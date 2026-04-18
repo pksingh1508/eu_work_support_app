@@ -916,9 +916,14 @@ grant execute on function public.ensure_user_profile() to authenticated;
 
 ## 18. Useful Queries For The App
 
+The examples in this section are written so they can be pasted directly into the Supabase SQL Editor. PostgreSQL does not understand placeholder syntax like `:query` or `:country_slug` in the SQL Editor. Those placeholders are only pseudocode for app code, RPC functions, or query builders.
+
 ### Search Published Country Documents
 
 ```sql
+with params as (
+  select 'greece work visa'::text as search_query
+)
 select
   d.id,
   d.title,
@@ -934,12 +939,13 @@ select
 from public.country_documents d
 join public.countries c on c.id = d.country_id
 join public.document_categories dc on dc.id = d.category_id
+cross join params p
 where d.status = 'published'
   and c.is_active = true
   and (
-    d.search_text ilike '%' || lower(:query) || '%'
-    or c.name ilike '%' || lower(:query) || '%'
-    or dc.name ilike '%' || lower(:query) || '%'
+    d.search_text ilike '%' || lower(p.search_query) || '%'
+    or c.name ilike '%' || lower(p.search_query) || '%'
+    or dc.name ilike '%' || lower(p.search_query) || '%'
   )
 order by c.popularity_rank nulls last, d.sort_order, d.title
 limit 25;
@@ -948,6 +954,11 @@ limit 25;
 ### Get Documents For One Country
 
 ```sql
+with params as (
+  select
+    'greece'::text as country_slug,
+    'en'::text as language
+)
 select
   d.id,
   d.title,
@@ -959,10 +970,11 @@ select
 from public.country_documents d
 join public.document_categories dc on dc.id = d.category_id
 join public.countries c on c.id = d.country_id
-where c.slug = :country_slug
+cross join params p
+where c.slug = p.country_slug
   and c.is_active = true
   and d.status = 'published'
-  and d.language = coalesce(:language, 'en')
+  and d.language = coalesce(p.language, 'en')
 order by dc.sort_order, d.sort_order, d.title;
 ```
 
@@ -1026,3 +1038,361 @@ Server-side notification sends should use OneSignal REST API from a trusted back
 - Add database backups before importing real content.
 - Keep `is_premium` enforcement in the app and backend. RLS alone does not hide premium content rows in this baseline because previews and paywalls may need metadata. If premium body text must be hidden from non-subscribers, split premium content into a separate table with entitlement-aware server access.
 - Supabase service-role key must never be used in the Expo app.
+
+## 21. Clerk webhook integration with supabase
+
+Clerk needs a public backend endpoint for webhooks. A mobile app cannot be the webhook endpoint because Clerk must send an HTTP `POST` request to a server URL. For this project, use a Supabase Edge Function as the webhook receiver.
+
+Final production endpoint format:
+
+```text
+https://YOUR_SUPABASE_PROJECT_REF.supabase.co/functions/v1/clerk-webhook
+```
+
+The flow:
+
+```text
+User signs up in Expo app
+Clerk creates the user
+Clerk sends user.created webhook to Supabase Edge Function
+Edge Function verifies Clerk signature
+Edge Function upserts public.app_users with the Clerk user ID
+App can now read/write user-owned data in Supabase
+```
+
+### Step 1: Prepare Supabase from SQL Editor
+
+Open Supabase Dashboard -> SQL Editor -> New query.
+
+Run this SQL after the core schema has been created. It creates a small webhook event log so Clerk retries are idempotent.
+
+```sql
+create table if not exists public.clerk_webhook_events (
+  event_id text primary key,
+  event_type text not null,
+  clerk_user_id text,
+  payload jsonb not null default '{}'::jsonb,
+  processed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+alter table public.clerk_webhook_events enable row level security;
+
+-- No anon/authenticated policies are added.
+-- This table is written by the Supabase service role inside the Edge Function.
+```
+
+Confirm `app_users` exists:
+
+```sql
+select column_name, data_type
+from information_schema.columns
+where table_schema = 'public'
+  and table_name = 'app_users'
+order by ordinal_position;
+```
+
+You should see `clerk_user_id` as the primary identifier. Clerk user IDs are strings like `user_...`, so this column must be `text`, not `uuid`.
+
+Optional test after a webhook runs:
+
+```sql
+select
+  clerk_user_id,
+  email,
+  first_name,
+  last_name,
+  created_at,
+  updated_at,
+  deleted_at
+from public.app_users
+order by created_at desc
+limit 20;
+```
+
+### Step 2: Create the Supabase Edge Function
+
+The SQL Editor cannot create the HTTP endpoint itself. The endpoint must be created as a Supabase Edge Function.
+
+Create this file:
+
+```text
+supabase/functions/clerk-webhook/index.ts
+```
+
+Use this function:
+
+```ts
+import { createClient } from "npm:@supabase/supabase-js@2";
+import { verifyWebhook } from "npm:@clerk/backend/webhooks";
+
+type ClerkEmailAddress = {
+  id: string;
+  email_address: string;
+};
+
+type ClerkUserPayload = {
+  id: string;
+  email_addresses?: ClerkEmailAddress[];
+  primary_email_address_id?: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  image_url?: string | null;
+  created_at?: number;
+  updated_at?: number;
+};
+
+Deno.serve(async (req) => {
+  if (req.method !== "POST") {
+    return new Response("Method not allowed", { status: 405 });
+  }
+
+  const signingSecret = Deno.env.get("CLERK_WEBHOOK_SIGNING_SECRET");
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+  if (!signingSecret || !supabaseUrl || !serviceRoleKey) {
+    return new Response("Missing server configuration", { status: 500 });
+  }
+
+  let event;
+  try {
+    event = await verifyWebhook(req, { signingSecret });
+  } catch {
+    return new Response("Invalid Clerk webhook signature", { status: 400 });
+  }
+
+  const eventId = req.headers.get("svix-id");
+  if (!eventId) {
+    return new Response("Missing svix-id", { status: 400 });
+  }
+
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false },
+  });
+
+  const user = event.data as ClerkUserPayload;
+
+  const { error: eventInsertError } = await supabase
+    .from("clerk_webhook_events")
+    .insert({
+      event_id: eventId,
+      event_type: event.type,
+      clerk_user_id: user.id ?? null,
+      payload: event,
+    });
+
+  if (eventInsertError) {
+    if (eventInsertError.code === "23505") {
+      return new Response("Duplicate event ignored", { status: 200 });
+    }
+
+    return new Response(eventInsertError.message, { status: 500 });
+  }
+
+  const primaryEmail = user.email_addresses?.find(
+    (email) => email.id === user.primary_email_address_id,
+  )?.email_address;
+
+  if (event.type === "user.created" || event.type === "user.updated") {
+    const { error } = await supabase.from("app_users").upsert({
+      clerk_user_id: user.id,
+      email: primaryEmail ?? null,
+      first_name: user.first_name ?? null,
+      last_name: user.last_name ?? null,
+      image_url: user.image_url ?? null,
+      deleted_at: null,
+      clerk_created_at: user.created_at
+        ? new Date(user.created_at).toISOString()
+        : null,
+      clerk_updated_at: user.updated_at
+        ? new Date(user.updated_at).toISOString()
+        : null,
+      updated_at: new Date().toISOString(),
+    });
+
+    if (error) return new Response(error.message, { status: 500 });
+  }
+
+  if (event.type === "user.deleted") {
+    const { error } = await supabase
+      .from("app_users")
+      .update({
+        email: null,
+        first_name: null,
+        last_name: null,
+        image_url: null,
+        deleted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("clerk_user_id", user.id);
+
+    if (error) return new Response(error.message, { status: 500 });
+  }
+
+  await supabase
+    .from("clerk_webhook_events")
+    .update({ processed_at: new Date().toISOString() })
+    .eq("event_id", eventId);
+
+  return new Response("ok", { status: 200 });
+});
+```
+
+### Step 3: Deploy the Edge Function
+
+Deploy with JWT verification disabled. Clerk will not send a Supabase JWT. The function verifies Clerk's webhook signature instead.
+
+```bash
+supabase functions deploy clerk-webhook --no-verify-jwt
+```
+
+After deploy, your endpoint is:
+
+```text
+https://YOUR_SUPABASE_PROJECT_REF.supabase.co/functions/v1/clerk-webhook
+```
+
+You can find your project ref in Supabase Dashboard -> Project Settings -> General.
+
+### Step 4: Add Supabase function secrets
+
+In Supabase Dashboard, go to:
+
+```text
+Project Settings -> Edge Functions -> Secrets
+```
+
+Add:
+
+```text
+CLERK_WEBHOOK_SIGNING_SECRET
+SUPABASE_SERVICE_ROLE_KEY
+```
+
+You get `CLERK_WEBHOOK_SIGNING_SECRET` after creating the webhook endpoint in Clerk. If you need to deploy first, create the Clerk endpoint, copy the signing secret, add it to Supabase secrets, then redeploy or retry the webhook.
+
+You can also add secrets with the CLI:
+
+```bash
+supabase secrets set CLERK_WEBHOOK_SIGNING_SECRET=whsec_...
+supabase secrets set SUPABASE_SERVICE_ROLE_KEY=...
+```
+
+Never put `SUPABASE_SERVICE_ROLE_KEY` in the Expo app.
+
+### Step 5: Create the webhook endpoint in Clerk
+
+In Clerk Dashboard:
+
+1. Go to `Developers -> Webhooks`.
+2. Click `New Endpoint`.
+3. In `Endpoint URL`, paste:
+
+```text
+https://YOUR_SUPABASE_PROJECT_REF.supabase.co/functions/v1/clerk-webhook
+```
+
+4. Add a description, for example:
+
+```text
+Sync Clerk users to Supabase app_users
+```
+
+5. Subscribe to these events:
+
+```text
+user.created
+user.updated
+user.deleted
+```
+
+6. Click `Create`.
+7. Open the created endpoint.
+8. Copy the signing secret.
+9. Add that signing secret to Supabase as `CLERK_WEBHOOK_SIGNING_SECRET`.
+
+### Step 6: Test the webhook
+
+In Clerk Dashboard:
+
+1. Open the webhook endpoint.
+2. Go to the testing/sending area.
+3. Send a `user.created` test event.
+4. Then open Supabase SQL Editor and run:
+
+```sql
+select *
+from public.clerk_webhook_events
+order by created_at desc
+limit 10;
+```
+
+Then check users:
+
+```sql
+select
+  clerk_user_id,
+  email,
+  first_name,
+  last_name,
+  deleted_at,
+  created_at,
+  updated_at
+from public.app_users
+order by updated_at desc
+limit 10;
+```
+
+If both tables show data, the integration is working.
+
+### Step 7: Test with real signup
+
+1. Run the Expo app.
+2. Sign up with a new email using Clerk.
+3. Wait a few seconds.
+4. In Supabase SQL Editor, run:
+
+```sql
+select
+  clerk_user_id,
+  email,
+  first_name,
+  last_name,
+  created_at
+from public.app_users
+order by created_at desc
+limit 5;
+```
+
+The new Clerk user should appear in `app_users`.
+
+### Troubleshooting
+
+If Clerk shows webhook failures:
+
+- Confirm the endpoint URL is exactly:
+
+```text
+https://YOUR_SUPABASE_PROJECT_REF.supabase.co/functions/v1/clerk-webhook
+```
+
+- Confirm the function was deployed with:
+
+```bash
+--no-verify-jwt
+```
+
+- Confirm `CLERK_WEBHOOK_SIGNING_SECRET` is set in Supabase secrets.
+- Confirm `SUPABASE_SERVICE_ROLE_KEY` is set in Supabase secrets.
+- Check Supabase Dashboard -> Edge Functions -> `clerk-webhook` -> Logs.
+- Check Clerk Dashboard -> Webhooks -> endpoint -> Logs.
+- If the SQL Editor query returns no users, check `clerk_webhook_events` first. If events exist but `app_users` is empty, the function received Clerk's webhook but failed during the user upsert.
+
+Common mistakes:
+
+- Using the Expo app URL as the webhook URL.
+- Forgetting `--no-verify-jwt`.
+- Copying the wrong Clerk signing secret.
+- Putting the service-role key in the mobile app instead of Edge Function secrets.
+- Using a UUID column for Clerk user IDs. Clerk user IDs must be stored as `text`.
