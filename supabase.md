@@ -87,17 +87,70 @@ create index user_onboarding_answers_user_idx
 on public.user_onboarding_answers(clerk_user_id);
 ```
 
-## 4. Country And Visa Content Tables
+## 4. Country And Document Content Tables
+
+The country content should be stored as flexible documents, not as one rigid set of visa-specific tables. Each country can have many different document types, such as work visa, student visa, driving licence, insurance companies, university list, AMKA/social security, sworn translation, CV guide, residence permit, and any future country-specific topic.
+
+Use `country_documents.content_json` for the document body. This keeps highly different document shapes in one stable table while still allowing structured rendering in the mobile app.
+
+Recommended `content_json` section types:
+
+- `hero`: introductory title and paragraph.
+- `quick_answer`: short answer blocks.
+- `paragraph`: normal text.
+- `bullet_list`: unordered points.
+- `numbered_steps`: ordered process steps.
+- `checklist`: required items.
+- `table`: columns and rows like the Word docs in the screenshot.
+- `warning`: important do/don't or risk note.
+- `callout`: highlighted guidance.
+- `faq`: question and answer list.
+- `source_links`: official links.
+
+Example body shape:
+
+```json
+{
+  "sections": [
+    {
+      "type": "hero",
+      "title": "What is a Greece Work Visa?",
+      "content": "A Greece Work Visa allows you to enter Greece legally for work."
+    },
+    {
+      "type": "bullet_list",
+      "title": "Who Can Apply?",
+      "items": [
+        "People with a job offer",
+        "Applicants with a valid passport",
+        "People meeting embassy requirements"
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Employer Documents",
+      "columns": ["Document", "Explanation"],
+      "rows": [
+        ["Job contract", "Signed job agreement"],
+        ["Employer approval letter", "Permission from Greek authority"]
+      ]
+    }
+  ]
+}
+```
 
 ```sql
 create table public.countries (
   id uuid primary key default gen_random_uuid(),
-  iso2 char(2) not null unique,
-  iso3 char(3) not null unique,
-  name text not null,
   slug text not null unique,
+  name text not null,
+  code text not null unique,
+  iso2 char(2) unique,
+  iso3 char(3) unique,
+  flag_url text,
   flag_emoji text,
   flag_asset_key text,
+  is_active boolean not null default true,
   region text,
   subregion text,
   is_eu boolean not null default false,
@@ -109,7 +162,6 @@ create table public.countries (
   popularity_rank int,
   short_description text,
   official_immigration_url text,
-  status text not null default 'draft' check (status in ('draft', 'review', 'published', 'archived')),
   last_reviewed_at date,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -119,8 +171,8 @@ create trigger countries_set_updated_at
 before update on public.countries
 for each row execute function public.set_updated_at();
 
-create index countries_status_rank_idx
-on public.countries(status, popularity_rank nulls last);
+create index countries_active_rank_idx
+on public.countries(is_active, popularity_rank nulls last);
 
 create index countries_name_trgm_idx
 on public.countries using gin (name gin_trgm_ops);
@@ -139,181 +191,214 @@ on public.country_aliases(country_id, lower(alias), coalesce(locale, ''));
 create index country_aliases_alias_trgm_idx
 on public.country_aliases using gin (alias gin_trgm_ops);
 
-create table public.visa_categories (
+create table public.document_categories (
   id uuid primary key default gen_random_uuid(),
-  key text not null unique,
+  slug text not null unique,
   name text not null,
+  icon text,
   description text,
   sort_order int not null default 100,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
-create table public.visa_guides (
+create trigger document_categories_set_updated_at
+before update on public.document_categories
+for each row execute function public.set_updated_at();
+
+create table public.country_documents (
   id uuid primary key default gen_random_uuid(),
   country_id uuid not null references public.countries(id) on delete cascade,
-  category_id uuid not null references public.visa_categories(id),
+  category_id uuid not null references public.document_categories(id) on delete cascade,
   title text not null,
   slug text not null,
-  summary text,
-  purpose text,
-  audience text,
-  difficulty text check (difficulty in ('low', 'medium', 'high')),
+  short_description text,
+  intro text,
+  content_json jsonb not null default '{"sections":[]}'::jsonb,
+  language text not null default 'en',
+  status text not null default 'draft' check (status in ('draft', 'review', 'published', 'archived')),
   is_premium boolean not null default false,
   tags text[] not null default '{}',
-  search_text text generated always as (
-    lower(coalesce(title, '') || ' ' || coalesce(summary, '') || ' ' || coalesce(purpose, '') || ' ' || array_to_string(tags, ' '))
-  ) stored,
-  status text not null default 'draft' check (status in ('draft', 'review', 'published', 'archived')),
+  sort_order int not null default 100,
+  seo_title text,
+  seo_description text,
   source_url text,
   last_reviewed_at date,
   published_at timestamptz,
+  metadata jsonb not null default '{}'::jsonb,
+  search_text text not null default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique(country_id, slug)
+  unique(country_id, category_id, slug, language),
+  check (jsonb_typeof(content_json) = 'object'),
+  check (
+    not (content_json ? 'sections')
+    or jsonb_typeof(content_json->'sections') = 'array'
+  )
 );
 
-create trigger visa_guides_set_updated_at
-before update on public.visa_guides
+create trigger country_documents_set_updated_at
+before update on public.country_documents
 for each row execute function public.set_updated_at();
 
-create index visa_guides_country_status_idx
-on public.visa_guides(country_id, status);
+create or replace function public.set_country_document_search_text()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.search_text = lower(
+    coalesce(new.title, '') || ' ' ||
+    coalesce(new.short_description, '') || ' ' ||
+    coalesce(new.intro, '') || ' ' ||
+    array_to_string(new.tags, ' ') || ' ' ||
+    new.content_json::text
+  );
+  return new;
+end;
+$$;
 
-create index visa_guides_category_idx
-on public.visa_guides(category_id);
+create trigger country_documents_set_search_text
+before insert or update of title, short_description, intro, tags, content_json
+on public.country_documents
+for each row execute function public.set_country_document_search_text();
 
-create index visa_guides_search_trgm_idx
-on public.visa_guides using gin (search_text gin_trgm_ops);
+create index country_documents_country_status_idx
+on public.country_documents(country_id, status, sort_order);
 
-create index visa_guides_tags_idx
-on public.visa_guides using gin (tags);
+create index country_documents_category_idx
+on public.country_documents(category_id, status);
 
-create table public.visa_guide_sections (
+create index country_documents_language_idx
+on public.country_documents(language);
+
+create index country_documents_search_trgm_idx
+on public.country_documents using gin (search_text gin_trgm_ops);
+
+create index country_documents_tags_idx
+on public.country_documents using gin (tags);
+
+create index country_documents_content_json_idx
+on public.country_documents using gin (content_json jsonb_path_ops);
+
+create table public.document_sources (
   id uuid primary key default gen_random_uuid(),
-  visa_guide_id uuid not null references public.visa_guides(id) on delete cascade,
-  section_key text not null,
-  title text not null,
-  body text not null,
-  sort_order int not null default 100,
-  is_premium boolean not null default false,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique(visa_guide_id, section_key)
-);
-
-create trigger visa_guide_sections_set_updated_at
-before update on public.visa_guide_sections
-for each row execute function public.set_updated_at();
-
-create index visa_guide_sections_guide_idx
-on public.visa_guide_sections(visa_guide_id, sort_order);
-
-create table public.visa_process_steps (
-  id uuid primary key default gen_random_uuid(),
-  visa_guide_id uuid not null references public.visa_guides(id) on delete cascade,
-  step_number int not null,
-  title text not null,
-  description text not null,
-  estimated_duration text,
-  official_url text,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique(visa_guide_id, step_number)
-);
-
-create trigger visa_process_steps_set_updated_at
-before update on public.visa_process_steps
-for each row execute function public.set_updated_at();
-
-create table public.visa_requirements (
-  id uuid primary key default gen_random_uuid(),
-  visa_guide_id uuid not null references public.visa_guides(id) on delete cascade,
-  requirement_type text not null check (requirement_type in ('eligibility', 'document', 'financial', 'health', 'language', 'other')),
-  title text not null,
-  description text,
-  is_mandatory boolean not null default true,
-  sort_order int not null default 100,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create trigger visa_requirements_set_updated_at
-before update on public.visa_requirements
-for each row execute function public.set_updated_at();
-
-create table public.visa_fees (
-  id uuid primary key default gen_random_uuid(),
-  visa_guide_id uuid not null references public.visa_guides(id) on delete cascade,
-  fee_name text not null,
-  amount_min numeric(12,2),
-  amount_max numeric(12,2),
-  currency_code char(3),
-  notes text,
-  source_url text,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create trigger visa_fees_set_updated_at
-before update on public.visa_fees
-for each row execute function public.set_updated_at();
-
-create table public.visa_processing_times (
-  id uuid primary key default gen_random_uuid(),
-  visa_guide_id uuid not null references public.visa_guides(id) on delete cascade,
-  title text not null,
-  duration_min_days int,
-  duration_max_days int,
-  notes text,
-  source_url text,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create trigger visa_processing_times_set_updated_at
-before update on public.visa_processing_times
-for each row execute function public.set_updated_at();
-
-create table public.visa_faqs (
-  id uuid primary key default gen_random_uuid(),
-  visa_guide_id uuid not null references public.visa_guides(id) on delete cascade,
-  question text not null,
-  answer text not null,
-  sort_order int not null default 100,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create trigger visa_faqs_set_updated_at
-before update on public.visa_faqs
-for each row execute function public.set_updated_at();
-
-create table public.visa_do_donts (
-  id uuid primary key default gen_random_uuid(),
-  visa_guide_id uuid not null references public.visa_guides(id) on delete cascade,
-  kind text not null check (kind in ('do', 'dont')),
-  title text not null,
-  description text,
-  sort_order int not null default 100,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create trigger visa_do_donts_set_updated_at
-before update on public.visa_do_donts
-for each row execute function public.set_updated_at();
-
-create table public.official_links (
-  id uuid primary key default gen_random_uuid(),
-  country_id uuid references public.countries(id) on delete cascade,
-  visa_guide_id uuid references public.visa_guides(id) on delete cascade,
+  document_id uuid not null references public.country_documents(id) on delete cascade,
   title text not null,
   url text not null,
   link_type text not null default 'official',
   notes text,
-  created_at timestamptz not null default now(),
-  check (country_id is not null or visa_guide_id is not null)
+  sort_order int not null default 100,
+  created_at timestamptz not null default now()
 );
+
+create index document_sources_document_idx
+on public.document_sources(document_id, sort_order);
+```
+
+Starter document categories:
+
+```sql
+insert into public.document_categories (slug, name, icon, sort_order)
+values
+  ('work-visa', 'Work Visa', 'briefcase', 10),
+  ('student-visa', 'Student Visa', 'graduation-cap', 20),
+  ('tourist-visa', 'Tourist Visa', 'passport', 30),
+  ('residence-permit', 'Residence Permit', 'id-card', 40),
+  ('social-security', 'Social Security', 'shield-check', 50),
+  ('driving-licence', 'Driving Licence', 'car', 60),
+  ('health-insurance', 'Health Insurance', 'heart-pulse', 70),
+  ('education', 'Education', 'book-open', 80),
+  ('translation', 'Translation', 'languages', 90),
+  ('cv-and-jobs', 'CV and Jobs', 'file-text', 100)
+on conflict (slug) do update
+set
+  name = excluded.name,
+  icon = excluded.icon,
+  sort_order = excluded.sort_order;
+```
+
+Example country document insert:
+
+```sql
+insert into public.country_documents (
+  country_id,
+  category_id,
+  title,
+  slug,
+  short_description,
+  intro,
+  content_json,
+  tags,
+  status,
+  published_at,
+  last_reviewed_at
+)
+select
+  c.id,
+  dc.id,
+  'Greece Work Visa',
+  'greece-work-visa',
+  'Complete guide for Greece work visa process and required documents',
+  'A practical country document for people applying to work in Greece.',
+  '{
+    "sections": [
+      {
+        "type": "hero",
+        "title": "What is a Greece Work Visa?",
+        "content": "A Greece Work Visa allows you to enter Greece legally for work."
+      },
+      {
+        "type": "quick_answer",
+        "title": "Quick Answer",
+        "items": [
+          "You usually need a Greek employer approval first.",
+          "You apply at the Greek Embassy in your home country.",
+          "After arrival, you apply for a residence permit."
+        ]
+      },
+      {
+        "type": "bullet_list",
+        "title": "Who Can Apply?",
+        "items": [
+          "People with a job offer",
+          "Applicants with a valid passport",
+          "People meeting embassy requirements"
+        ]
+      },
+      {
+        "type": "table",
+        "title": "Employer Documents",
+        "columns": ["Document", "Explanation"],
+        "rows": [
+          ["Job contract", "Signed job agreement"],
+          ["Employer approval letter", "Permission from Greek authority"],
+          ["Proof of accommodation", "Paper saying you have a place to stay in Greece"]
+        ]
+      },
+      {
+        "type": "warning",
+        "title": "Important",
+        "content": "Without the employer approval, you usually cannot apply for the work visa."
+      }
+    ]
+  }'::jsonb,
+  array['greece', 'work', 'visa', 'documents'],
+  'published',
+  now(),
+  current_date
+from public.countries c
+join public.document_categories dc on dc.slug = 'work-visa'
+where c.slug = 'greece'
+on conflict (country_id, category_id, slug, language) do update
+set
+  title = excluded.title,
+  short_description = excluded.short_description,
+  intro = excluded.intro,
+  content_json = excluded.content_json,
+  tags = excluded.tags,
+  status = excluded.status,
+  published_at = excluded.published_at,
+  last_reviewed_at = excluded.last_reviewed_at;
 ```
 
 ## 5. Saved Items, Search, Feedback, And Support
@@ -330,33 +415,33 @@ create table public.saved_countries (
 create index saved_countries_user_idx
 on public.saved_countries(clerk_user_id, created_at desc);
 
-create table public.saved_visa_guides (
+create table public.saved_documents (
   id uuid primary key default gen_random_uuid(),
   clerk_user_id text not null references public.app_users(clerk_user_id) on delete cascade,
-  visa_guide_id uuid not null references public.visa_guides(id) on delete cascade,
+  document_id uuid not null references public.country_documents(id) on delete cascade,
   notes text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique(clerk_user_id, visa_guide_id)
+  unique(clerk_user_id, document_id)
 );
 
-create trigger saved_visa_guides_set_updated_at
-before update on public.saved_visa_guides
+create trigger saved_documents_set_updated_at
+before update on public.saved_documents
 for each row execute function public.set_updated_at();
 
-create index saved_visa_guides_user_idx
-on public.saved_visa_guides(clerk_user_id, created_at desc);
+create index saved_documents_user_idx
+on public.saved_documents(clerk_user_id, created_at desc);
 
-create table public.recently_viewed_guides (
+create table public.recently_viewed_documents (
   id uuid primary key default gen_random_uuid(),
   clerk_user_id text not null references public.app_users(clerk_user_id) on delete cascade,
-  visa_guide_id uuid not null references public.visa_guides(id) on delete cascade,
+  document_id uuid not null references public.country_documents(id) on delete cascade,
   viewed_at timestamptz not null default now(),
-  unique(clerk_user_id, visa_guide_id)
+  unique(clerk_user_id, document_id)
 );
 
-create index recently_viewed_guides_user_idx
-on public.recently_viewed_guides(clerk_user_id, viewed_at desc);
+create index recently_viewed_documents_user_idx
+on public.recently_viewed_documents(clerk_user_id, viewed_at desc);
 
 create table public.search_history (
   id uuid primary key default gen_random_uuid(),
@@ -374,7 +459,7 @@ create table public.content_feedback (
   id uuid primary key default gen_random_uuid(),
   clerk_user_id text references public.app_users(clerk_user_id) on delete set null,
   country_id uuid references public.countries(id) on delete set null,
-  visa_guide_id uuid references public.visa_guides(id) on delete set null,
+  document_id uuid references public.country_documents(id) on delete set null,
   feedback_type text not null check (feedback_type in ('correction', 'outdated', 'missing', 'helpful', 'other')),
   message text not null,
   status text not null default 'open' check (status in ('open', 'reviewing', 'resolved', 'dismissed')),
@@ -478,7 +563,7 @@ create table public.notification_preferences (
   clerk_user_id text primary key references public.app_users(clerk_user_id) on delete cascade,
   push_enabled boolean not null default false,
   marketing_enabled boolean not null default false,
-  saved_guide_updates_enabled boolean not null default true,
+  saved_document_updates_enabled boolean not null default true,
   billing_updates_enabled boolean not null default true,
   preferred_hour_local int check (preferred_hour_local between 0 and 23),
   timezone text,
@@ -537,20 +622,13 @@ alter table public.user_onboarding_answers enable row level security;
 
 alter table public.countries enable row level security;
 alter table public.country_aliases enable row level security;
-alter table public.visa_categories enable row level security;
-alter table public.visa_guides enable row level security;
-alter table public.visa_guide_sections enable row level security;
-alter table public.visa_process_steps enable row level security;
-alter table public.visa_requirements enable row level security;
-alter table public.visa_fees enable row level security;
-alter table public.visa_processing_times enable row level security;
-alter table public.visa_faqs enable row level security;
-alter table public.visa_do_donts enable row level security;
-alter table public.official_links enable row level security;
+alter table public.document_categories enable row level security;
+alter table public.country_documents enable row level security;
+alter table public.document_sources enable row level security;
 
 alter table public.saved_countries enable row level security;
-alter table public.saved_visa_guides enable row level security;
-alter table public.recently_viewed_guides enable row level security;
+alter table public.saved_documents enable row level security;
+alter table public.recently_viewed_documents enable row level security;
 alter table public.search_history enable row level security;
 alter table public.content_feedback enable row level security;
 alter table public.support_requests enable row level security;
@@ -597,13 +675,13 @@ with check ((select public.current_clerk_user_id()) = clerk_user_id);
 ## 11. RLS Policies: Public Published Content
 
 ```sql
-create policy "Anyone can read published countries"
+create policy "Anyone can read active countries"
 on public.countries
 for select
 to anon, authenticated
-using (status = 'published');
+using (is_active = true);
 
-create policy "Anyone can read aliases for published countries"
+create policy "Anyone can read aliases for active countries"
 on public.country_aliases
 for select
 to anon, authenticated
@@ -612,18 +690,18 @@ using (
     select 1
     from public.countries c
     where c.id = country_aliases.country_id
-      and c.status = 'published'
+      and c.is_active = true
   )
 );
 
-create policy "Anyone can read visa categories"
-on public.visa_categories
+create policy "Anyone can read document categories"
+on public.document_categories
 for select
 to anon, authenticated
 using (true);
 
-create policy "Anyone can read published visa guides"
-on public.visa_guides
+create policy "Anyone can read published country documents"
+on public.country_documents
 for select
 to anon, authenticated
 using (
@@ -631,140 +709,23 @@ using (
   and exists (
     select 1
     from public.countries c
-    where c.id = visa_guides.country_id
-      and c.status = 'published'
+    where c.id = country_documents.country_id
+      and c.is_active = true
   )
 );
 
-create policy "Anyone can read sections for published guides"
-on public.visa_guide_sections
+create policy "Anyone can read sources for published documents"
+on public.document_sources
 for select
 to anon, authenticated
 using (
   exists (
     select 1
-    from public.visa_guides g
-    join public.countries c on c.id = g.country_id
-    where g.id = visa_guide_sections.visa_guide_id
-      and g.status = 'published'
-      and c.status = 'published'
-  )
-);
-
-create policy "Anyone can read process steps for published guides"
-on public.visa_process_steps
-for select
-to anon, authenticated
-using (
-  exists (
-    select 1
-    from public.visa_guides g
-    join public.countries c on c.id = g.country_id
-    where g.id = visa_process_steps.visa_guide_id
-      and g.status = 'published'
-      and c.status = 'published'
-  )
-);
-
-create policy "Anyone can read requirements for published guides"
-on public.visa_requirements
-for select
-to anon, authenticated
-using (
-  exists (
-    select 1
-    from public.visa_guides g
-    join public.countries c on c.id = g.country_id
-    where g.id = visa_requirements.visa_guide_id
-      and g.status = 'published'
-      and c.status = 'published'
-  )
-);
-
-create policy "Anyone can read fees for published guides"
-on public.visa_fees
-for select
-to anon, authenticated
-using (
-  exists (
-    select 1
-    from public.visa_guides g
-    join public.countries c on c.id = g.country_id
-    where g.id = visa_fees.visa_guide_id
-      and g.status = 'published'
-      and c.status = 'published'
-  )
-);
-
-create policy "Anyone can read processing times for published guides"
-on public.visa_processing_times
-for select
-to anon, authenticated
-using (
-  exists (
-    select 1
-    from public.visa_guides g
-    join public.countries c on c.id = g.country_id
-    where g.id = visa_processing_times.visa_guide_id
-      and g.status = 'published'
-      and c.status = 'published'
-  )
-);
-
-create policy "Anyone can read FAQs for published guides"
-on public.visa_faqs
-for select
-to anon, authenticated
-using (
-  exists (
-    select 1
-    from public.visa_guides g
-    join public.countries c on c.id = g.country_id
-    where g.id = visa_faqs.visa_guide_id
-      and g.status = 'published'
-      and c.status = 'published'
-  )
-);
-
-create policy "Anyone can read do-donts for published guides"
-on public.visa_do_donts
-for select
-to anon, authenticated
-using (
-  exists (
-    select 1
-    from public.visa_guides g
-    join public.countries c on c.id = g.country_id
-    where g.id = visa_do_donts.visa_guide_id
-      and g.status = 'published'
-      and c.status = 'published'
-  )
-);
-
-create policy "Anyone can read official links for published content"
-on public.official_links
-for select
-to anon, authenticated
-using (
-  (
-    country_id is not null
-    and exists (
-      select 1 from public.countries c
-      where c.id = official_links.country_id
-        and c.status = 'published'
-    )
-  )
-  or
-  (
-    visa_guide_id is not null
-    and exists (
-      select 1
-      from public.visa_guides g
-      join public.countries c on c.id = g.country_id
-      where g.id = official_links.visa_guide_id
-        and g.status = 'published'
-        and c.status = 'published'
-    )
+    from public.country_documents d
+    join public.countries c on c.id = d.country_id
+    where d.id = document_sources.document_id
+      and d.status = 'published'
+      and c.is_active = true
   )
 );
 ```
@@ -777,21 +738,49 @@ on public.saved_countries
 for all
 to authenticated
 using ((select public.current_clerk_user_id()) = clerk_user_id)
-with check ((select public.current_clerk_user_id()) = clerk_user_id);
+with check (
+  (select public.current_clerk_user_id()) = clerk_user_id
+  and exists (
+    select 1
+    from public.countries c
+    where c.id = saved_countries.country_id
+      and c.is_active = true
+  )
+);
 
-create policy "Users can manage own saved visa guides"
-on public.saved_visa_guides
+create policy "Users can manage own saved documents"
+on public.saved_documents
 for all
 to authenticated
 using ((select public.current_clerk_user_id()) = clerk_user_id)
-with check ((select public.current_clerk_user_id()) = clerk_user_id);
+with check (
+  (select public.current_clerk_user_id()) = clerk_user_id
+  and exists (
+    select 1
+    from public.country_documents d
+    join public.countries c on c.id = d.country_id
+    where d.id = saved_documents.document_id
+      and d.status = 'published'
+      and c.is_active = true
+  )
+);
 
-create policy "Users can manage own recently viewed guides"
-on public.recently_viewed_guides
+create policy "Users can manage own recently viewed documents"
+on public.recently_viewed_documents
 for all
 to authenticated
 using ((select public.current_clerk_user_id()) = clerk_user_id)
-with check ((select public.current_clerk_user_id()) = clerk_user_id);
+with check (
+  (select public.current_clerk_user_id()) = clerk_user_id
+  and exists (
+    select 1
+    from public.country_documents d
+    join public.countries c on c.id = d.country_id
+    where d.id = recently_viewed_documents.document_id
+      and d.status = 'published'
+      and c.is_active = true
+  )
+);
 
 create policy "Users can manage own search history"
 on public.search_history
@@ -927,30 +916,54 @@ grant execute on function public.ensure_user_profile() to authenticated;
 
 ## 18. Useful Queries For The App
 
-### Search Published Visa Guides
+### Search Published Country Documents
 
 ```sql
 select
-  g.id,
-  g.title,
-  g.slug,
-  g.summary,
-  g.is_premium,
+  d.id,
+  d.title,
+  d.slug,
+  d.short_description,
+  d.is_premium,
+  d.language,
   c.name as country_name,
   c.slug as country_slug,
   c.flag_emoji,
-  vc.name as category_name
-from public.visa_guides g
-join public.countries c on c.id = g.country_id
-join public.visa_categories vc on vc.id = g.category_id
-where g.status = 'published'
-  and c.status = 'published'
+  dc.name as category_name,
+  dc.slug as category_slug
+from public.country_documents d
+join public.countries c on c.id = d.country_id
+join public.document_categories dc on dc.id = d.category_id
+where d.status = 'published'
+  and c.is_active = true
   and (
-    g.search_text ilike '%' || lower(:query) || '%'
-    or c.name ilike '%' || :query || '%'
+    d.search_text ilike '%' || lower(:query) || '%'
+    or c.name ilike '%' || lower(:query) || '%'
+    or dc.name ilike '%' || lower(:query) || '%'
   )
-order by c.popularity_rank nulls last, g.title
+order by c.popularity_rank nulls last, d.sort_order, d.title
 limit 25;
+```
+
+### Get Documents For One Country
+
+```sql
+select
+  d.id,
+  d.title,
+  d.slug,
+  d.short_description,
+  d.is_premium,
+  dc.name as category_name,
+  dc.slug as category_slug
+from public.country_documents d
+join public.document_categories dc on dc.id = d.category_id
+join public.countries c on c.id = d.country_id
+where c.slug = :country_slug
+  and c.is_active = true
+  and d.status = 'published'
+  and d.language = coalesce(:language, 'en')
+order by dc.sort_order, d.sort_order, d.title;
 ```
 
 ### Read Active Entitlement
