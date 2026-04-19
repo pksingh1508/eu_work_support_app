@@ -1,17 +1,22 @@
-import { useSignIn } from '@clerk/expo/legacy';
-import { Link, useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { useSignIn } from "@clerk/expo/legacy";
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import { Pressable, Text, View } from "react-native";
 
-import { AuthCard, AuthPrimaryButton, AuthTextField } from '@/features/auth/components/auth-card';
-import { getAuthErrorMessage } from '@/features/auth/errors';
+import {
+  AuthCard,
+  AuthPrimaryButton,
+  AuthTextField,
+} from "@/features/auth/components/auth-card";
+import { getAuthErrorMessage } from "@/features/auth/errors";
+import { goBack } from "expo-router/build/global-state/routing";
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const { isLoaded, signIn, setActive } = useSignIn();
-  const [emailAddress, setEmailAddress] = useState('');
-  const [resetCode, setResetCode] = useState('');
-  const [newPassword, setNewPassword] = useState('');
+  const [emailAddress, setEmailAddress] = useState("");
+  const [resetCode, setResetCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [hasSentCode, setHasSentCode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -29,14 +34,14 @@ export default function ForgotPasswordScreen() {
 
     try {
       await signIn.create({
-        strategy: 'reset_password_email_code',
+        strategy: "reset_password_email_code",
         identifier: emailAddress.trim(),
       });
 
       setHasSentCode(true);
-      setNotice('We sent a password reset code to your email.');
+      setNotice("We sent a password reset code to your email.");
     } catch (authError) {
-      setError(getAuthErrorMessage(authError, 'Unable to send a reset code.'));
+      setError(getAuthErrorMessage(authError, "Unable to send a reset code."));
     } finally {
       setIsSubmitting(false);
     }
@@ -53,25 +58,32 @@ export default function ForgotPasswordScreen() {
 
     try {
       const result = await signIn.attemptFirstFactor({
-        strategy: 'reset_password_email_code',
+        strategy: "reset_password_email_code",
         code: resetCode.trim(),
         password: newPassword,
       });
 
-      if (result.status === 'complete' && result.createdSessionId) {
+      if (result.status === "complete" && result.createdSessionId) {
         await setActive({ session: result.createdSessionId });
-        router.replace('/');
+        router.replace("/");
         return;
       }
 
-      if (result.status === 'needs_second_factor') {
-        setError('This account needs one more verification step before the reset can finish.');
+      if (result.status === "needs_second_factor") {
+        setError(
+          "This account needs one more verification step before the reset can finish.",
+        );
         return;
       }
 
-      setError('Password reset needs another step before it can finish.');
+      setError("Password reset needs another step before it can finish.");
     } catch (authError) {
-      setError(getAuthErrorMessage(authError, 'Unable to reset password with that code.'));
+      setError(
+        getAuthErrorMessage(
+          authError,
+          "Unable to reset password with that code.",
+        ),
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -79,13 +91,14 @@ export default function ForgotPasswordScreen() {
 
   return (
     <AuthCard
-      title="Reset Password"
+      title={hasSentCode ? "Check your email" : "Reset password"}
       subtitle={
         hasSentCode
-          ? 'Enter the code from your email and choose a new password.'
-          : 'Enter your email and we will send a reset code.'
+          ? "Enter the code from your email and choose a new password."
+          : "Enter your email and we will send a secure reset code."
       }
-      error={error}>
+      error={error}
+    >
       {notice ? (
         <View className="rounded-interactive bg-diplomatic-surfaceHigh px-4 py-3">
           <Text className="text-sm font-semibold tracking-normal text-diplomatic-ink">
@@ -124,7 +137,7 @@ export default function ForgotPasswordScreen() {
           <AuthTextField
             label="New Password"
             icon="lock"
-            actionLabel={isPasswordVisible ? 'Hide' : 'Show'}
+            actionLabel={isPasswordVisible ? "Hide" : "Show"}
             onActionPress={() => setIsPasswordVisible((current) => !current)}
             value={newPassword}
             onChangeText={setNewPassword}
@@ -145,14 +158,15 @@ export default function ForgotPasswordScreen() {
           <Pressable
             onPress={() => {
               setHasSentCode(false);
-              setResetCode('');
-              setNewPassword('');
+              setResetCode("");
+              setNewPassword("");
               setNotice(null);
               setError(null);
             }}
             disabled={isSubmitting}
             className="items-center"
-            hitSlop={10}>
+            hitSlop={10}
+          >
             <Text className="text-sm font-bold tracking-normal text-diplomatic-primary">
               Use a different email
             </Text>
@@ -167,13 +181,11 @@ export default function ForgotPasswordScreen() {
         />
       )}
 
-      <Link href="/sign-in" asChild>
-        <Pressable className="items-center" hitSlop={10}>
-          <Text className="text-sm font-bold tracking-normal text-diplomatic-primary">
-            Back to sign in
-          </Text>
-        </Pressable>
-      </Link>
+      <Pressable className="items-center" hitSlop={10} onPress={goBack}>
+        <Text className="text-sm font-bold tracking-normal text-diplomatic-primary">
+          Back to sign in
+        </Text>
+      </Pressable>
     </AuthCard>
   );
 }

@@ -44,3 +44,8 @@ app-example
 # generated native folders
 /ios
 /android
+
+
+# additional files to ignore
+UI Screen
+UI Screen/*
