@@ -28,6 +28,7 @@ type AuthTextFieldProps = TextInputProps & {
 type AuthPrimaryButtonProps = {
   label: string;
   isLoading?: boolean;
+  disabled?: boolean;
   onPress: () => void;
 };
 
@@ -96,10 +97,10 @@ export function AuthTextField({
   );
 }
 
-export function AuthPrimaryButton({ label, isLoading, onPress }: AuthPrimaryButtonProps) {
+export function AuthPrimaryButton({ label, isLoading, disabled, onPress }: AuthPrimaryButtonProps) {
   return (
     <Pressable
-      disabled={isLoading}
+      disabled={isLoading || disabled}
       onPress={onPress}
       className="h-14 items-center justify-center rounded-interactive bg-diplomatic-primary active:opacity-80 disabled:opacity-60">
       {isLoading ? (
