@@ -7,6 +7,12 @@ import { ActivityIndicator, Text, useColorScheme, View } from 'react-native';
 import { AuthProfileProvider } from '@/features/auth/auth-profile';
 import { clerkPublishableKey, clerkTokenCache } from '@/lib/clerk';
 import { optionalEnv } from '@/lib/env';
+import {
+  clearCachedAuthSnapshot,
+  getCachedAuthSnapshot,
+  getThemePreference,
+  setCachedAuthSnapshot,
+} from '@/lib/local-storage';
 import { setSupabaseAccessTokenGetter, supabase } from '@/lib/supabase';
 
 function SupabaseAuthBridge({ children }: PropsWithChildren) {
@@ -57,7 +63,17 @@ function AuthGate({ children }: PropsWithChildren) {
       return;
     }
 
-    setIsProfileLoading(true);
+    const cachedProfile = getCachedAuthSnapshot();
+    const canUseCachedProfile =
+      cachedProfile.lastSignedIn &&
+      cachedProfile.userId === userId &&
+      typeof cachedProfile.onboardingCompleted === 'boolean';
+
+    if (canUseCachedProfile) {
+      setOnboardingCompleted(cachedProfile.onboardingCompleted);
+    }
+
+    setIsProfileLoading(!canUseCachedProfile);
 
     try {
       await supabase.rpc('ensure_user_profile');
@@ -72,18 +88,35 @@ function AuthGate({ children }: PropsWithChildren) {
         throw error;
       }
 
-      setOnboardingCompleted(Boolean(data?.onboarding_completed));
+      const nextOnboardingCompleted = Boolean(data?.onboarding_completed);
+
+      setCachedAuthSnapshot({
+        lastSignedIn: true,
+        userId,
+        onboardingCompleted: nextOnboardingCompleted,
+      });
+      setOnboardingCompleted(nextOnboardingCompleted);
     } catch (error) {
       console.warn('Unable to load Supabase user profile', error);
-      setOnboardingCompleted(false);
+      if (!canUseCachedProfile) {
+        setOnboardingCompleted(false);
+      }
     } finally {
       setIsProfileLoading(false);
     }
   }, [userId]);
 
   const markOnboardingCompleted = useCallback(() => {
+    if (userId) {
+      setCachedAuthSnapshot({
+        lastSignedIn: true,
+        userId,
+        onboardingCompleted: true,
+      });
+    }
+
     setOnboardingCompleted(true);
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     if (!isLoaded) {
@@ -91,6 +124,7 @@ function AuthGate({ children }: PropsWithChildren) {
     }
 
     if (!isSignedIn) {
+      clearCachedAuthSnapshot();
       setOnboardingCompleted(null);
       setIsProfileLoading(false);
 
@@ -150,11 +184,14 @@ function AuthGate({ children }: PropsWithChildren) {
 
 export function AppProviders({ children }: PropsWithChildren) {
   const colorScheme = useColorScheme();
+  const [themePreference] = useState(() => getThemePreference());
+  const resolvedColorScheme =
+    themePreference === 'system' ? colorScheme : themePreference;
 
   return (
     <ClerkProvider publishableKey={clerkPublishableKey} tokenCache={clerkTokenCache}>
       <SupabaseAuthBridge>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <ThemeProvider value={resolvedColorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <AuthGate>{children}</AuthGate>
         </ThemeProvider>
       </SupabaseAuthBridge>
