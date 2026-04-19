@@ -8,9 +8,11 @@
     "scheme": "euworksupport",
     "userInterfaceStyle": "automatic",
     "ios": {
+      "bundleIdentifier": "com.euworksupport.app",
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "package": "com.euworksupport.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -41,6 +43,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "02bd2770-4cf7-499e-88bd-41564e2aab57"
+      }
     }
   }
 }
