@@ -1,7 +1,8 @@
-import { useClerk } from "@clerk/expo";
-import { Pressable, Text, View } from "react-native";
+import { useClerk } from '@clerk/expo';
+import { Pressable, Text, View } from 'react-native';
 
-import { ScreenPlaceholder } from "@/components/ui/screen-placeholder";
+import { ScreenPlaceholder } from '@/components/ui/screen-placeholder';
+import { BottomTabInset } from '@/constants/theme';
 
 export default function ProfileScreen() {
   const { signOut } = useClerk();
@@ -19,11 +20,10 @@ export default function ProfileScreen() {
           "Refer and earn",
         ]}
       />
-      <View className="px-6 pb-24">
+      <View className="px-6 pt-4" style={{ paddingBottom: BottomTabInset }}>
         <Pressable
           onPress={() => signOut()}
-          className="h-12 items-center justify-center rounded-interactive bg-diplomatic-surfaceHigh"
-        >
+          className="h-12 items-center justify-center rounded-interactive bg-diplomatic-surfaceHigh">
           <Text className="text-sm font-bold tracking-normal text-diplomatic-ink">
             Sign out
           </Text>
