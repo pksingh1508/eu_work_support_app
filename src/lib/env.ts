@@ -9,6 +9,10 @@ type RequiredPublicEnv = {
   oneSignalAppId: string;
 };
 
+type OptionalPublicEnv = {
+  clerkSupabaseJwtTemplate?: string;
+};
+
 const requiredEnv = {
   clerkPublishableKey: process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY,
   supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
@@ -29,9 +33,12 @@ if (missingEnv.length > 0) {
 
 export const env = requiredEnv as RequiredPublicEnv;
 
+export const optionalEnv: OptionalPublicEnv = {
+  clerkSupabaseJwtTemplate: process.env.EXPO_PUBLIC_CLERK_SUPABASE_JWT_TEMPLATE || undefined,
+};
+
 export const revenueCatApiKey = Platform.select({
   ios: env.revenueCatIosApiKey,
   android: env.revenueCatAndroidApiKey,
   default: env.revenueCatIosApiKey,
 });
-

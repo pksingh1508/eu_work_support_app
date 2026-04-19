@@ -1396,3 +1396,52 @@ Common mistakes:
 - Copying the wrong Clerk signing secret.
 - Putting the service-role key in the mobile app instead of Edge Function secrets.
 - Using a UUID column for Clerk user IDs. Clerk user IDs must be stored as `text`.
+
+### Step 8: Enable Clerk tokens for mobile app RLS queries
+
+The Clerk webhook only syncs user rows into `app_users`. It does not make the Expo app authenticated to Supabase for direct RLS-protected queries.
+
+If the mobile app shows this error:
+
+```text
+PGRST301: No suitable key was found to decode the JWT
+```
+
+it means Supabase received a Clerk JWT from the app, but your Supabase project is not yet configured to verify that token.
+
+Recommended setup:
+
+1. In Clerk Dashboard, configure Supabase compatibility for your Clerk instance.
+2. Make sure Clerk session tokens include this claim:
+
+```json
+{
+  "role": "authenticated"
+}
+```
+
+3. In Supabase Dashboard, open Authentication.
+4. Open Third-Party Auth.
+5. Add Clerk as a provider.
+6. Enter the Clerk domain/issuer requested by Supabase.
+7. Save the integration.
+8. Restart the Expo dev server.
+9. Sign out of the app and sign in again so Clerk issues a fresh token.
+
+The app is already configured to send Clerk's session token to Supabase with:
+
+```ts
+accessToken: async () => session?.getToken() ?? null
+```
+
+After the Third-Party Auth integration is enabled, Supabase can verify the Clerk token and the existing RLS policies using `auth.jwt()->>'sub'` will work.
+
+Legacy fallback:
+
+If you decide to use Clerk's older Supabase JWT template approach instead of Supabase Third-Party Auth, create a Clerk JWT template, commonly named `supabase`, and add this public env value:
+
+```env
+EXPO_PUBLIC_CLERK_SUPABASE_JWT_TEMPLATE=supabase
+```
+
+Then restart Expo and sign in again. The Third-Party Auth setup above is preferred because it avoids sharing the Supabase JWT secret with Clerk.
