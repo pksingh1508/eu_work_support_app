@@ -1,14 +1,12 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import React from 'react';
-import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { AppProviders } from '@/components/app-providers';
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <AppProviders>
       <AnimatedSplashOverlay />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
@@ -22,6 +20,6 @@ export default function RootLayout() {
         <Stack.Screen name="billing/paywall" />
         <Stack.Screen name="billing/manage" />
       </Stack>
-    </ThemeProvider>
+    </AppProviders>
   );
 }

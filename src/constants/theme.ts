@@ -1,30 +1,68 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
 import "@/global.css";
 
 import { Platform } from "react-native";
 
 export const Colors = {
   light: {
-    text: "#000000",
-    background: "#ffffff",
-    backgroundElement: "#F0F0F3",
-    backgroundSelected: "#E0E1E6",
-    textSecondary: "#60646C",
+    text: "#131B2E",
+    background: "#FAF8FF",
+    backgroundElement: "#F2F3FF",
+    backgroundSelected: "#E2E7FF",
+    textSecondary: "#5F6678",
+    primary: "#0058BC",
+    primaryContainer: "#0070EB",
+    onPrimary: "#FFFFFF",
+    surface: "#FAF8FF",
+    surfaceLowest: "#FFFFFF",
+    surfaceLow: "#F2F3FF",
+    surfaceHigh: "#E2E7FF",
+    outlineVariant: "#8C93A6",
+    error: "#BA1A1A",
+    errorContainer: "#FFEDEA",
+    tertiary: "#C15300",
   },
   dark: {
-    text: "#ffffff",
-    background: "#000000",
-    backgroundElement: "#212225",
-    backgroundSelected: "#2E3135",
-    textSecondary: "#B0B4BA",
+    text: "#F6F7FF",
+    background: "#101626",
+    backgroundElement: "#1B2438",
+    backgroundSelected: "#26324B",
+    textSecondary: "#C5CAD8",
+    primary: "#8FBEFF",
+    primaryContainer: "#4A93F1",
+    onPrimary: "#07111F",
+    surface: "#101626",
+    surfaceLowest: "#182035",
+    surfaceLow: "#1B2438",
+    surfaceHigh: "#26324B",
+    outlineVariant: "#747D91",
+    error: "#FFB4AB",
+    errorContainer: "#3E1110",
+    tertiary: "#FFB787",
   },
 } as const;
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
+
+export const Gradients = {
+  primary: ["#0058BC", "#0070EB"] as const,
+} as const;
+
+export const Radii = {
+  flag: 4,
+  interactive: 8,
+  md: 12,
+  xl: 24,
+} as const;
+
+export const Shadows = {
+  ambient: {
+    shadowColor: "#131B2E",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.06,
+    shadowRadius: 32,
+    elevation: 3,
+  },
+} as const;
 
 export const Fonts = Platform.select({
   ios: {
