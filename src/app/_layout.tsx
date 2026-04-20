@@ -1,11 +1,11 @@
-import '@/global.css';
+import "@/global.css";
 
-import { Stack } from 'expo-router';
-import React from 'react';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Stack } from "expo-router";
+import React from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import { AppProviders } from '@/components/app-providers';
+import { AnimatedSplashOverlay } from "@/components/animated-icon";
+import { AppProviders } from "@/components/app-providers";
 
 export default function RootLayout() {
   return (
@@ -19,6 +19,7 @@ export default function RootLayout() {
           <Stack.Screen name="country/[slug]" />
           <Stack.Screen name="visa/[id]" />
           <Stack.Screen name="profile/settings" />
+          <Stack.Screen name="profile/edit" />
           <Stack.Screen name="profile/saved-items" />
           <Stack.Screen name="profile/help" />
           <Stack.Screen name="billing/paywall" />
