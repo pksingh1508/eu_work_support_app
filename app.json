@@ -10,7 +10,10 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "com.euworksupport.app",
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.euworksupport.app",
