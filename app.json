@@ -4,31 +4,30 @@
     "slug": "eu_work_support",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/adaptive-icon.png",
     "newArchEnabled": true,
     "scheme": "euworksupport",
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "com.euworksupport.app",
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/iosIcons.icon",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.euworksupport.app",
+      "icon": "./assets/images/adaptive-icon.png",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#002396",
+        "foregroundImage": "./assets/images/adaptive-icon.png"
       },
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/adaptive-icon.png"
     },
     "plugins": [
       "@clerk/expo",
@@ -36,10 +35,30 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "image": "./assets/images/splash-icon-light.png",
+          "backgroundColor": "#FFFFFF",
+          "imageWidth": 200,
+          "dark": {
+            "image": "./assets/images/splash-icon-dark.png",
+            "backgroundColor": "#000000"
+          },
           "android": {
-            "image": "./assets/images/splash-icon.png",
-            "imageWidth": 76
+            "image": "./assets/images/splash-icon-light.png",
+            "backgroundColor": "#FFFFFF",
+            "imageWidth": 200,
+            "dark": {
+              "image": "./assets/images/splash-icon-dark.png",
+              "backgroundColor": "#000000"
+            }
+          },
+          "ios": {
+            "image": "./assets/images/splash-icon-light.png",
+            "backgroundColor": "#FFFFFF",
+            "imageWidth": 200,
+            "dark": {
+              "image": "./assets/images/splash-icon-dark.png",
+              "backgroundColor": "#000000"
+            }
           }
         }
       ]
