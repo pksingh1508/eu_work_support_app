@@ -669,6 +669,13 @@ function ContentSectionView({ section }: { section: ContentSection }) {
 function TableSection({ section }: { section: ContentSection }) {
   const columns = Array.isArray(section.columns) ? section.columns : [];
   const rows = Array.isArray(section.rows) ? section.rows : [];
+  const columnCount = Math.max(
+    columns.length,
+    ...rows.map((row) => row?.length ?? 0),
+    1,
+  );
+  const columnWidth = columnCount <= 2 ? 220 : 170;
+  const tableWidth = columnWidth * columnCount;
 
   return (
     <View className="rounded-interactive border border-[#E0E5EF] bg-white px-4 py-4">
@@ -683,13 +690,17 @@ function TableSection({ section }: { section: ContentSection }) {
         className="mt-3"
         showsHorizontalScrollIndicator={false}
       >
-        <View className="min-w-[390px] overflow-hidden rounded-interactive border border-[#E0E5EF]">
+        <View
+          className="overflow-hidden rounded-interactive border border-[#E0E5EF]"
+          style={{ minWidth: tableWidth }}
+        >
           {columns.length > 0 ? (
             <View className="flex-row bg-diplomatic-surfaceHigh">
               {columns.map((column) => (
                 <Text
                   key={column}
-                  className="min-w-[170px] flex-1 px-3 py-3 text-sm font-extrabold uppercase tracking-normal text-diplomatic-ink"
+                  className="px-3 py-3 text-left text-sm font-extrabold uppercase tracking-normal text-diplomatic-ink"
+                  style={{ width: columnWidth, textAlign: "left" }}
                 >
                   {column}
                 </Text>
@@ -705,7 +716,8 @@ function TableSection({ section }: { section: ContentSection }) {
               {(Array.isArray(row) ? row : []).map((cell, cellIndex) => (
                 <Text
                   key={`${rowIndex}-${cellIndex}`}
-                  className="min-w-[170px] flex-1 px-3 py-4 text-sm font-semibold leading-6 tracking-normal text-diplomatic-secondaryText"
+                  className="px-3 py-4 text-left text-sm font-semibold leading-6 tracking-normal text-diplomatic-secondaryText"
+                  style={{ width: columnWidth, textAlign: "left" }}
                 >
                   {stringifyValue(cell)}
                 </Text>
