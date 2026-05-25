@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   Text,
@@ -17,6 +18,8 @@ import {
   fetchSavedItems,
   SavedCountry,
   SavedDocument,
+  setCountrySaved,
+  setDocumentSaved,
 } from "@/lib/saved-items";
 
 type SavedItem =
@@ -41,6 +44,7 @@ export default function SavedScreen() {
   const { userId } = useAuth();
   const [savedItems, setSavedItems] = useState<SavedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [updatingItemKey, setUpdatingItemKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useFocusEffect(
@@ -111,6 +115,48 @@ export default function SavedScreen() {
     router.push(`/visa/${item.documentId}`);
   };
 
+  const unsaveItem = async (item: SavedItem) => {
+    if (!userId) {
+      Alert.alert("Sign in required", "Please sign in to update saved items.");
+      return;
+    }
+
+    const itemKey = `${item.type}-${item.id}`;
+    const previousItems = savedItems;
+
+    setUpdatingItemKey(itemKey);
+    setSavedItems((currentItems) =>
+      currentItems.filter(
+        (currentItem) => `${currentItem.type}-${currentItem.id}` !== itemKey,
+      ),
+    );
+
+    try {
+      if (item.type === "country") {
+        await setCountrySaved({
+          clerkUserId: userId,
+          countryId: item.countryId,
+          shouldSave: false,
+        });
+      } else {
+        await setDocumentSaved({
+          clerkUserId: userId,
+          documentId: item.documentId,
+          shouldSave: false,
+        });
+      }
+    } catch (error) {
+      console.warn("Unable to remove saved item", error);
+      setSavedItems(previousItems);
+      Alert.alert(
+        "Could not remove saved item",
+        "Please try again in a moment.",
+      );
+    } finally {
+      setUpdatingItemKey(null);
+    }
+  };
+
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-diplomatic-surface">
       <ScrollView
@@ -162,7 +208,9 @@ export default function SavedScreen() {
                 <SavedGuideCard
                   key={`${item.type}-${item.id}`}
                   item={item}
+                  isUpdating={updatingItemKey === `${item.type}-${item.id}`}
                   onPress={() => openSavedItem(item)}
+                  onUnsave={() => unsaveItem(item)}
                 />
               ))}
             </View>
@@ -175,10 +223,14 @@ export default function SavedScreen() {
 
 function SavedGuideCard({
   item,
+  isUpdating,
   onPress,
+  onUnsave,
 }: {
   item: SavedItem;
+  isUpdating: boolean;
   onPress: () => void;
+  onUnsave: () => void;
 }) {
   const isCountry = item.type === "country";
   const title = isCountry ? item.name : item.title;
@@ -213,7 +265,16 @@ function SavedGuideCard({
             </Text>
           </View>
         </View>
-        <Ionicons name="bookmark" size={22} color="#1E7AF2" />
+        <Pressable
+          onPress={onUnsave}
+          disabled={isUpdating}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={`Unsave ${title}`}
+          className="h-9 w-9 items-center justify-center rounded-full bg-[#DFF3E6] active:opacity-70 disabled:opacity-60"
+        >
+          <Ionicons name="bookmark" size={21} color="#183B2B" />
+        </Pressable>
       </View>
 
       {description ? (

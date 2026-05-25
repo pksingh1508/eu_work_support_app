@@ -513,12 +513,14 @@ function CountryListCard({
           hitSlop={12}
           accessibilityRole="button"
           accessibilityLabel={isSaved ? `Unsave ${country}` : `Save ${country}`}
-          className="h-8 w-8 items-center justify-center rounded-full active:opacity-70 disabled:opacity-50"
+          className={`h-8 w-8 items-center justify-center rounded-full active:opacity-70 disabled:opacity-60 ${
+            isSaved ? "bg-[#DFF3E6]" : "bg-transparent"
+          }`}
         >
           <Ionicons
             name={bookmarkIcon}
             size={21}
-            color={isSaved ? "#1E7AF2" : "#7C8497"}
+            color={isSaved ? "#183B2B" : "#2F3A4A"}
           />
         </Pressable>
       </View>

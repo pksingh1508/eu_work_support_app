@@ -424,7 +424,9 @@ export default function CountryDetailScreen() {
               <Pressable
                 onPress={toggleSavedCountry}
                 disabled={!country || isSavingCountry}
-                className="h-10 w-10 items-center justify-center rounded-interactive bg-diplomatic-primary disabled:opacity-50"
+                className={`h-10 w-10 items-center justify-center rounded-interactive active:opacity-70 disabled:opacity-60 ${
+                  isCountrySavedState ? "bg-[#DFF3E6]" : "bg-transparent"
+                }`}
                 accessibilityRole="button"
                 accessibilityLabel={
                   isCountrySavedState
@@ -435,7 +437,7 @@ export default function CountryDetailScreen() {
                 <Ionicons
                   name={isCountrySavedState ? "bookmark" : "bookmark-outline"}
                   size={19}
-                  color="#FFFFFF"
+                  color={isCountrySavedState ? "#183B2B" : "#2F3A4A"}
                 />
               </Pressable>
             </View>

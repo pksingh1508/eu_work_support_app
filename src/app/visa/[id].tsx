@@ -370,7 +370,9 @@ export default function VisaDocumentScreen() {
             <Pressable
               onPress={toggleSavedDocument}
               disabled={!document || isSavingDocument}
-              className="h-10 w-10 items-center justify-center rounded-interactive bg-diplomatic-primary disabled:opacity-50"
+              className={`h-10 w-10 items-center justify-center rounded-interactive active:opacity-70 disabled:opacity-60 ${
+                isDocumentSavedState ? "bg-[#DFF3E6]" : "bg-transparent"
+              }`}
               accessibilityRole="button"
               accessibilityLabel={
                 isDocumentSavedState
@@ -381,7 +383,7 @@ export default function VisaDocumentScreen() {
               <Ionicons
                 name={isDocumentSavedState ? "bookmark" : "bookmark-outline"}
                 size={19}
-                color="#FFFFFF"
+                color={isDocumentSavedState ? "#183B2B" : "#2F3A4A"}
               />
             </Pressable>
           </View>
