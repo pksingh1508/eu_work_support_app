@@ -86,8 +86,7 @@ export default function ProfileSettingsScreen() {
             Account safety
           </Text>
           <Text className="mt-2 text-sm font-semibold leading-5 tracking-normal text-diplomatic-secondaryText">
-            Your saved guides and billing data are protected with secure account
-            access.
+            Your saved guides are protected with secure account access.
           </Text>
         </View>
 

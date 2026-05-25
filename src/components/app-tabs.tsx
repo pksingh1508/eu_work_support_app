@@ -58,14 +58,6 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Label>Saved</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="billing" disableTransparentOnScrollEdge>
-        <NativeTabs.Trigger.Icon
-          md="credit_card"
-          sf={{ default: 'creditcard', selected: 'creditcard.fill' }}
-        />
-        <NativeTabs.Trigger.Label>Billing</NativeTabs.Trigger.Label>
-      </NativeTabs.Trigger>
-
       <NativeTabs.Trigger name="profile" disableTransparentOnScrollEdge>
         <NativeTabs.Trigger.Icon
           md="person"

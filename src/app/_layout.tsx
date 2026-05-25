@@ -22,8 +22,6 @@ export default function RootLayout() {
           <Stack.Screen name="profile/edit" />
           <Stack.Screen name="profile/saved-items" />
           <Stack.Screen name="profile/help" />
-          <Stack.Screen name="billing/paywall" />
-          <Stack.Screen name="billing/manage" />
         </Stack>
       </AppProviders>
     </GestureHandlerRootView>
