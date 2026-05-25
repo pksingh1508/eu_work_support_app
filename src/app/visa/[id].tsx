@@ -1,8 +1,10 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useAuth } from "@clerk/expo";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Linking,
   Pressable,
   ScrollView,
@@ -12,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { isDocumentSaved, setDocumentSaved } from "@/lib/saved-items";
 import { supabase } from "@/lib/supabase";
 
 const documentSelect = `
@@ -204,10 +207,13 @@ async function fetchVisaDocument(id: string) {
 
 export default function VisaDocumentScreen() {
   const router = useRouter();
+  const { userId } = useAuth();
   const { id } = useLocalSearchParams<{ id: string }>();
   const documentId = Array.isArray(id) ? id[0] : id;
   const [document, setDocument] = useState<VisaDocument | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDocumentSavedState, setIsDocumentSavedState] = useState(false);
+  const [isSavingDocument, setIsSavingDocument] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -251,6 +257,33 @@ export default function VisaDocumentScreen() {
     };
   }, [documentId]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadSavedState() {
+      if (!userId || !document?.id) {
+        setIsDocumentSavedState(false);
+        return;
+      }
+
+      try {
+        const nextIsSaved = await isDocumentSaved(userId, document.id);
+
+        if (isMounted) {
+          setIsDocumentSavedState(nextIsSaved);
+        }
+      } catch (error) {
+        console.warn("Unable to load saved document state", error);
+      }
+    }
+
+    void loadSavedState();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [document?.id, userId]);
+
   const overviewText = useMemo(() => {
     if (!document) {
       return "";
@@ -271,6 +304,39 @@ export default function VisaDocumentScreen() {
     await Share.share({
       message: `${document.title} for ${document.countryName} in EU Work Support.`,
     });
+  };
+
+  const toggleSavedDocument = async () => {
+    if (!document) {
+      return;
+    }
+
+    if (!userId) {
+      Alert.alert("Sign in required", "Please sign in to save documents.");
+      return;
+    }
+
+    const nextIsSaved = !isDocumentSavedState;
+
+    setIsSavingDocument(true);
+    setIsDocumentSavedState(nextIsSaved);
+
+    try {
+      await setDocumentSaved({
+        clerkUserId: userId,
+        documentId: document.id,
+        shouldSave: nextIsSaved,
+      });
+    } catch (error) {
+      console.warn("Unable to update saved document", error);
+      setIsDocumentSavedState(!nextIsSaved);
+      Alert.alert(
+        "Could not update saved document",
+        "Please try again in a moment.",
+      );
+    } finally {
+      setIsSavingDocument(false);
+    }
   };
 
   return (
@@ -302,10 +368,21 @@ export default function VisaDocumentScreen() {
               <Ionicons name="share-social-outline" size={19} color="#0A0F1A" />
             </Pressable>
             <Pressable
-              className="h-10 w-10 items-center justify-center rounded-interactive bg-diplomatic-primary"
+              onPress={toggleSavedDocument}
+              disabled={!document || isSavingDocument}
+              className="h-10 w-10 items-center justify-center rounded-interactive bg-diplomatic-primary disabled:opacity-50"
               accessibilityRole="button"
+              accessibilityLabel={
+                isDocumentSavedState
+                  ? `Unsave ${document?.title ?? "document"}`
+                  : `Save ${document?.title ?? "document"}`
+              }
             >
-              <Ionicons name="bookmark-outline" size={19} color="#FFFFFF" />
+              <Ionicons
+                name={isDocumentSavedState ? "bookmark" : "bookmark-outline"}
+                size={19}
+                color="#FFFFFF"
+              />
             </Pressable>
           </View>
         </View>

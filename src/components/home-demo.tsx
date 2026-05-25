@@ -1,8 +1,17 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useAuth } from "@clerk/expo";
+import { useFocusEffect } from "@react-navigation/native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { useCallback, useMemo, useState } from "react";
+import {
+  Alert,
+  GestureResponderEvent,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
@@ -12,6 +21,11 @@ import {
   topRated,
 } from "@/constants/country";
 import { BottomTabInset } from "@/constants/theme";
+import {
+  fetchCountryIdBySlug,
+  fetchSavedCountrySlugs,
+  setCountrySaved,
+} from "@/lib/saved-items";
 
 type FilterKey = "all" | "top-rated" | "easiest-visa";
 
@@ -193,7 +207,17 @@ function getFlagUrl(country: CountryName) {
 
 export function HomeDemo() {
   const router = useRouter();
+  const { userId } = useAuth();
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
+  const [savedCountrySlugs, setSavedCountrySlugs] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [countryIdsBySlug, setCountryIdsBySlug] = useState<
+    Record<string, string>
+  >({});
+  const [savingCountrySlug, setSavingCountrySlug] = useState<string | null>(
+    null,
+  );
 
   const filteredCountries = useMemo(() => {
     if (activeFilter === "top-rated") {
@@ -210,6 +234,94 @@ export function HomeDemo() {
   const openCountry = (country: CountryName) => {
     router.push(`/country/${getCountrySlug(country)}`);
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      async function loadSavedCountries() {
+        if (!userId) {
+          setSavedCountrySlugs(new Set());
+          return;
+        }
+
+        try {
+          const slugs = await fetchSavedCountrySlugs(userId);
+
+          if (isActive) {
+            setSavedCountrySlugs(new Set(slugs));
+          }
+        } catch (error) {
+          console.warn("Unable to load saved countries", error);
+        }
+      }
+
+      void loadSavedCountries();
+
+      return () => {
+        isActive = false;
+      };
+    }, [userId]),
+  );
+
+  const toggleSavedCountry = useCallback(
+    async (country: CountryName) => {
+      if (!userId) {
+        Alert.alert("Sign in required", "Please sign in to save countries.");
+        return;
+      }
+
+      const slug = getCountrySlug(country);
+      const shouldSave = !savedCountrySlugs.has(slug);
+      const previousSavedSlugs = savedCountrySlugs;
+
+      setSavingCountrySlug(slug);
+      setSavedCountrySlugs((currentSlugs) => {
+        const nextSlugs = new Set(currentSlugs);
+
+        if (shouldSave) {
+          nextSlugs.add(slug);
+        } else {
+          nextSlugs.delete(slug);
+        }
+
+        return nextSlugs;
+      });
+
+      try {
+        let countryId = countryIdsBySlug[slug];
+
+        if (!countryId) {
+          countryId = await fetchCountryIdBySlug(slug);
+
+          if (!countryId) {
+            throw new Error("Country not found.");
+          }
+
+          setCountryIdsBySlug((currentIds) => ({
+            ...currentIds,
+            [slug]: countryId,
+          }));
+        }
+
+        await setCountrySaved({
+          clerkUserId: userId,
+          countryId,
+          shouldSave,
+        });
+      } catch (error) {
+        console.warn("Unable to update saved country", error);
+        setSavedCountrySlugs(previousSavedSlugs);
+        Alert.alert(
+          "Could not update saved country",
+          "Please try again in a moment.",
+        );
+      } finally {
+        setSavingCountrySlug(null);
+      }
+    },
+    [countryIdsBySlug, savedCountrySlugs, userId],
+  );
 
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-diplomatic-surface">
@@ -300,6 +412,9 @@ export function HomeDemo() {
                 key={country}
                 country={country}
                 onPress={openCountry}
+                isSaved={savedCountrySlugs.has(getCountrySlug(country))}
+                isSaving={savingCountrySlug === getCountrySlug(country)}
+                onToggleSave={toggleSavedCountry}
               />
             ))}
           </View>
@@ -364,11 +479,18 @@ function PopularDestinationCard({
 function CountryListCard({
   country,
   onPress,
+  isSaved,
+  isSaving,
+  onToggleSave,
 }: {
   country: CountryName;
   onPress: (country: CountryName) => void;
+  isSaved: boolean;
+  isSaving: boolean;
+  onToggleSave: (country: CountryName) => void;
 }) {
   const details = countryDetails[country];
+  const bookmarkIcon = isSaved ? "bookmark" : "bookmark-outline";
 
   return (
     <Pressable
@@ -382,7 +504,23 @@ function CountryListCard({
           style={{ width: 30, height: 20, borderRadius: 3 }}
           contentFit="cover"
         />
-        <Ionicons name="bookmark" size={20} color="#7C8497" />
+        <Pressable
+          onPress={(event: GestureResponderEvent) => {
+            event.stopPropagation();
+            onToggleSave(country);
+          }}
+          disabled={isSaving}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={isSaved ? `Unsave ${country}` : `Save ${country}`}
+          className="h-8 w-8 items-center justify-center rounded-full active:opacity-70 disabled:opacity-50"
+        >
+          <Ionicons
+            name={bookmarkIcon}
+            size={21}
+            color={isSaved ? "#1E7AF2" : "#7C8497"}
+          />
+        </Pressable>
       </View>
       <Text className="mt-7 text-[20px] font-extrabold tracking-normal text-diplomatic-ink">
         {country}

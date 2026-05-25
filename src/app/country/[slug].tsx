@@ -1,8 +1,10 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useAuth } from "@clerk/expo";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Linking,
   Modal,
   Pressable,
@@ -14,6 +16,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BottomTabInset } from "@/constants/theme";
+import { isCountrySaved, setCountrySaved } from "@/lib/saved-items";
 import { supabase } from "@/lib/supabase";
 
 const countrySelect = `
@@ -245,12 +248,15 @@ async function fetchCountry(slug: string) {
 
 export default function CountryDetailScreen() {
   const router = useRouter();
+  const { userId } = useAuth();
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const countrySlug = Array.isArray(slug) ? slug[0] : slug;
   const [country, setCountry] = useState<CountryState | null>(null);
   const [selectedDocument, setSelectedDocument] =
     useState<CountryDocument | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCountrySavedState, setIsCountrySavedState] = useState(false);
+  const [isSavingCountry, setIsSavingCountry] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -294,6 +300,33 @@ export default function CountryDetailScreen() {
     };
   }, [countrySlug]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadSavedState() {
+      if (!userId || !country?.id) {
+        setIsCountrySavedState(false);
+        return;
+      }
+
+      try {
+        const nextIsSaved = await isCountrySaved(userId, country.id);
+
+        if (isMounted) {
+          setIsCountrySavedState(nextIsSaved);
+        }
+      } catch (error) {
+        console.warn("Unable to load saved country state", error);
+      }
+    }
+
+    void loadSavedState();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [country?.id, userId]);
+
   const overviewText =
     country?.shortDescription ??
     `${country?.name ?? "This country"} visa, immigration, work, study, and document guidance.`;
@@ -320,6 +353,39 @@ export default function CountryDetailScreen() {
     await Share.share({
       message: `${country.name} immigration and visa guide in EU Work Support.`,
     });
+  };
+
+  const toggleSavedCountry = async () => {
+    if (!country) {
+      return;
+    }
+
+    if (!userId) {
+      Alert.alert("Sign in required", "Please sign in to save countries.");
+      return;
+    }
+
+    const nextIsSaved = !isCountrySavedState;
+
+    setIsSavingCountry(true);
+    setIsCountrySavedState(nextIsSaved);
+
+    try {
+      await setCountrySaved({
+        clerkUserId: userId,
+        countryId: country.id,
+        shouldSave: nextIsSaved,
+      });
+    } catch (error) {
+      console.warn("Unable to update saved country", error);
+      setIsCountrySavedState(!nextIsSaved);
+      Alert.alert(
+        "Could not update saved country",
+        "Please try again in a moment.",
+      );
+    } finally {
+      setIsSavingCountry(false);
+    }
   };
 
   return (
@@ -356,10 +422,21 @@ export default function CountryDetailScreen() {
                 />
               </Pressable>
               <Pressable
-                className="h-10 w-10 items-center justify-center rounded-interactive bg-diplomatic-primary"
+                onPress={toggleSavedCountry}
+                disabled={!country || isSavingCountry}
+                className="h-10 w-10 items-center justify-center rounded-interactive bg-diplomatic-primary disabled:opacity-50"
                 accessibilityRole="button"
+                accessibilityLabel={
+                  isCountrySavedState
+                    ? `Unsave ${country?.name ?? "country"}`
+                    : `Save ${country?.name ?? "country"}`
+                }
               >
-                <Ionicons name="bookmark-outline" size={19} color="#FFFFFF" />
+                <Ionicons
+                  name={isCountrySavedState ? "bookmark" : "bookmark-outline"}
+                  size={19}
+                  color="#FFFFFF"
+                />
               </Pressable>
             </View>
           </View>
