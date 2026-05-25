@@ -167,7 +167,7 @@ export default function SavedScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View className="px-5 pt-8">
-          <Text className="text-[30px] font-extrabold tracking-normal text-diplomatic-ink">
+          <Text className="text-[30px] font-serif font-extrabold tracking-normal text-diplomatic-ink">
             Saved Guides
           </Text>
           <Text className="mt-3 max-w-[310px] text-base font-semibold leading-6 tracking-normal text-diplomatic-secondaryText">
@@ -195,7 +195,7 @@ export default function SavedScreen() {
           {!isLoading && !error && savedItems.length === 0 ? (
             <View className="mt-7 rounded-atelier bg-white px-5 py-7">
               <Ionicons name="bookmark-outline" size={32} color="#1E7AF2" />
-              <Text className="mt-4 text-xl font-extrabold tracking-normal text-diplomatic-ink">
+              <Text className="mt-4 text-xl font-serif font-extrabold tracking-normal text-diplomatic-ink">
                 No saved guides yet
               </Text>
               <Text className="mt-2 text-sm font-semibold leading-5 tracking-normal text-diplomatic-secondaryText">
@@ -307,7 +307,7 @@ function SavedGuideCard({
             <Text className="text-xs font-extrabold uppercase tracking-normal text-diplomatic-primary">
               {label}
             </Text>
-            <Text className="mt-1 text-2xl font-extrabold tracking-normal text-diplomatic-ink">
+            <Text className="mt-1 text-2xl font-serif font-extrabold tracking-normal text-diplomatic-ink">
               {title}
             </Text>
           </View>

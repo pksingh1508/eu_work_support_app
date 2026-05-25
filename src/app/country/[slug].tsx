@@ -455,7 +455,7 @@ export default function CountryDetailScreen() {
           {!isLoading && error ? (
             <View className="mt-8 rounded-atelier bg-white px-6 py-8">
               <Ionicons name="alert-circle-outline" size={30} color="#BA1A1A" />
-              <Text className="mt-4 text-xl font-extrabold tracking-normal text-diplomatic-ink">
+              <Text className="mt-4 text-xl font-serif font-extrabold tracking-normal text-diplomatic-ink">
                 {error}
               </Text>
               <Pressable
@@ -494,7 +494,7 @@ export default function CountryDetailScreen() {
                   </View>
                 </View>
 
-                <Text className="mt-4 text-[34px] font-extrabold leading-10 tracking-normal text-white">
+                <Text className="mt-4 text-[34px] font-serif font-extrabold leading-10 tracking-normal text-white">
                   {country.name}
                 </Text>
                 <Text className="mt-1 text-base font-semibold leading-6 tracking-normal text-white opacity-80">
@@ -639,7 +639,7 @@ function DocumentModal({
                   <Text className="text-sm font-extrabold uppercase tracking-normal text-diplomatic-primary">
                     {document.categoryName}
                   </Text>
-                  <Text className="mt-1 text-2xl font-extrabold tracking-normal text-diplomatic-ink">
+                  <Text className="mt-1 text-2xl font-serif font-extrabold tracking-normal text-diplomatic-ink">
                     {document.title}
                   </Text>
                 </View>

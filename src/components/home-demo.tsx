@@ -386,7 +386,7 @@ export function HomeDemo() {
         ListHeaderComponent={
           <>
             <View className="px-5 pt-7">
-              <Text className="text-[32px] font-extrabold leading-9 tracking-normal text-diplomatic-ink">
+              <Text className="text-[32px] font-serif font-extrabold leading-9 tracking-normal text-diplomatic-ink">
                 Welcome
               </Text>
               <Text className="mt-2 text-[17px] font-semibold leading-6 tracking-normal text-diplomatic-secondaryText">
@@ -409,7 +409,7 @@ export function HomeDemo() {
 
             <View className="pt-4">
               <View className="px-5">
-                <Text className="text-[25px] font-extrabold tracking-normal text-diplomatic-ink">
+                <Text className="text-[25px] font-serif font-extrabold tracking-normal text-diplomatic-ink">
                   Popular Destinations
                 </Text>
               </View>
@@ -581,7 +581,7 @@ function PopularDestinationCard({
         </View>
         <View className="flex-row items-end justify-between gap-4">
           <View className="flex-1">
-            <Text className="text-[29px] font-extrabold tracking-normal text-white">
+            <Text className="text-[29px] font-serif font-extrabold tracking-normal text-white">
               {country}
             </Text>
             <Text className="mt-1 text-[15px] font-semibold leading-5 tracking-normal text-white opacity-85">
@@ -645,7 +645,7 @@ function CountryListCard({
           />
         </Pressable>
       </View>
-      <Text className="mt-7 text-[20px] font-extrabold tracking-normal text-diplomatic-ink">
+      <Text className="mt-7 text-[20px] font-serif font-extrabold tracking-normal text-diplomatic-ink">
         {country}
       </Text>
       <Text className="mt-1 text-sm font-semibold tracking-normal text-diplomatic-secondaryText">

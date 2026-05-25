@@ -240,7 +240,7 @@ function OnboardingSlideFrame({
 function SlideCopy({ title, description }: { title: string; description: string }) {
   return (
     <View className="mt-7 items-center px-3">
-      <Text className="text-center text-[28px] font-extrabold leading-9 tracking-normal text-[#111827]">
+      <Text className="text-center text-[28px] font-serif font-extrabold leading-9 tracking-normal text-[#111827]">
         {title}
       </Text>
       <Text className="mt-4 text-center text-base leading-6 tracking-normal text-diplomatic-secondaryText">

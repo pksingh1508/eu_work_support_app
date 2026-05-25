@@ -92,7 +92,7 @@ export default function ProfileScreen() {
       >
         <View className="px-5 pt-7">
           <View className="flex-row items-center justify-between">
-            <Text className="text-[30px] font-extrabold tracking-normal text-diplomatic-ink">
+            <Text className="text-[30px] font-serif font-extrabold tracking-normal text-diplomatic-ink">
               Profile
             </Text>
             <Pressable
@@ -106,11 +106,11 @@ export default function ProfileScreen() {
 
           <View className="mt-5 items-center rounded-interactive bg-white px-4 py-5">
             <View className="h-[74px] w-[74px] items-center justify-center rounded-interactive bg-[#0B1019]">
-              <Text className="text-[22px] font-extrabold tracking-normal text-white">
+              <Text className="text-[22px] font-serif font-extrabold tracking-normal text-white">
                 {initials}
               </Text>
             </View>
-            <Text className="mt-4 text-2xl font-extrabold tracking-normal text-diplomatic-ink">
+            <Text className="mt-4 text-2xl font-serif font-extrabold tracking-normal text-diplomatic-ink">
               {fullName}
             </Text>
             {email ? (

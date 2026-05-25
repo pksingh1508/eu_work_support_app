@@ -143,13 +143,13 @@ export default function EditProfileScreen() {
               </Text>
             </Pressable>
 
-            <Text className="text-[30px] font-extrabold tracking-normal text-diplomatic-ink">
+            <Text className="text-[30px] font-serif font-extrabold tracking-normal text-diplomatic-ink">
               Edit
             </Text>
           </View>
 
           <View className="mt-6 rounded-interactive bg-white px-4 py-5">
-            <Text className="text-2xl font-extrabold tracking-normal text-diplomatic-ink">
+            <Text className="text-2xl font-serif font-extrabold tracking-normal text-diplomatic-ink">
               Edit Profile
             </Text>
             <Text className="mt-2 text-sm font-semibold leading-5 tracking-normal text-diplomatic-secondaryText">

@@ -56,7 +56,7 @@ export function AuthCard({
               <Ionicons name="shield-checkmark-outline" size={25} color="#FFFFFF" />
             </View>
             <View>
-              <Text className="text-xl font-extrabold tracking-normal text-diplomatic-ink">
+              <Text className="text-xl font-serif font-extrabold tracking-normal text-diplomatic-ink">
                 EU Work Support
               </Text>
               <Text className="mt-1 text-sm font-semibold tracking-normal text-diplomatic-secondaryText">
@@ -66,7 +66,7 @@ export function AuthCard({
           </View>
 
           <View className="mt-8">
-            <Text className="text-[32px] font-extrabold leading-10 tracking-normal text-diplomatic-ink">
+            <Text className="text-[32px] font-serif font-extrabold leading-10 tracking-normal text-diplomatic-ink">
               {title}
             </Text>
             <Text className="mt-3 text-base leading-6 tracking-normal text-diplomatic-secondaryText">

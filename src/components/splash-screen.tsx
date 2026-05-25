@@ -94,7 +94,7 @@ export function SplashScreen({
           <RotatingStarCircle />
         </View>
 
-        <Text className="mt-7 text-center text-[30px] font-extrabold leading-9 tracking-normal text-white">
+        <Text className="mt-7 text-center text-[30px] font-serif font-extrabold leading-9 tracking-normal text-white">
           EU Work Support
         </Text>
         <Text className="mt-3 text-center text-base font-medium leading-6 tracking-normal text-[#E8F1FF]">

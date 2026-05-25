@@ -1,4 +1,5 @@
 import { ClerkProvider, useAuth } from "@clerk/expo";
+import { useFonts } from "expo-font";
 import {
   DarkTheme,
   DefaultTheme,
@@ -12,12 +13,19 @@ import {
   useMemo,
   useState,
 } from "react";
-import { useColorScheme } from "react-native";
+import {
+  Text,
+  TextInput,
+  useColorScheme,
+  type TextInputProps,
+  type TextProps,
+} from "react-native";
 
 import { SplashScreen } from "@/components/splash-screen";
 import { AuthProfileProvider } from "@/features/auth/auth-profile";
 import { clerkPublishableKey, clerkTokenCache } from "@/lib/clerk";
 import { optionalEnv } from "@/lib/env";
+import { appFonts, FontFamily } from "@/lib/fonts";
 import {
   clearCachedAuthSnapshot,
   getCachedAuthSnapshot,
@@ -25,6 +33,34 @@ import {
   setCachedAuthSnapshot,
 } from "@/lib/local-storage";
 import { setSupabaseAccessTokenGetter, supabase } from "@/lib/supabase";
+
+let defaultTextFontsConfigured = false;
+
+function configureDefaultTextFonts() {
+  if (defaultTextFontsConfigured) {
+    return;
+  }
+
+  const textDefaults = Text as unknown as {
+    defaultProps?: TextProps;
+  };
+  const textInputDefaults = TextInput as unknown as {
+    defaultProps?: TextInputProps;
+  };
+
+  textDefaults.defaultProps = {
+    ...textDefaults.defaultProps,
+    style: [{ fontFamily: FontFamily.body }, textDefaults.defaultProps?.style],
+  };
+  textInputDefaults.defaultProps = {
+    ...textInputDefaults.defaultProps,
+    style: [
+      { fontFamily: FontFamily.body },
+      textInputDefaults.defaultProps?.style,
+    ],
+  };
+  defaultTextFontsConfigured = true;
+}
 
 function SupabaseAuthBridge({ children }: PropsWithChildren) {
   const { getToken } = useAuth();
@@ -205,10 +241,17 @@ function AuthGate({ children }: PropsWithChildren) {
 }
 
 export function AppProviders({ children }: PropsWithChildren) {
+  const [fontsLoaded] = useFonts(appFonts);
   const colorScheme = useColorScheme();
   const [themePreference] = useState(() => getThemePreference());
   const resolvedColorScheme =
     themePreference === "system" ? colorScheme : themePreference;
+
+  if (!fontsLoaded) {
+    return <SplashScreen label="Loading app fonts" />;
+  }
+
+  configureDefaultTextFonts();
 
   return (
     <ClerkProvider

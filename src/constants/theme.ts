@@ -1,5 +1,7 @@
 import { Platform } from "react-native";
 
+import { FontFamily } from "@/lib/fonts";
+
 export const Colors = {
   light: {
     text: "#131B2E",
@@ -65,18 +67,18 @@ export const Shadows = {
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: "system-ui",
+    sans: FontFamily.body,
     /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: "ui-serif",
+    serif: FontFamily.headingExtraBold,
     /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: "ui-rounded",
+    rounded: FontFamily.bodySemiBold,
     /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: "ui-monospace",
   },
   default: {
-    sans: "normal",
-    serif: "serif",
-    rounded: "normal",
+    sans: FontFamily.body,
+    serif: FontFamily.headingExtraBold,
+    rounded: FontFamily.bodySemiBold,
     mono: "monospace",
   },
   web: {

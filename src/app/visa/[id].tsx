@@ -401,7 +401,7 @@ export default function VisaDocumentScreen() {
         {!isLoading && error ? (
           <View className="mt-8 rounded-atelier bg-white px-6 py-8">
             <Ionicons name="alert-circle-outline" size={32} color="#BA1A1A" />
-            <Text className="mt-4 text-xl font-extrabold tracking-normal text-diplomatic-ink">
+            <Text className="mt-4 text-xl font-serif font-extrabold tracking-normal text-diplomatic-ink">
               {error}
             </Text>
             <Text className="mt-2 text-base font-semibold leading-6 tracking-normal text-diplomatic-secondaryText">
@@ -442,7 +442,7 @@ export default function VisaDocumentScreen() {
                     </View>
                   </View>
 
-                  <Text className="mt-5 text-[32px] font-extrabold leading-10 tracking-normal text-white">
+                  <Text className="mt-5 text-[32px] font-serif font-extrabold leading-10 tracking-normal text-white">
                     {document.title}
                   </Text>
                   <Text className="mt-2 text-base font-semibold leading-6 tracking-normal text-white opacity-80">
@@ -622,7 +622,7 @@ function TableSection({ section }: { section: ContentSection }) {
   return (
     <View className="rounded-interactive border border-[#E0E5EF] bg-white px-4 py-4">
       {section.title ? (
-        <Text className="text-xl font-extrabold tracking-normal text-diplomatic-ink">
+        <Text className="text-xl font-serif font-extrabold tracking-normal text-diplomatic-ink">
           {section.title}
         </Text>
       ) : null}
@@ -678,7 +678,7 @@ function FaqSection({ section }: { section: ContentSection }) {
   return (
     <View className="rounded-interactive border border-[#E0E5EF] bg-white px-4 py-4">
       {section.title ? (
-        <Text className="text-xl font-extrabold tracking-normal text-diplomatic-ink">
+        <Text className="text-xl font-serif font-extrabold tracking-normal text-diplomatic-ink">
           {section.title}
         </Text>
       ) : null}
@@ -709,7 +709,7 @@ function SourceLinksSection({ section }: { section: ContentSection }) {
   return (
     <View className="rounded-interactive border border-[#E0E5EF] bg-white px-4 py-4">
       {section.title ? (
-        <Text className="text-xl font-extrabold tracking-normal text-diplomatic-ink">
+        <Text className="text-xl font-serif font-extrabold tracking-normal text-diplomatic-ink">
           {section.title}
         </Text>
       ) : null}

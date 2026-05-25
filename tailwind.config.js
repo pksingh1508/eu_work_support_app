@@ -25,6 +25,10 @@ module.exports = {
           tertiary: '#C15300',
         },
       },
+      fontFamily: {
+        sans: ['Inter_400Regular'],
+        serif: ['PlayfairDisplay_800ExtraBold'],
+      },
       borderRadius: {
         flag: '4px',
         interactive: '8px',
@@ -37,4 +41,3 @@ module.exports = {
   },
   plugins: [],
 };
-

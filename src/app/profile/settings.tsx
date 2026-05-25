@@ -36,7 +36,7 @@ export default function ProfileSettingsScreen() {
             </Text>
           </Pressable>
 
-          <Text className="text-[30px] font-extrabold tracking-normal text-diplomatic-ink">
+          <Text className="text-[30px] font-serif font-extrabold tracking-normal text-diplomatic-ink">
             Settings
           </Text>
         </View>
