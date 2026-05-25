@@ -3,13 +3,17 @@ import { useAuth } from "@clerk/expo";
 import { useFocusEffect } from "@react-navigation/native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
+  Animated,
+  Easing,
+  FlatList,
   GestureResponderEvent,
   Pressable,
   ScrollView,
   Text,
+  type ViewToken,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -42,6 +46,10 @@ const filters: Array<{ key: FilterKey; label: string }> = [
   { key: "top-rated", label: "Top Rated" },
   { key: "easiest-visa", label: "Easiest Visa" },
 ];
+
+const countryEntryDistance = 34;
+const countryEntryDuration = 380;
+const initiallyAnimatedCountryCount = 6;
 
 const countryDetails: Record<CountryName, CountryDetails> = {
   Austria: {
@@ -218,6 +226,16 @@ export function HomeDemo() {
   const [savingCountrySlug, setSavingCountrySlug] = useState<string | null>(
     null,
   );
+  const activeFilterRef = useRef(activeFilter);
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 35 }).current;
+  const [visibleCountryKeys, setVisibleCountryKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
+
+  useEffect(() => {
+    activeFilterRef.current = activeFilter;
+    setVisibleCountryKeys(new Set());
+  }, [activeFilter]);
 
   const filteredCountries = useMemo(() => {
     if (activeFilter === "top-rated") {
@@ -234,6 +252,24 @@ export function HomeDemo() {
   const openCountry = (country: CountryName) => {
     router.push(`/country/${getCountrySlug(country)}`);
   };
+
+  const handleViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: ViewToken<CountryName>[] }) => {
+      const filterKey = activeFilterRef.current;
+
+      setVisibleCountryKeys((currentKeys) => {
+        const nextKeys = new Set(currentKeys);
+
+        viewableItems.forEach((item) => {
+          if (item.isViewable && item.item) {
+            nextKeys.add(`${filterKey}-${item.item}`);
+          }
+        });
+
+        return nextKeys;
+      });
+    },
+  ).current;
 
   useFocusEffect(
     useCallback(() => {
@@ -325,102 +361,187 @@ export function HomeDemo() {
 
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-diplomatic-surface">
-      <ScrollView
-        stickyHeaderIndices={[1]}
+      <FlatList
+        key={activeFilter}
+        data={filteredCountries}
+        keyExtractor={(country) => country}
+        renderItem={({ item: country, index }) => (
+          <View className="px-5">
+            <AnimatedCountryListCard
+              animationKey={`${activeFilter}-${country}`}
+              country={country}
+              index={index}
+              isVisible={
+                index < initiallyAnimatedCountryCount ||
+                visibleCountryKeys.has(`${activeFilter}-${country}`)
+              }
+              onPress={openCountry}
+              isSaved={savedCountrySlugs.has(getCountrySlug(country))}
+              isSaving={savingCountrySlug === getCountrySlug(country)}
+              onToggleSave={toggleSavedCountry}
+            />
+          </View>
+        )}
+        ItemSeparatorComponent={() => <View className="h-5" />}
+        ListHeaderComponent={
+          <>
+            <View className="px-5 pt-7">
+              <Text className="text-[32px] font-extrabold leading-9 tracking-normal text-diplomatic-ink">
+                Welcome
+              </Text>
+              <Text className="mt-2 text-[17px] font-semibold leading-6 tracking-normal text-diplomatic-secondaryText">
+                Your journey to working in Europe begins here.
+              </Text>
+            </View>
+
+            <View className="bg-diplomatic-surface px-5 pb-4 pt-7">
+              <Pressable
+                onPress={() => router.push("/search")}
+                className="h-14 flex-row items-center rounded-interactive bg-white px-4"
+                accessibilityRole="button"
+              >
+                <Ionicons name="search" size={20} color="#7C8497" />
+                <Text className="ml-3 text-[15px] font-semibold tracking-normal text-[#7C8497]">
+                  Search countries, visas, or roles...
+                </Text>
+              </Pressable>
+            </View>
+
+            <View className="pt-4">
+              <View className="px-5">
+                <Text className="text-[25px] font-extrabold tracking-normal text-diplomatic-ink">
+                  Popular Destinations
+                </Text>
+              </View>
+
+              <ScrollView
+                horizontal
+                className="mt-5"
+                contentContainerClassName="gap-4 px-5"
+                showsHorizontalScrollIndicator={false}
+              >
+                {popularDestinations.map((country) => (
+                  <PopularDestinationCard
+                    key={country}
+                    country={country}
+                    onPress={openCountry}
+                  />
+                ))}
+              </ScrollView>
+
+              <ScrollView
+                horizontal
+                className="mt-8"
+                contentContainerClassName="gap-3 px-5"
+                showsHorizontalScrollIndicator={false}
+              >
+                {filters.map((filter) => {
+                  const isActive = activeFilter === filter.key;
+
+                  return (
+                    <Pressable
+                      key={filter.key}
+                      onPress={() => setActiveFilter(filter.key)}
+                      className={`h-10 items-center justify-center rounded-full px-5 ${
+                        isActive ? "bg-diplomatic-surfaceHigh" : "bg-white"
+                      }`}
+                    >
+                      <Text
+                        className={`text-sm font-extrabold tracking-normal ${
+                          isActive
+                            ? "text-diplomatic-primary"
+                            : "text-diplomatic-secondaryText"
+                        }`}
+                      >
+                        {filter.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+
+              <View className="mt-6" />
+            </View>
+          </>
+        }
         className="flex-1"
         contentContainerStyle={{ paddingBottom: BottomTabInset }}
         showsVerticalScrollIndicator={false}
-      >
-        <View className="px-5 pt-7">
-          <Text className="text-[32px] font-extrabold leading-9 tracking-normal text-diplomatic-ink">
-            Welcome
-          </Text>
-          <Text className="mt-2 text-[17px] font-semibold leading-6 tracking-normal text-diplomatic-secondaryText">
-            Your journey to working in Europe begins here.
-          </Text>
-        </View>
-
-        <View className="bg-diplomatic-surface px-5 pb-4 pt-7">
-          <Pressable
-            onPress={() => router.push("/search")}
-            className="h-14 flex-row items-center rounded-interactive bg-white px-4"
-            accessibilityRole="button"
-          >
-            <Ionicons name="search" size={20} color="#7C8497" />
-            <Text className="ml-3 text-[15px] font-semibold tracking-normal text-[#7C8497]">
-              Search countries, visas, or roles...
-            </Text>
-          </Pressable>
-        </View>
-
-        <View className="pt-4">
-          <View className="px-5">
-            <Text className="text-[25px] font-extrabold tracking-normal text-diplomatic-ink">
-              Popular Destinations
-            </Text>
-          </View>
-
-          <ScrollView
-            horizontal
-            className="mt-5"
-            contentContainerClassName="gap-4 px-5"
-            showsHorizontalScrollIndicator={false}
-          >
-            {popularDestinations.map((country) => (
-              <PopularDestinationCard
-                key={country}
-                country={country}
-                onPress={openCountry}
-              />
-            ))}
-          </ScrollView>
-
-          <ScrollView
-            horizontal
-            className="mt-8"
-            contentContainerClassName="gap-3 px-5"
-            showsHorizontalScrollIndicator={false}
-          >
-            {filters.map((filter) => {
-              const isActive = activeFilter === filter.key;
-
-              return (
-                <Pressable
-                  key={filter.key}
-                  onPress={() => setActiveFilter(filter.key)}
-                  className={`h-10 items-center justify-center rounded-full px-5 ${
-                    isActive ? "bg-diplomatic-surfaceHigh" : "bg-white"
-                  }`}
-                >
-                  <Text
-                    className={`text-sm font-extrabold tracking-normal ${
-                      isActive
-                        ? "text-diplomatic-primary"
-                        : "text-diplomatic-secondaryText"
-                    }`}
-                  >
-                    {filter.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          <View className="mt-6 gap-5 px-5">
-            {filteredCountries.map((country) => (
-              <CountryListCard
-                key={country}
-                country={country}
-                onPress={openCountry}
-                isSaved={savedCountrySlugs.has(getCountrySlug(country))}
-                isSaving={savingCountrySlug === getCountrySlug(country)}
-                onToggleSave={toggleSavedCountry}
-              />
-            ))}
-          </View>
-        </View>
-      </ScrollView>
+        initialNumToRender={7}
+        maxToRenderPerBatch={5}
+        onViewableItemsChanged={handleViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
+        windowSize={5}
+      />
     </SafeAreaView>
+  );
+}
+
+function AnimatedCountryListCard({
+  animationKey,
+  country,
+  index,
+  isVisible,
+  onPress,
+  isSaved,
+  isSaving,
+  onToggleSave,
+}: {
+  animationKey: string;
+  country: CountryName;
+  index: number;
+  isVisible: boolean;
+  onPress: (country: CountryName) => void;
+  isSaved: boolean;
+  isSaving: boolean;
+  onToggleSave: (country: CountryName) => void;
+}) {
+  const entryProgress = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!isVisible) {
+      entryProgress.setValue(0);
+      return;
+    }
+
+    entryProgress.setValue(0);
+    Animated.timing(entryProgress, {
+      toValue: 1,
+      duration: countryEntryDuration,
+      delay: Math.min((index % 8) * 45, 260),
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [animationKey, entryProgress, index, isVisible]);
+
+  const animatedStyle = {
+    opacity: entryProgress,
+    transform: [
+      {
+        translateX: entryProgress.interpolate({
+          inputRange: [0, 1],
+          outputRange: [-countryEntryDistance, 0],
+        }),
+      },
+      {
+        scale: entryProgress.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0.985, 1],
+        }),
+      },
+    ],
+  };
+
+  return (
+    <Animated.View style={animatedStyle}>
+      <CountryListCard
+        country={country}
+        onPress={onPress}
+        isSaved={isSaved}
+        isSaving={isSaving}
+        onToggleSave={onToggleSave}
+      />
+    </Animated.View>
   );
 }
 
