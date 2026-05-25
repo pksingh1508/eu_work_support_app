@@ -2,10 +2,12 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@clerk/expo";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  Easing,
   Pressable,
   ScrollView,
   Text,
@@ -240,9 +242,54 @@ function SavedGuideCard({
     ? item.shortDescription
     : item.shortDescription ?? item.intro;
   const status = isCountry ? "Saved country" : item.categoryName;
+  const exitProgress = useRef(new Animated.Value(0)).current;
+  const [isLeaving, setIsLeaving] = useState(false);
+
+  const handleUnsave = () => {
+    if (isLeaving || isUpdating) {
+      return;
+    }
+
+    setIsLeaving(true);
+    Animated.timing(exitProgress, {
+      toValue: 1,
+      duration: 280,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) {
+        onUnsave();
+        return;
+      }
+
+      setIsLeaving(false);
+    });
+  };
+
+  const animatedStyle = {
+    opacity: exitProgress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [1, 0.15],
+    }),
+    transform: [
+      {
+        translateX: exitProgress.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, 420],
+        }),
+      },
+      {
+        scale: exitProgress.interpolate({
+          inputRange: [0, 1],
+          outputRange: [1, 0.98],
+        }),
+      },
+    ],
+  };
 
   return (
-    <View className="rounded-atelier bg-white px-5 py-5">
+    <Animated.View style={animatedStyle}>
+      <View className="rounded-atelier bg-white px-5 py-5">
       <View className="flex-row items-start justify-between">
         <View className="min-w-0 flex-1 flex-row items-center">
           {flagEmoji ? (
@@ -266,8 +313,8 @@ function SavedGuideCard({
           </View>
         </View>
         <Pressable
-          onPress={onUnsave}
-          disabled={isUpdating}
+          onPress={handleUnsave}
+          disabled={isUpdating || isLeaving}
           hitSlop={12}
           accessibilityRole="button"
           accessibilityLabel={`Unsave ${title}`}
@@ -306,6 +353,7 @@ function SavedGuideCard({
           <Ionicons name="arrow-forward" size={15} color="#0058BC" />
         </Pressable>
       </View>
-    </View>
+      </View>
+    </Animated.View>
   );
 }
