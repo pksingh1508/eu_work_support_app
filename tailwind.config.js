@@ -27,7 +27,7 @@ module.exports = {
       },
       fontFamily: {
         sans: ['Inter_400Regular'],
-        serif: ['PlayfairDisplay_800ExtraBold'],
+        serif: ['Poppins_800ExtraBold'],
       },
       borderRadius: {
         flag: '4px',
