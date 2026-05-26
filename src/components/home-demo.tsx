@@ -238,11 +238,9 @@ export function HomeDemo() {
   const activeFilterRef = useRef(activeFilter);
   const filterDockedRef = useRef(false);
   const popularSectionHeightRef = useRef(0);
-  const searchHeaderHeightRef = useRef(0);
   const welcomeSectionHeightRef = useRef(0);
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 35 }).current;
   const [isFilterDocked, setIsFilterDocked] = useState(false);
-  const [searchHeaderHeight, setSearchHeaderHeight] = useState(0);
   const [visibleCountryKeys, setVisibleCountryKeys] = useState<Set<string>>(
     () => new Set(),
   );
@@ -304,11 +302,6 @@ export function HomeDemo() {
       });
     },
   ).current;
-
-  const setSearchHeaderLayout = useCallback((height: number) => {
-    searchHeaderHeightRef.current = height;
-    setSearchHeaderHeight(height);
-  }, []);
 
   const setWelcomeSectionLayout = useCallback((height: number) => {
     welcomeSectionHeightRef.current = height;
@@ -454,23 +447,27 @@ export function HomeDemo() {
 
           if (item.type === "search") {
             return (
-            <View
-              onLayout={(event) =>
-                setSearchHeaderLayout(event.nativeEvent.layout.height)
-              }
-              className="bg-diplomatic-surface px-5 pb-4 pt-5"
-            >
-              <Pressable
-                onPress={() => router.push("/search")}
-                className="h-14 flex-row items-center rounded-interactive bg-white px-4"
-                accessibilityRole="button"
-              >
-                <Ionicons name="search" size={20} color="#7C8497" />
-                <Text className="ml-3 text-[15px] font-semibold tracking-normal text-[#7C8497]">
-                  Search countries, visas, or roles...
-                </Text>
-              </Pressable>
-            </View>
+              <View className="bg-diplomatic-surface px-5 pb-4 pt-5">
+                <Pressable
+                  onPress={() => router.push("/search")}
+                  className="h-16 flex-row items-center rounded-full border border-[#AEB5C2] bg-white px-7"
+                  accessibilityRole="button"
+                >
+                  <Ionicons name="search" size={24} color="#8C95A6" />
+                  <Text className="ml-4 text-[17px] font-semibold tracking-normal text-[#A4ABB8]">
+                    Search countries and topics
+                  </Text>
+                </Pressable>
+
+                {isFilterDocked ? (
+                  <View className="mt-4">
+                    <FilterTabs
+                      activeFilter={activeFilter}
+                      onChange={setActiveFilter}
+                    />
+                  </View>
+                ) : null}
+              </View>
             );
           }
 
@@ -552,14 +549,6 @@ export function HomeDemo() {
         viewabilityConfig={viewabilityConfig}
         windowSize={5}
       />
-      {isFilterDocked ? (
-        <View
-          className="absolute inset-x-0 z-20"
-          style={{ top: searchHeaderHeight }}
-        >
-          <FilterTabs activeFilter={activeFilter} onChange={setActiveFilter} />
-        </View>
-      ) : null}
     </SafeAreaView>
   );
 }
@@ -572,7 +561,7 @@ function FilterTabs({
   onChange: (filter: FilterKey) => void;
 }) {
   return (
-    <View className="bg-diplomatic-surface px-5 pb-4 pt-4">
+    <View className="bg-diplomatic-surface">
       <ScrollView
         horizontal
         contentContainerClassName="gap-3"
