@@ -1,14 +1,13 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@clerk/expo";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Alert,
   Linking,
   Modal,
   Pressable,
   ScrollView,
-  Share,
   Text,
   View,
 } from "react-native";
@@ -222,14 +221,6 @@ function stringifyValue(value: unknown) {
   return "";
 }
 
-function formatShortTopic(value: string | null) {
-  if (!value) {
-    return "Guide";
-  }
-
-  return value.length > 22 ? `${value.slice(0, 22).trim()}...` : value;
-}
-
 async function fetchCountry(slug: string) {
   const { data, error } = await supabase
     .from("countries")
@@ -346,16 +337,6 @@ export default function CountryDetailScreen() {
       : "visa, permits, documents";
   }, [country]);
 
-  const shareCountry = async () => {
-    if (!country) {
-      return;
-    }
-
-    await Share.share({
-      message: `${country.name} immigration and visa guide in EU Work Support.`,
-    });
-  };
-
   const toggleSavedCountry = async () => {
     if (!country) {
       return;
@@ -396,43 +377,22 @@ export default function CountryDetailScreen() {
   };
 
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-diplomatic-surface">
+    <SafeAreaView edges={["top"]} className="flex-1 bg-[#FAFAFB]">
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: BottomTabInset + 24 }}
         showsVerticalScrollIndicator={false}
       >
-        <View className="px-5 pt-5">
-          <View className="flex-row items-center justify-between">
-            <Pressable
-              onPress={() => router.back()}
-              className="h-10 flex-row items-center rounded-interactive border border-[#E0E5EF] bg-white px-4"
-              accessibilityRole="button"
-            >
-              <Ionicons name="chevron-back" size={18} color="#0A0F1A" />
-              <Text className="ml-2 text-sm font-extrabold tracking-normal text-diplomatic-ink">
-                {country?.name ?? "Country"}
-              </Text>
-            </Pressable>
-
-            <View className="flex-row items-center gap-3">
-              <Pressable
-                onPress={shareCountry}
-                disabled={!country}
-                className="h-10 w-10 items-center justify-center rounded-interactive border border-[#E0E5EF] bg-white"
-                accessibilityRole="button"
-              >
-                <Ionicons
-                  name="share-social-outline"
-                  size={19}
-                  color="#0A0F1A"
-                />
-              </Pressable>
+        <View className="px-5 pt-7">
+          <Header
+            title={country?.name ?? "Country"}
+            onBack={() => router.back()}
+            rightAction={
               <Pressable
                 onPress={toggleSavedCountry}
                 disabled={!country || isSavingCountry}
-                className={`h-10 w-10 items-center justify-center rounded-interactive active:opacity-70 disabled:opacity-60 ${
-                  isCountrySavedState ? "bg-[#DFF3E6]" : "bg-transparent"
+                className={`h-11 w-11 items-center justify-center rounded-full border border-[#E6E6EA] active:opacity-70 disabled:opacity-60 ${
+                  isCountrySavedState ? "bg-[#DFF3E6]" : "bg-white"
                 }`}
                 accessibilityRole="button"
                 accessibilityLabel={
@@ -443,31 +403,31 @@ export default function CountryDetailScreen() {
               >
                 <Ionicons
                   name={isCountrySavedState ? "bookmark" : "bookmark-outline"}
-                  size={19}
-                  color={isCountrySavedState ? "#183B2B" : "#2F3A4A"}
+                  size={21}
+                  color={isCountrySavedState ? "#183B2B" : "#202124"}
                 />
               </Pressable>
-            </View>
-          </View>
+            }
+          />
 
           {isLoading ? (
-            <View className="mt-16 items-center justify-center rounded-atelier bg-white px-6 py-12">
+            <View className="mt-16 items-center justify-center rounded-[30px] border border-[#EDEDF0] bg-white px-6 py-12">
               <CustomLoading />
-              <Text className="mt-4 text-base font-bold tracking-normal text-diplomatic-secondaryText">
+              <Text className="mt-4 text-base font-bold tracking-normal text-[#707684]">
                 Loading country guide...
               </Text>
             </View>
           ) : null}
 
           {!isLoading && error ? (
-            <View className="mt-8 rounded-atelier bg-white px-6 py-8">
+            <View className="mt-8 rounded-[30px] border border-[#EDEDF0] bg-white px-6 py-8">
               <Ionicons name="alert-circle-outline" size={30} color="#BA1A1A" />
-              <Text className="mt-4 text-xl font-serif font-extrabold tracking-normal text-diplomatic-ink">
+              <Text className="mt-4 text-xl font-extrabold tracking-normal text-[#202124]">
                 {error}
               </Text>
               <Pressable
                 onPress={() => router.back()}
-                className="mt-6 h-12 items-center justify-center rounded-interactive bg-diplomatic-primary"
+                className="mt-6 h-12 items-center justify-center rounded-[22px] bg-diplomatic-primary"
               >
                 <Text className="text-base font-extrabold tracking-normal text-white">
                   Go back
@@ -478,7 +438,7 @@ export default function CountryDetailScreen() {
 
           {!isLoading && country ? (
             <>
-              <View className="mt-5 min-h-[190px] rounded-interactive bg-[#111827] p-5">
+              <View className="mt-8 min-h-[190px] rounded-[30px] bg-[#111827] p-5">
                 <View className="flex-row items-start justify-between">
                   <View className="h-16 w-16 items-center justify-center">
                     {country.flagEmoji ? (
@@ -489,7 +449,7 @@ export default function CountryDetailScreen() {
                       <Ionicons name="flag-outline" size={44} color="#FFFFFF" />
                     )}
                   </View>
-                  <View className="flex-row items-center rounded-interactive bg-diplomatic-primary px-3 py-2">
+                  <View className="flex-row items-center rounded-[16px] bg-diplomatic-primary px-3 py-2">
                     <Ionicons
                       name="radio-button-on-outline"
                       size={13}
@@ -501,7 +461,7 @@ export default function CountryDetailScreen() {
                   </View>
                 </View>
 
-                <Text className="mt-4 text-[34px] font-serif font-extrabold leading-10 tracking-normal text-white">
+                <Text className="mt-4 text-[34px] font-extrabold leading-10 tracking-normal text-white">
                   {country.name}
                 </Text>
                 <Text className="mt-1 text-base font-semibold leading-6 tracking-normal text-white opacity-80">
@@ -509,7 +469,7 @@ export default function CountryDetailScreen() {
                 </Text>
 
                 <View className="mt-4 flex-row gap-3">
-                  <View className="flex-1 rounded-interactive bg-white/10 px-4 py-4">
+                  <View className="flex-1 rounded-[20px] bg-white/10 px-4 py-4">
                     <Text className="text-lg font-extrabold tracking-normal text-white">
                       4-12 weeks
                     </Text>
@@ -517,7 +477,7 @@ export default function CountryDetailScreen() {
                       typical process
                     </Text>
                   </View>
-                  <View className="flex-1 rounded-interactive bg-white/10 px-4 py-4">
+                  <View className="flex-1 rounded-[20px] bg-white/10 px-4 py-4">
                     <Text className="text-lg font-extrabold tracking-normal text-white">
                       {country.documents.length} docs
                     </Text>
@@ -528,7 +488,7 @@ export default function CountryDetailScreen() {
                 </View>
               </View>
 
-              <View className="mt-5 rounded-interactive border border-[#E0E5EF] bg-white px-4 py-4">
+              <View className="mt-5 rounded-[30px] border border-[#EDEDF0] bg-white px-5 py-5">
                 <View className="flex-row items-start justify-between">
                   <View className="min-w-0 flex-1 flex-row items-start">
                     <Ionicons
@@ -537,10 +497,10 @@ export default function CountryDetailScreen() {
                       color="#1E7AF2"
                     />
                     <View className="ml-3 min-w-0 flex-1">
-                      <Text className="text-base font-extrabold tracking-normal text-diplomatic-ink">
+                      <Text className="text-base font-extrabold tracking-normal text-[#202124]">
                         Immigration overview
                       </Text>
-                      <Text className="mt-2 text-sm font-semibold leading-5 tracking-normal text-diplomatic-secondaryText">
+                      <Text className="mt-2 text-sm font-semibold leading-6 tracking-normal text-[#707684]">
                         {overviewText}
                       </Text>
                     </View>
@@ -549,26 +509,26 @@ export default function CountryDetailScreen() {
                 </View>
               </View>
 
-              <View className="mt-6 rounded-t-atelier bg-white px-4 py-4">
+              <View className="mt-6 rounded-[30px] border border-[#EDEDF0] bg-white px-5 py-5">
                 <View className="flex-row items-center justify-between">
-                  <Text className="text-lg font-extrabold tracking-normal text-diplomatic-ink">
-                    Required documents
+                  <Text className="text-xl font-extrabold tracking-normal text-[#202124]">
+                    Document Lists
                   </Text>
                   <Text className="text-sm font-extrabold tracking-normal text-diplomatic-primary">
                     {country.documents.length} items
                   </Text>
                 </View>
-              </View>
 
-              <View className="mt-3 gap-3">
-                {country.documents.map((document, index) => (
-                  <DocumentRow
-                    key={document.id}
-                    document={document}
-                    index={index}
-                    onPress={() => setSelectedDocument(document)}
-                  />
-                ))}
+                <View className="mt-5 gap-3">
+                  {country.documents.map((document, index) => (
+                    <DocumentRow
+                      key={document.id}
+                      document={document}
+                      index={index}
+                      onPress={() => setSelectedDocument(document)}
+                    />
+                  ))}
+                </View>
               </View>
             </>
           ) : null}
@@ -580,6 +540,35 @@ export default function CountryDetailScreen() {
         onClose={() => setSelectedDocument(null)}
       />
     </SafeAreaView>
+  );
+}
+
+function Header({
+  title,
+  onBack,
+  rightAction,
+}: {
+  title: string;
+  onBack: () => void;
+  rightAction?: ReactNode;
+}) {
+  return (
+    <View className="flex-row items-center justify-between">
+      <Pressable
+        onPress={onBack}
+        className="h-11 w-11 items-center justify-center rounded-full border border-[#E6E6EA] bg-white"
+        accessibilityRole="button"
+      >
+        <Ionicons name="chevron-back" size={21} color="#202124" />
+      </Pressable>
+      <Text
+        className="mx-3 min-w-0 flex-1 text-center text-[28px] font-extrabold tracking-normal text-[#202124]"
+        numberOfLines={1}
+      >
+        {title}
+      </Text>
+      {rightAction ?? <View className="h-11 w-11" />}
+    </View>
   );
 }
 
@@ -595,26 +584,55 @@ function DocumentRow({
   return (
     <Pressable
       onPress={onPress}
-      className="min-h-[54px] justify-center rounded-interactive border border-[#E0E5EF] bg-white px-4 py-3"
+      className="rounded-[24px] border border-[#E2E2E6] bg-[#FAFAFB] px-4 py-4 active:opacity-80"
       accessibilityRole="button"
     >
-      <View className="flex-row items-center">
-        <Ionicons
-          name={
-            index === 0
-              ? "information-circle-outline"
-              : getCategoryIcon(document.categoryIcon)
-          }
-          size={20}
-          color="#1E7AF2"
-        />
-        <Text className="ml-3 min-w-0 flex-1 text-base font-extrabold tracking-normal text-diplomatic-ink">
-          {document.title}
-        </Text>
-        <Text className="ml-2 max-w-[118px] text-xs font-semibold tracking-normal text-diplomatic-secondaryText">
-          {formatShortTopic(document.shortDescription)}
-        </Text>
-        <Ionicons name="chevron-down" size={18} color="#7C8497" />
+      <View className="flex-row items-start">
+        <View className="h-11 w-11 items-center justify-center rounded-[16px] bg-[#EEF7FF]">
+          <Ionicons
+            name={
+              index === 0
+                ? "information-circle-outline"
+                : getCategoryIcon(document.categoryIcon)
+            }
+            size={23}
+            color="#1E7AF2"
+          />
+        </View>
+        <View className="ml-3 min-w-0 flex-1">
+          <Text className="text-base font-extrabold leading-6 tracking-normal text-[#202124]">
+            {document.title}
+          </Text>
+          <Text className="mt-2 text-sm font-semibold leading-5 tracking-normal text-[#707684]">
+            {document.shortDescription ?? document.intro ?? "Complete guide"}
+          </Text>
+        </View>
+      </View>
+      <View className="mt-4 flex-row items-center justify-between">
+        <View className="min-w-0 flex-1 flex-row items-center gap-2">
+          <View className="flex-row items-center rounded-full bg-white px-3 py-2">
+            <Ionicons
+              name={getCategoryIcon(document.categoryIcon)}
+              size={15}
+              color="#1E7AF2"
+            />
+            <Text
+              numberOfLines={1}
+              className="ml-2 max-w-[170px] text-xs font-extrabold tracking-normal text-diplomatic-primary"
+            >
+              {document.categoryName}
+            </Text>
+          </View>
+          {document.isPremium ? (
+            <View className="flex-row items-center rounded-full bg-[#EEF7FF] px-3 py-2">
+              <Ionicons name="sparkles-outline" size={14} color="#1E7AF2" />
+              <Text className="ml-1 text-xs font-extrabold tracking-normal text-diplomatic-primary">
+                Pro
+              </Text>
+            </View>
+          ) : null}
+        </View>
+        <Ionicons name="chevron-down" size={21} color="#7C8497" />
       </View>
     </Pressable>
   );
