@@ -1,0 +1,131 @@
+export const openSource = {
+  title: "EU Work Support Open Source Notices",
+  lastUpdated: "May 26, 2026",
+  blocks: [
+    {
+      type: "paragraph",
+      text: "EU Work Support uses open-source software to build and run the mobile app. This notice summarizes the direct open-source packages declared in package.json. Transitive dependencies are managed through pnpm-lock.yaml and remain subject to their own license terms.",
+    },
+    {
+      type: "paragraph",
+      text: "This file is an attribution and compliance aid. It does not replace the full license text included by each package author.",
+    },
+    {
+      type: "heading",
+      text: "Direct Dependencies",
+    },
+    {
+      type: "table",
+      headers: ["Package", "Version", "License", "Purpose"],
+      rows: [
+        ["@clerk/expo", "3.2.1", "MIT", "Authentication and user account management"],
+        ["@expo-google-fonts/inter", "0.4.2", "MIT AND OFL-1.1", "Inter font package"],
+        ["@expo-google-fonts/poppins", "0.4.1", "MIT AND OFL-1.1", "Poppins font package"],
+        ["@react-navigation/bottom-tabs", "7.15.9", "MIT", "Bottom tab navigation"],
+        ["@react-navigation/elements", "2.9.14", "MIT", "Navigation UI elements"],
+        ["@react-navigation/native", "7.2.2", "MIT", "React Navigation core"],
+        ["@supabase/supabase-js", "2.103.3", "MIT", "Supabase database client"],
+        ["expo", "55.0.15", "MIT", "Expo application runtime"],
+        ["expo-constants", "55.0.14", "MIT", "App and device constants"],
+        ["expo-dev-client", "55.0.27", "MIT", "Development client support"],
+        ["expo-device", "55.0.15", "MIT", "Device information APIs"],
+        ["expo-font", "55.0.6", "MIT", "Font loading"],
+        ["expo-glass-effect", "55.0.10", "MIT", "Native glass visual effects"],
+        ["expo-image", "55.0.8", "MIT", "Optimized image rendering"],
+        ["expo-linking", "55.0.13", "MIT", "Deep linking and URL handling"],
+        ["expo-router", "55.0.12", "MIT", "File-based routing"],
+        ["expo-secure-store", "55.0.13", "MIT", "Secure local storage"],
+        ["expo-splash-screen", "55.0.18", "MIT", "Splash screen control"],
+        ["expo-status-bar", "55.0.5", "MIT", "Status bar handling"],
+        ["expo-symbols", "55.0.7", "MIT", "iOS SF Symbols support"],
+        ["expo-system-ui", "55.0.15", "MIT", "System UI configuration"],
+        ["expo-web-browser", "55.0.14", "MIT", "Web browser sessions"],
+        ["nativewind", "4.2.3", "MIT", "Tailwind-style React Native styling"],
+        ["react", "19.2.0", "MIT", "UI framework"],
+        ["react-dom", "19.2.0", "MIT", "React DOM runtime for web"],
+        ["react-native", "0.83.4", "MIT", "Native app framework"],
+        ["react-native-gesture-handler", "2.30.1", "MIT", "Gesture handling"],
+        ["react-native-mmkv", "4.3.1", "MIT", "Local key-value storage"],
+        ["react-native-nitro-modules", "0.35.4", "MIT", "Native module runtime support"],
+        ["react-native-reanimated", "4.2.1", "MIT", "Animations"],
+        ["react-native-safe-area-context", "5.6.2", "MIT", "Safe area handling"],
+        ["react-native-screens", "4.23.0", "MIT", "Native screen primitives"],
+        ["react-native-svg", "15.15.5", "MIT", "SVG rendering"],
+        ["react-native-web", "0.21.2", "MIT", "React Native web runtime"],
+        ["react-native-worklets", "0.7.2", "MIT", "Worklet runtime"],
+        ["sonner-native", "0.25.1", "MIT", "Animated toast notifications"],
+      ],
+    },
+    {
+      type: "heading",
+      text: "Direct Development Dependencies",
+    },
+    {
+      type: "table",
+      headers: ["Package", "Version", "License", "Purpose"],
+      rows: [
+        ["@types/react", "19.2.14", "MIT", "React TypeScript definitions"],
+        ["babel-preset-expo", "55.0.17", "MIT", "Expo Babel preset"],
+        ["prettier-plugin-tailwindcss", "0.5.14", "MIT", "Tailwind class formatting"],
+        ["tailwindcss", "3.4.19", "MIT", "Styling framework"],
+        ["typescript", "5.9.3", "Apache-2.0", "TypeScript compiler"],
+      ],
+    },
+    {
+      type: "heading",
+      text: "License Families Used",
+    },
+    {
+      type: "subheading",
+      text: "MIT License",
+    },
+    {
+      type: "paragraph",
+      text: "Most direct dependencies use the MIT License. The MIT License generally permits use, copying, modification, distribution, sublicensing, and sale of software, provided the copyright notice and license notice are included.",
+    },
+    {
+      type: "subheading",
+      text: "Apache License 2.0",
+    },
+    {
+      type: "paragraph",
+      text: "TypeScript uses the Apache License 2.0. This license generally permits use, modification, and distribution, with conditions related to copyright, license notices, and patent grants.",
+    },
+    {
+      type: "subheading",
+      text: "SIL Open Font License 1.1",
+    },
+    {
+      type: "paragraph",
+      text: "The Inter and Poppins font packages include font assets that are commonly distributed under the SIL Open Font License 1.1. This license generally permits use, study, copying, merging, embedding, modification, and redistribution of fonts subject to its conditions.",
+    },
+    {
+      type: "heading",
+      text: "Attribution Practice",
+    },
+    {
+      type: "paragraph",
+      text: "EU Work Support should keep this notice available in the project repository and may expose it in-app under Profile > App Info > Open Source Notices.",
+    },
+    {
+      type: "paragraph",
+      text: "For App Store and Play Store submissions, this notice helps document third-party software used by the app. If dependencies change, regenerate and review this notice before release.",
+    },
+    {
+      type: "heading",
+      text: "No Warranty From Open-Source Authors",
+    },
+    {
+      type: "paragraph",
+      text: "Open-source packages are generally provided by their authors without warranties. EU Work Support is responsible for how these packages are integrated and used in the app.",
+    },
+    {
+      type: "heading",
+      text: "Package Review Method",
+    },
+    {
+      type: "paragraph",
+      text: "This notice was prepared by reviewing the direct dependencies and license fields in package.json, installed package metadata in node_modules, and pnpm-lock.yaml for dependency state.",
+    },
+  ],
+} as const;

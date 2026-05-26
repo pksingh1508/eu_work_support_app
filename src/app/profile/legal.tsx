@@ -1,12 +1,13 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useRouter } from "expo-router";
+import { type Href, useRouter } from "expo-router";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const legalItems = [
-  "Privacy Policy",
-  "Terms & Conditions",
-  "Data Deletion Policy",
+  { title: "Privacy Policy", href: "/profile/legal/privacy-policy" },
+  { title: "Terms & Conditions", href: "/profile/legal/terms-and-conditions" },
+  { title: "Data Deletion Policy", href: "/profile/legal/data-deletion" },
+  { title: "Open Source License", href: "/profile/legal/open-source" },
 ];
 
 export default function LegalScreen() {
@@ -23,7 +24,12 @@ export default function LegalScreen() {
 
         <View className="mt-8 rounded-[30px] border border-[#EDEDF0] bg-white px-5 py-2">
           {legalItems.map((item, index) => (
-            <InfoRow key={item} title={item} isLast={index === legalItems.length - 1} />
+            <InfoRow
+              key={item.href}
+              title={item.title}
+              isLast={index === legalItems.length - 1}
+              onPress={() => router.push(item.href as Href)}
+            />
           ))}
         </View>
       </ScrollView>
@@ -49,9 +55,18 @@ function Header({ title, onBack }: { title: string; onBack: () => void }) {
   );
 }
 
-function InfoRow({ title, isLast }: { title: string; isLast: boolean }) {
+function InfoRow({
+  title,
+  isLast,
+  onPress,
+}: {
+  title: string;
+  isLast: boolean;
+  onPress: () => void;
+}) {
   return (
     <Pressable
+      onPress={onPress}
       className={`min-h-[70px] flex-row items-center ${
         isLast ? "" : "border-b border-[#EAEAED]"
       }`}
