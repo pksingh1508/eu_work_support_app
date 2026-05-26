@@ -30,6 +30,18 @@ export const europeanCountryNames = [
 
 export const popularDestinations = ["France", "Germany", "Greece"] as const;
 
-export const topRated = ["Poland", "Portugal", "Romania"] as const;
+export const topRated = [
+  "Poland",
+  "Portugal",
+  "Romania",
+  "Norway",
+  "Slovakia",
+] as const;
 
-export const easiestVisaCountries = ["Austria", "Belgium", "Bulgaria"] as const;
+export const easiestVisaCountries = [
+  "Austria",
+  "Belgium",
+  "Bulgaria",
+  "Croatia",
+  "Malta",
+] as const;

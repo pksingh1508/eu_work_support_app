@@ -10,6 +10,8 @@ import {
   Easing,
   FlatList,
   GestureResponderEvent,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Pressable,
   ScrollView,
   Text,
@@ -34,6 +36,13 @@ import {
 type FilterKey = "all" | "top-rated" | "easiest-visa";
 
 type CountryName = (typeof europeanCountryNames)[number];
+
+type HomeListItem =
+  | { type: "welcome" }
+  | { type: "search" }
+  | { type: "popular" }
+  | { type: "filters" }
+  | { type: "country"; country: CountryName; countryIndex: number };
 
 type CountryDetails = {
   code: string;
@@ -227,7 +236,13 @@ export function HomeDemo() {
     null,
   );
   const activeFilterRef = useRef(activeFilter);
+  const filterDockedRef = useRef(false);
+  const popularSectionHeightRef = useRef(0);
+  const searchHeaderHeightRef = useRef(0);
+  const welcomeSectionHeightRef = useRef(0);
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 35 }).current;
+  const [isFilterDocked, setIsFilterDocked] = useState(false);
+  const [searchHeaderHeight, setSearchHeaderHeight] = useState(0);
   const [visibleCountryKeys, setVisibleCountryKeys] = useState<Set<string>>(
     () => new Set(),
   );
@@ -249,20 +264,39 @@ export function HomeDemo() {
     return europeanCountryNames;
   }, [activeFilter]);
 
+  const homeListData = useMemo<HomeListItem[]>(
+    () => [
+      { type: "welcome" },
+      { type: "search" },
+      { type: "popular" },
+      { type: "filters" },
+      ...filteredCountries.map((country, countryIndex) => ({
+        type: "country" as const,
+        country,
+        countryIndex,
+      })),
+    ],
+    [filteredCountries],
+  );
+
   const openCountry = (country: CountryName) => {
     router.push(`/country/${getCountrySlug(country)}`);
   };
 
   const handleViewableItemsChanged = useRef(
-    ({ viewableItems }: { viewableItems: ViewToken<CountryName>[] }) => {
+    ({ viewableItems }: { viewableItems: ViewToken<HomeListItem>[] }) => {
       const filterKey = activeFilterRef.current;
 
       setVisibleCountryKeys((currentKeys) => {
         const nextKeys = new Set(currentKeys);
 
         viewableItems.forEach((item) => {
-          if (item.isViewable && item.item) {
-            nextKeys.add(`${filterKey}-${item.item}`);
+          if (
+            item.isViewable &&
+            item.item &&
+            item.item.type === "country"
+          ) {
+            nextKeys.add(`${filterKey}-${item.item.country}`);
           }
         });
 
@@ -270,6 +304,35 @@ export function HomeDemo() {
       });
     },
   ).current;
+
+  const setSearchHeaderLayout = useCallback((height: number) => {
+    searchHeaderHeightRef.current = height;
+    setSearchHeaderHeight(height);
+  }, []);
+
+  const setWelcomeSectionLayout = useCallback((height: number) => {
+    welcomeSectionHeightRef.current = height;
+  }, []);
+
+  const setPopularSectionLayout = useCallback((height: number) => {
+    popularSectionHeightRef.current = height;
+  }, []);
+
+  const handleHomeScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const threshold =
+        welcomeSectionHeightRef.current + popularSectionHeightRef.current;
+      const shouldDock =
+        threshold > 0 &&
+        event.nativeEvent.contentOffset.y >= threshold;
+
+      if (shouldDock !== filterDockedRef.current) {
+        filterDockedRef.current = shouldDock;
+        setIsFilterDocked(shouldDock);
+      }
+    },
+    [],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -362,30 +425,23 @@ export function HomeDemo() {
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-diplomatic-surface">
       <FlatList
-        key={activeFilter}
-        data={filteredCountries}
-        keyExtractor={(country) => country}
-        renderItem={({ item: country, index }) => (
-          <View className="px-5">
-            <AnimatedCountryListCard
-              animationKey={`${activeFilter}-${country}`}
-              country={country}
-              index={index}
-              isVisible={
-                index < initiallyAnimatedCountryCount ||
-                visibleCountryKeys.has(`${activeFilter}-${country}`)
+        data={homeListData}
+        keyExtractor={(item) => {
+          if (item.type === "country") {
+            return `${activeFilter}-${item.country}`;
+          }
+
+          return item.type;
+        }}
+        renderItem={({ item }) => {
+          if (item.type === "welcome") {
+            return (
+            <View
+              onLayout={(event) =>
+                setWelcomeSectionLayout(event.nativeEvent.layout.height)
               }
-              onPress={openCountry}
-              isSaved={savedCountrySlugs.has(getCountrySlug(country))}
-              isSaving={savingCountrySlug === getCountrySlug(country)}
-              onToggleSave={toggleSavedCountry}
-            />
-          </View>
-        )}
-        ItemSeparatorComponent={() => <View className="h-5" />}
-        ListHeaderComponent={
-          <>
-            <View className="px-5 pt-7">
+              className="px-5 pt-7"
+            >
               <Text className="text-[32px] font-serif font-extrabold leading-9 tracking-normal text-diplomatic-ink">
                 Welcome
               </Text>
@@ -393,8 +449,17 @@ export function HomeDemo() {
                 Your journey to working in Europe begins here.
               </Text>
             </View>
+            );
+          }
 
-            <View className="bg-diplomatic-surface px-5 pb-4 pt-7">
+          if (item.type === "search") {
+            return (
+            <View
+              onLayout={(event) =>
+                setSearchHeaderLayout(event.nativeEvent.layout.height)
+              }
+              className="bg-diplomatic-surface px-5 pb-4 pt-5"
+            >
               <Pressable
                 onPress={() => router.push("/search")}
                 className="h-14 flex-row items-center rounded-interactive bg-white px-4"
@@ -406,8 +471,17 @@ export function HomeDemo() {
                 </Text>
               </Pressable>
             </View>
+            );
+          }
 
-            <View className="pt-4">
+          if (item.type === "popular") {
+            return (
+            <View
+              onLayout={(event) =>
+                setPopularSectionLayout(event.nativeEvent.layout.height)
+              }
+              className="pt-4"
+            >
               <View className="px-5">
                 <Text className="text-[25px] font-serif font-extrabold tracking-normal text-diplomatic-ink">
                   Popular Destinations
@@ -429,51 +503,106 @@ export function HomeDemo() {
                 ))}
               </ScrollView>
 
-              <ScrollView
-                horizontal
-                className="mt-8"
-                contentContainerClassName="gap-3 px-5"
-                showsHorizontalScrollIndicator={false}
-              >
-                {filters.map((filter) => {
-                  const isActive = activeFilter === filter.key;
-
-                  return (
-                    <Pressable
-                      key={filter.key}
-                      onPress={() => setActiveFilter(filter.key)}
-                      className={`h-10 items-center justify-center rounded-full px-5 ${
-                        isActive ? "bg-diplomatic-surfaceHigh" : "bg-white"
-                      }`}
-                    >
-                      <Text
-                        className={`text-sm font-extrabold tracking-normal ${
-                          isActive
-                            ? "text-diplomatic-primary"
-                            : "text-diplomatic-secondaryText"
-                        }`}
-                      >
-                        {filter.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-
               <View className="mt-6" />
             </View>
-          </>
-        }
+            );
+          }
+
+          if (item.type === "filters") {
+            return (
+              <View className={isFilterDocked ? "opacity-0" : "opacity-100"}>
+                <FilterTabs
+                  activeFilter={activeFilter}
+                  onChange={setActiveFilter}
+                />
+              </View>
+            );
+          }
+
+          const country = item.country;
+          const countryIndex = item.countryIndex;
+
+          return (
+            <View className="mb-5 px-5">
+              <AnimatedCountryListCard
+                animationKey={`${activeFilter}-${country}`}
+                country={country}
+                index={countryIndex}
+                isVisible={
+                  countryIndex < initiallyAnimatedCountryCount ||
+                  visibleCountryKeys.has(`${activeFilter}-${country}`)
+                }
+                onPress={openCountry}
+                isSaved={savedCountrySlugs.has(getCountrySlug(country))}
+                isSaving={savingCountrySlug === getCountrySlug(country)}
+                onToggleSave={toggleSavedCountry}
+              />
+            </View>
+          );
+        }}
         className="flex-1"
         contentContainerStyle={{ paddingBottom: BottomTabInset }}
         showsVerticalScrollIndicator={false}
-        initialNumToRender={7}
+        initialNumToRender={9}
         maxToRenderPerBatch={5}
+        onScroll={handleHomeScroll}
         onViewableItemsChanged={handleViewableItemsChanged}
+        stickyHeaderIndices={[1]}
+        scrollEventThrottle={16}
         viewabilityConfig={viewabilityConfig}
         windowSize={5}
       />
+      {isFilterDocked ? (
+        <View
+          className="absolute inset-x-0 z-20"
+          style={{ top: searchHeaderHeight }}
+        >
+          <FilterTabs activeFilter={activeFilter} onChange={setActiveFilter} />
+        </View>
+      ) : null}
     </SafeAreaView>
+  );
+}
+
+function FilterTabs({
+  activeFilter,
+  onChange,
+}: {
+  activeFilter: FilterKey;
+  onChange: (filter: FilterKey) => void;
+}) {
+  return (
+    <View className="bg-diplomatic-surface px-5 pb-4 pt-4">
+      <ScrollView
+        horizontal
+        contentContainerClassName="gap-3"
+        showsHorizontalScrollIndicator={false}
+      >
+        {filters.map((filter) => {
+          const isActive = activeFilter === filter.key;
+
+          return (
+            <Pressable
+              key={filter.key}
+              onPress={() => onChange(filter.key)}
+              className={`h-10 items-center justify-center rounded-full px-5 ${
+                isActive ? "bg-diplomatic-surfaceHigh" : "bg-white"
+              }`}
+            >
+              <Text
+                className={`text-sm font-extrabold tracking-normal ${
+                  isActive
+                    ? "text-diplomatic-primary"
+                    : "text-diplomatic-secondaryText"
+                }`}
+              >
+                {filter.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
   );
 }
 
