@@ -1,6 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useUser } from "@clerk/expo";
 import { useFocusEffect } from "@react-navigation/native";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -13,6 +14,7 @@ type AppUserProfile = {
   first_name: string | null;
   last_name: string | null;
   email: string | null;
+  image_url: string | null;
 };
 
 type MenuRowProps = {
@@ -33,6 +35,13 @@ export default function ProfileScreen() {
     .trim();
   const fullName =
     databaseName || user?.fullName || user?.firstName || "Name";
+  const initials = databaseName
+    ? `${profile?.first_name?.trim().charAt(0) ?? ""}${
+        profile?.last_name?.trim().charAt(0) ??
+        profile?.first_name?.trim().charAt(1) ??
+        ""
+      }`.toUpperCase()
+    : "";
 
   useFocusEffect(
     useCallback(() => {
@@ -49,7 +58,7 @@ export default function ProfileScreen() {
 
           const { data, error } = await supabase
             .from("app_users")
-            .select("first_name, last_name, email")
+            .select("first_name, last_name, email, image_url")
             .eq("clerk_user_id", user.id)
             .maybeSingle();
 
@@ -83,10 +92,7 @@ export default function ProfileScreen() {
         <View className="px-5 pt-7">
           <View className="rounded-[34px] border border-[#E8E8EC] bg-white px-5 py-6">
             <View className="flex-row items-center">
-              <View className="h-[86px] w-[86px] items-center justify-center rounded-full bg-[#C9C9CC]">
-                <View className="h-8 w-8 rounded-full bg-white" />
-                <View className="mt-2 h-5 w-12 rounded-t-full bg-white" />
-              </View>
+              <ProfileAvatar initials={initials} imageUrl={profile?.image_url} />
 
               <View className="ml-5 min-w-0 flex-1">
                 <Text className="text-[24px] font-extrabold leading-8 tracking-normal text-[#202124]">
@@ -139,6 +145,42 @@ export default function ProfileScreen() {
         </View>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function ProfileAvatar({
+  initials,
+  imageUrl,
+}: {
+  initials: string;
+  imageUrl?: string | null;
+}) {
+  if (initials) {
+    return (
+      <View className="h-[86px] w-[86px] items-center justify-center rounded-full bg-[#C9C9CC]">
+        <Text className="text-[28px] font-extrabold tracking-normal text-white">
+          {initials}
+        </Text>
+      </View>
+    );
+  }
+
+  if (imageUrl) {
+    return (
+      <Image
+        source={{ uri: imageUrl }}
+        className="h-[86px] w-[86px] rounded-full bg-[#C9C9CC]"
+        contentFit="cover"
+        transition={180}
+      />
+    );
+  }
+
+  return (
+    <View className="h-[86px] w-[86px] items-center justify-center rounded-full bg-[#C9C9CC]">
+      <View className="h-8 w-8 rounded-full bg-white" />
+      <View className="mt-2 h-5 w-12 rounded-t-full bg-white" />
+    </View>
   );
 }
 
