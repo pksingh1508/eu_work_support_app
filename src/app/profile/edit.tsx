@@ -120,7 +120,7 @@ export default function EditProfileScreen() {
   };
 
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-diplomatic-surface">
+    <SafeAreaView edges={["top"]} className="flex-1 bg-[#FAFAFB]">
       <KeyboardAvoidingView
         behavior={Platform.select({ ios: "padding", default: undefined })}
         className="flex-1"
@@ -131,34 +131,19 @@ export default function EditProfileScreen() {
           contentContainerClassName="px-5 pb-10 pt-7"
           showsVerticalScrollIndicator={false}
         >
-          <View className="flex-row items-center justify-between">
-            <Pressable
-              onPress={() => router.back()}
-              className="h-10 flex-row items-center rounded-interactive border border-[#E0E5EF] bg-white px-4"
-              accessibilityRole="button"
-            >
-              <Ionicons name="chevron-back" size={18} color="#0A0F1A" />
-              <Text className="ml-2 text-sm font-extrabold tracking-normal text-diplomatic-ink">
-                Profile
-              </Text>
-            </Pressable>
+          <Header title="Edit Profile" onBack={() => router.back()} />
 
-            <Text className="text-[30px] font-serif font-extrabold tracking-normal text-diplomatic-ink">
-              Edit
+          <View className="mt-8 rounded-[30px] border border-[#EDEDF0] bg-white px-5 py-6">
+            <Text className="text-xl font-extrabold tracking-normal text-[#202124]">
+              Update your profile
             </Text>
-          </View>
-
-          <View className="mt-6 rounded-interactive bg-white px-4 py-5">
-            <Text className="text-2xl font-serif font-extrabold tracking-normal text-diplomatic-ink">
-              Edit Profile
-            </Text>
-            <Text className="mt-2 text-sm font-semibold leading-5 tracking-normal text-diplomatic-secondaryText">
+            <Text className="mt-2 text-base font-semibold leading-7 tracking-normal text-[#707684]">
               Set your first and last name for your EU Work Support account.
             </Text>
 
             {error ? (
-              <View className="mt-4 rounded-interactive bg-[#FFEDEA] px-4 py-3">
-                <Text className="text-sm font-semibold tracking-normal text-[#BA1A1A]">
+              <View className="mt-5 rounded-[18px] bg-[#FFF1F1] px-4 py-3">
+                <Text className="text-sm font-semibold tracking-normal text-[#D83B3B]">
                   {error}
                 </Text>
               </View>
@@ -167,12 +152,12 @@ export default function EditProfileScreen() {
             {isLoading ? (
               <View className="items-center justify-center py-12">
                 <CustomLoading />
-                <Text className="mt-3 text-sm font-semibold tracking-normal text-diplomatic-secondaryText">
+                <Text className="mt-3 text-sm font-semibold tracking-normal text-[#707684]">
                   Loading profile...
                 </Text>
               </View>
             ) : (
-              <View className="mt-5 gap-4">
+              <View className="mt-6 gap-4">
                 <ProfileTextField
                   label="First Name"
                   value={firstName}
@@ -193,22 +178,15 @@ export default function EditProfileScreen() {
                 <Pressable
                   onPress={updateProfile}
                   disabled={isSubmitting}
-                  className="mt-2 min-h-[52px] flex-row items-center justify-center rounded-interactive bg-diplomatic-primary disabled:opacity-60"
+                  className="mt-2 h-14 items-center justify-center rounded-[22px] bg-diplomatic-primary disabled:opacity-60"
                   accessibilityRole="button"
                 >
                   {isSubmitting ? (
                     <CustomLoading size={28} />
                   ) : (
-                    <>
-                      <Ionicons
-                        name="checkmark-circle-outline"
-                        size={18}
-                        color="#FFFFFF"
-                      />
-                      <Text className="ml-2 text-base font-extrabold tracking-normal text-white">
-                        Update
-                      </Text>
-                    </>
+                    <Text className="text-base font-extrabold tracking-normal text-white">
+                      Update Profile
+                    </Text>
                   )}
                 </Pressable>
               </View>
@@ -217,6 +195,24 @@ export default function EditProfileScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
+  );
+}
+
+function Header({ title, onBack }: { title: string; onBack: () => void }) {
+  return (
+    <View className="flex-row items-center justify-between">
+      <Pressable
+        onPress={onBack}
+        className="h-11 w-11 items-center justify-center rounded-full border border-[#E6E6EA] bg-white"
+        accessibilityRole="button"
+      >
+        <Ionicons name="chevron-back" size={21} color="#202124" />
+      </Pressable>
+      <Text className="text-[28px] font-extrabold tracking-normal text-[#202124]">
+        {title}
+      </Text>
+      <View className="h-11 w-11" />
+    </View>
   );
 }
 
@@ -237,20 +233,20 @@ function ProfileTextField({
 }) {
   return (
     <View>
-      <Text className="mb-2 text-base font-extrabold tracking-normal text-diplomatic-ink">
+      <Text className="mb-2 text-sm font-extrabold tracking-normal text-[#202124]">
         {label}
       </Text>
-      <View className="h-14 flex-row items-center rounded-interactive border border-[#E0E5EF] bg-[#F8FAFD] px-4">
+      <View className="h-14 flex-row items-center rounded-[20px] border border-[#E2E2E6] bg-[#FAFAFB] px-4">
         <TextInput
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor="#A8AEBA"
+          placeholderTextColor="#A1A6B1"
           autoCapitalize="words"
           autoCorrect={false}
           autoComplete={autoComplete}
           textContentType={textContentType}
-          className="min-w-0 flex-1 text-base font-semibold tracking-normal text-diplomatic-ink"
+          className="min-w-0 flex-1 text-base font-semibold tracking-normal text-[#202124]"
         />
       </View>
     </View>
