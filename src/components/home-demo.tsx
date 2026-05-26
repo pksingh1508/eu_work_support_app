@@ -520,7 +520,7 @@ export function HomeDemo() {
           const countryIndex = item.countryIndex;
 
           return (
-            <View className="mb-5 px-5">
+            <View className={`${countryIndex === 0 ? "mt-4" : ""} mb-5 px-5`}>
               <AnimatedCountryListCard
                 animationKey={`${activeFilter}-${country}`}
                 country={country}
@@ -561,7 +561,7 @@ function FilterTabs({
   onChange: (filter: FilterKey) => void;
 }) {
   return (
-    <View className="bg-diplomatic-surface">
+    <View className="bg-diplomatic-surface px-5">
       <ScrollView
         horizontal
         contentContainerClassName="gap-3"
