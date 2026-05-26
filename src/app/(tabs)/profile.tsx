@@ -15,22 +15,12 @@ type AppUserProfile = {
   email: string | null;
 };
 
-function getInitials(name: string, email: string) {
-  const source = name || email;
-  const parts = source
-    .replace(/@.*$/, "")
-    .split(/\s|\.|_/)
-    .filter(Boolean);
-
-  if (parts.length === 0) {
-    return "EU";
-  }
-
-  return parts
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
-}
+type MenuRowProps = {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+  tone?: "default" | "danger";
+};
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -41,8 +31,8 @@ export default function ProfileScreen() {
     .filter(Boolean)
     .join(" ")
     .trim();
-  const fullName = databaseName || "No Name Set";
-  const initials = getInitials(databaseName, email);
+  const fullName =
+    databaseName || user?.fullName || user?.firstName || "Name";
 
   useFocusEffect(
     useCallback(() => {
@@ -84,94 +74,66 @@ export default function ProfileScreen() {
   );
 
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-diplomatic-surface">
+    <SafeAreaView edges={["top"]} className="flex-1 bg-[#FAFAFB]">
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingBottom: BottomTabInset + 24 }}
+        contentContainerStyle={{ paddingBottom: BottomTabInset + 26 }}
         showsVerticalScrollIndicator={false}
       >
         <View className="px-5 pt-7">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-[30px] font-serif font-extrabold tracking-normal text-diplomatic-ink">
-              Profile
-            </Text>
-            <Pressable
-              onPress={() => router.push("/profile/settings")}
-              className="h-10 w-10 items-center justify-center rounded-interactive border border-[#E0E5EF] bg-white"
-              accessibilityRole="button"
-            >
-              <Ionicons name="settings-outline" size={20} color="#0A0F1A" />
-            </Pressable>
-          </View>
+          <View className="rounded-[34px] border border-[#E8E8EC] bg-white px-5 py-6">
+            <View className="flex-row items-center">
+              <View className="h-[86px] w-[86px] items-center justify-center rounded-full bg-[#C9C9CC]">
+                <View className="h-8 w-8 rounded-full bg-white" />
+                <View className="mt-2 h-5 w-12 rounded-t-full bg-white" />
+              </View>
 
-          <View className="mt-5 items-center rounded-interactive bg-white px-4 py-5">
-            <View className="h-[74px] w-[74px] items-center justify-center rounded-interactive bg-[#0B1019]">
-              <Text className="text-[22px] font-serif font-extrabold tracking-normal text-white">
-                {initials}
-              </Text>
+              <View className="ml-5 min-w-0 flex-1">
+                <Text className="text-[24px] font-extrabold leading-8 tracking-normal text-[#202124]">
+                  {fullName}
+                </Text>
+                {email ? (
+                  <Text
+                    className="mt-2 text-sm font-semibold leading-5 tracking-normal text-[#707684]"
+                    numberOfLines={2}
+                  >
+                    {email}
+                  </Text>
+                ) : (
+                  <Text className="mt-2 text-sm font-semibold tracking-normal text-[#707684]">
+                    Email
+                  </Text>
+                )}
+              </View>
             </View>
-            <Text className="mt-4 text-2xl font-serif font-extrabold tracking-normal text-diplomatic-ink">
-              {fullName}
-            </Text>
-            {email ? (
-              <Text className="mt-1 text-sm font-semibold tracking-normal text-diplomatic-secondaryText">
-                {email}
-              </Text>
-            ) : null}
-
-            <Pressable
-              onPress={() => router.push("/profile/edit")}
-              className="mt-4 h-11 w-full flex-row items-center justify-center rounded-interactive bg-diplomatic-primary"
-              accessibilityRole="button"
-            >
-              <Ionicons name="help-circle-outline" size={16} color="#FFFFFF" />
-              <Text className="ml-2 text-base font-extrabold tracking-normal text-white">
-                Edit Profile
-              </Text>
-            </Pressable>
           </View>
 
-          <View className="mt-4 flex-row gap-3">
-            <MetricCard value="29" label="Countries" />
-            <MetricCard value="21" label="Saved" />
-            <MetricCard value="Pro" label="Plan" isPrimary />
-          </View>
-
-          <View className="mt-4 flex-row items-center rounded-interactive bg-[#0B1019] px-4 py-4">
-            <Ionicons
-              name="checkmark-circle-outline"
-              size={26}
-              color="#FFFFFF"
-            />
-            <View className="ml-3 min-w-0 flex-1">
-              <Text className="text-base font-extrabold tracking-normal text-white">
-                Premium active
-              </Text>
-              <Text className="mt-1 text-sm font-semibold tracking-normal text-white opacity-70">
-                Renews on 14 May 2026
-              </Text>
-            </View>
-            <Pressable hitSlop={10}>
-              <Text className="text-sm font-extrabold tracking-normal text-white">
-                Manage
-              </Text>
-            </Pressable>
-          </View>
-
-          <View className="mt-4 gap-3">
+          <View className="mt-10 gap-3">
             <ProfileMenuRow
-              icon="bookmark-outline"
-              label="Saved items"
-              onPress={() => router.push("/profile/saved-items")}
+              icon="person-circle-outline"
+              label="Account"
+              onPress={() => router.push("/profile/account")}
+            />
+            <ProfileMenuRow
+              icon="document-text-outline"
+              label="Legal"
+              onPress={() => router.push("/profile/legal")}
             />
             <ProfileMenuRow
               icon="help-circle-outline"
-              label="Support and help"
-              onPress={() => router.push("/profile/help")}
+              label="Support"
+              onPress={() => router.push("/profile/support")}
             />
             <ProfileMenuRow
-              icon="notifications-outline"
-              label="Notifications"
+              icon="trash-outline"
+              label="Danger Zone"
+              tone="danger"
+              onPress={() => router.push("/profile/danger-zone")}
+            />
+            <ProfileMenuRow
+              icon="information-circle-outline"
+              label="App Info"
+              onPress={() => router.push("/profile/app-info")}
             />
           </View>
         </View>
@@ -180,51 +142,34 @@ export default function ProfileScreen() {
   );
 }
 
-function MetricCard({
-  value,
-  label,
-  isPrimary,
-}: {
-  value: string;
-  label: string;
-  isPrimary?: boolean;
-}) {
-  return (
-    <View className="min-h-[60px] flex-1 justify-center rounded-interactive bg-white px-3">
-      <Text
-        className={`text-xl font-extrabold tracking-normal ${
-          isPrimary ? "text-diplomatic-primary" : "text-diplomatic-ink"
-        }`}
-      >
-        {value}
-      </Text>
-      <Text className="mt-1 text-xs font-extrabold tracking-normal text-diplomatic-secondaryText">
-        {label}
-      </Text>
-    </View>
-  );
-}
+function ProfileMenuRow({ icon, label, onPress, tone = "default" }: MenuRowProps) {
+  const isDanger = tone === "danger";
 
-function ProfileMenuRow({
-  icon,
-  label,
-  onPress,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  onPress?: () => void;
-}) {
   return (
     <Pressable
       onPress={onPress}
-      className="min-h-[54px] flex-row items-center rounded-interactive bg-white px-4"
+      className="min-h-[82px] flex-row items-center rounded-[28px] border border-[#EDEDF0] bg-white px-5 active:opacity-80"
       accessibilityRole="button"
     >
-      <Ionicons name={icon} size={21} color="#1E7AF2" />
-      <Text className="ml-3 min-w-0 flex-1 text-base font-extrabold tracking-normal text-diplomatic-ink">
+      <View
+        className={`h-[52px] w-[52px] items-center justify-center rounded-[20px] ${
+          isDanger ? "bg-[#FFF1F1]" : "bg-[#F4F4F5]"
+        }`}
+      >
+        <Ionicons
+          name={icon}
+          size={25}
+          color={isDanger ? "#D83B3B" : "#202124"}
+        />
+      </View>
+      <Text
+        className={`ml-5 min-w-0 flex-1 text-xl font-extrabold tracking-normal ${
+          isDanger ? "text-[#D83B3B]" : "text-[#202124]"
+        }`}
+      >
         {label}
       </Text>
-      <Ionicons name="chevron-forward" size={18} color="#8E95A3" />
+      <Ionicons name="chevron-forward" size={20} color="#202124" />
     </Pressable>
   );
 }

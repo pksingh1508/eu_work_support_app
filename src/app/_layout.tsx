@@ -19,6 +19,12 @@ export default function RootLayout() {
           <Stack.Screen name="onboarding" />
           <Stack.Screen name="country/[slug]" />
           <Stack.Screen name="visa/[id]" />
+          <Stack.Screen name="profile/account" />
+          <Stack.Screen name="profile/change-password" />
+          <Stack.Screen name="profile/legal" />
+          <Stack.Screen name="profile/support" />
+          <Stack.Screen name="profile/danger-zone" />
+          <Stack.Screen name="profile/app-info" />
           <Stack.Screen name="profile/settings" />
           <Stack.Screen name="profile/edit" />
           <Stack.Screen name="profile/saved-items" />
