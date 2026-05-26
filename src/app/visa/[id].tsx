@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { isDocumentSaved, setDocumentSaved } from "@/lib/saved-items";
 import { supabase } from "@/lib/supabase";
+import { showSavedToast, showUnsavedToast } from "@/lib/toast";
 
 const documentSelect = `
   id,
@@ -327,6 +328,12 @@ export default function VisaDocumentScreen() {
         documentId: document.id,
         shouldSave: nextIsSaved,
       });
+
+      if (nextIsSaved) {
+        showSavedToast(document.title, "document");
+      } else {
+        showUnsavedToast(document.title, "document");
+      }
     } catch (error) {
       console.warn("Unable to update saved document", error);
       setIsDocumentSavedState(!nextIsSaved);

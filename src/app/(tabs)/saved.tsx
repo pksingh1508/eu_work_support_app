@@ -23,6 +23,7 @@ import {
   setCountrySaved,
   setDocumentSaved,
 } from "@/lib/saved-items";
+import { showUnsavedToast } from "@/lib/toast";
 
 type SavedItem =
   | ({ type: "country" } & SavedCountry)
@@ -147,6 +148,11 @@ export default function SavedScreen() {
           shouldSave: false,
         });
       }
+
+      showUnsavedToast(
+        item.type === "country" ? item.name : item.title,
+        item.type,
+      );
     } catch (error) {
       console.warn("Unable to remove saved item", error);
       setSavedItems(previousItems);

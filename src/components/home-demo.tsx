@@ -32,6 +32,7 @@ import {
   fetchSavedCountrySlugs,
   setCountrySaved,
 } from "@/lib/saved-items";
+import { showSavedToast, showUnsavedToast } from "@/lib/toast";
 
 type FilterKey = "all" | "top-rated" | "easiest-visa";
 
@@ -401,6 +402,12 @@ export function HomeDemo() {
           countryId,
           shouldSave,
         });
+
+        if (shouldSave) {
+          showSavedToast(country, "country");
+        } else {
+          showUnsavedToast(country, "country");
+        }
       } catch (error) {
         console.warn("Unable to update saved country", error);
         setSavedCountrySlugs(previousSavedSlugs);

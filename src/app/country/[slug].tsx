@@ -18,6 +18,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { BottomTabInset } from "@/constants/theme";
 import { isCountrySaved, setCountrySaved } from "@/lib/saved-items";
 import { supabase } from "@/lib/supabase";
+import { showSavedToast, showUnsavedToast } from "@/lib/toast";
 
 const countrySelect = `
   id,
@@ -376,6 +377,12 @@ export default function CountryDetailScreen() {
         countryId: country.id,
         shouldSave: nextIsSaved,
       });
+
+      if (nextIsSaved) {
+        showSavedToast(country.name, "country");
+      } else {
+        showUnsavedToast(country.name, "country");
+      }
     } catch (error) {
       console.warn("Unable to update saved country", error);
       setIsCountrySavedState(!nextIsSaved);
