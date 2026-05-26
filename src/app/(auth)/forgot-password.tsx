@@ -100,8 +100,8 @@ export default function ForgotPasswordScreen() {
       error={error}
     >
       {notice ? (
-        <View className="rounded-interactive bg-diplomatic-surfaceHigh px-4 py-3">
-          <Text className="text-sm font-semibold tracking-normal text-diplomatic-ink">
+        <View className="rounded-[18px] bg-[#EEF7FF] px-4 py-3">
+          <Text className="text-sm font-semibold tracking-normal text-[#202124]">
             {notice}
           </Text>
         </View>

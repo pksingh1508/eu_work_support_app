@@ -104,11 +104,11 @@ function SignInForm() {
           hitSlop={10}>
           <View
             className={`h-5 w-5 items-center justify-center rounded-[5px] ${
-              rememberMe ? 'bg-diplomatic-primary' : 'border border-[#C7CEDB] bg-white'
+              rememberMe ? 'bg-diplomatic-primary' : 'border border-[#DADDE3] bg-white'
             }`}>
             {rememberMe ? <Ionicons name="checkmark" size={15} color="#FFFFFF" /> : null}
           </View>
-          <Text className="text-sm font-bold tracking-normal text-diplomatic-secondaryText">
+          <Text className="text-sm font-bold tracking-normal text-[#707684]">
             Remember me
           </Text>
         </Pressable>
@@ -258,8 +258,8 @@ function SignUpForm() {
 
 function AuthFormError({ message }: { message: string }) {
   return (
-    <View className="rounded-interactive bg-[#FFEDEA] px-4 py-3">
-      <Text className="text-sm font-semibold tracking-normal text-[#BA1A1A]">{message}</Text>
+    <View className="rounded-[18px] bg-[#FFF1F1] px-4 py-3">
+      <Text className="text-sm font-semibold tracking-normal text-[#D83B3B]">{message}</Text>
     </View>
   );
 }
