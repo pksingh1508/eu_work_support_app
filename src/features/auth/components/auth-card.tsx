@@ -1,7 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { PropsWithChildren } from 'react';
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -12,6 +11,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { CustomLoading } from "@/components/custom-loading";
 
 type AuthCardProps = PropsWithChildren<{
   title: string;
@@ -188,7 +189,7 @@ export function AuthPrimaryButton({ label, isLoading, disabled, onPress }: AuthP
       onPress={onPress}
       className="h-14 items-center justify-center rounded-interactive bg-diplomatic-primary active:opacity-80 disabled:opacity-60">
       {isLoading ? (
-        <ActivityIndicator color="#FFFFFF" />
+        <CustomLoading size={28} />
       ) : (
         <Text className="text-lg font-bold tracking-normal text-white">{label} {'->'}</Text>
       )}

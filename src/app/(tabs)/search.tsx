@@ -1,16 +1,10 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { CustomLoading } from "@/components/custom-loading";
 import { BottomTabInset } from "@/constants/theme";
 import { appStorage } from "@/lib/local-storage";
 import { supabase } from "@/lib/supabase";
@@ -456,7 +450,7 @@ export default function SearchScreen() {
             <View className="mt-9">
               <View className="flex-row items-center justify-between">
                 <SectionTitle title="Results" />
-                {isSearching ? <ActivityIndicator color="#0058BC" /> : null}
+                {isSearching ? <CustomLoading size={32} /> : null}
               </View>
 
               {error ? (

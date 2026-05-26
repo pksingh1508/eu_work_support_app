@@ -3,7 +3,6 @@ import { useAuth, useUser } from "@clerk/expo";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -14,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { CustomLoading } from "@/components/custom-loading";
 import { supabase } from "@/lib/supabase";
 
 type EditableProfile = {
@@ -166,7 +166,7 @@ export default function EditProfileScreen() {
 
             {isLoading ? (
               <View className="items-center justify-center py-12">
-                <ActivityIndicator color="#0058BC" />
+                <CustomLoading />
                 <Text className="mt-3 text-sm font-semibold tracking-normal text-diplomatic-secondaryText">
                   Loading profile...
                 </Text>
@@ -197,7 +197,7 @@ export default function EditProfileScreen() {
                   accessibilityRole="button"
                 >
                   {isSubmitting ? (
-                    <ActivityIndicator color="#FFFFFF" />
+                    <CustomLoading size={28} />
                   ) : (
                     <>
                       <Ionicons

@@ -1,4 +1,6 @@
-import { ActivityIndicator, Pressable, Text } from 'react-native';
+import { Pressable, Text } from 'react-native';
+
+import { CustomLoading } from "@/components/custom-loading";
 
 type PrimaryButtonProps = {
   label: string;
@@ -14,7 +16,7 @@ export function PrimaryButton({ label, isLoading, disabled, onPress }: PrimaryBu
       onPress={onPress}
       className="h-14 items-center justify-center rounded-interactive bg-diplomatic-primary px-5 active:opacity-80 disabled:opacity-50">
       {isLoading ? (
-        <ActivityIndicator color="#FFFFFF" />
+        <CustomLoading size={28} />
       ) : (
         <Text className="text-base font-bold tracking-normal text-white">{label}</Text>
       )}

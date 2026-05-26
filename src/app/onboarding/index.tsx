@@ -1,13 +1,7 @@
 import { useAuth } from "@clerk/expo";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import {
   Directions,
   Gesture,
@@ -23,6 +17,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { CustomLoading } from "@/components/custom-loading";
 import { useAuthProfile } from "@/features/auth/auth-profile";
 import {
   ExploreCountriesSlide,
@@ -211,7 +206,7 @@ export default function OnboardingStartScreen() {
             className="mt-5 h-14 items-center justify-center rounded-interactive bg-diplomatic-primary active:opacity-80 disabled:opacity-60"
           >
             {isSubmitting ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <CustomLoading size={28} />
             ) : (
               <Text className="text-base font-extrabold tracking-normal text-white">
                 {isLastSlide ? "Get Started" : "Next"} {"->"}

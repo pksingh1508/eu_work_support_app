@@ -3,7 +3,6 @@ import { useAuth } from "@clerk/expo";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Linking,
   Pressable,
@@ -14,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { CustomLoading } from "@/components/custom-loading";
 import { isDocumentSaved, setDocumentSaved } from "@/lib/saved-items";
 import { supabase } from "@/lib/supabase";
 import { showSavedToast, showUnsavedToast } from "@/lib/toast";
@@ -398,7 +398,7 @@ export default function VisaDocumentScreen() {
 
         {isLoading ? (
           <View className="mt-16 items-center justify-center rounded-atelier bg-white px-6 py-14">
-            <ActivityIndicator color="#0058BC" />
+            <CustomLoading />
             <Text className="mt-4 text-base font-bold tracking-normal text-diplomatic-secondaryText">
               Loading guide...
             </Text>

@@ -4,7 +4,6 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Animated,
   Easing,
@@ -15,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { CustomLoading } from "@/components/custom-loading";
 import { BottomTabInset } from "@/constants/theme";
 import {
   fetchSavedItems,
@@ -182,7 +182,7 @@ export default function SavedScreen() {
 
           {isLoading ? (
             <View className="mt-10 items-center rounded-atelier bg-white px-6 py-10">
-              <ActivityIndicator color="#0058BC" />
+              <CustomLoading />
               <Text className="mt-4 text-base font-bold tracking-normal text-diplomatic-secondaryText">
                 Loading saved guides...
               </Text>
