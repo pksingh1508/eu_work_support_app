@@ -20,3 +20,10 @@ export function showUnsavedToast(name: string, type: SavedToastType) {
     },
   );
 }
+
+export function showInfoToast(title: string, description?: string) {
+  toast.info(title, {
+    description,
+    duration: toastDuration,
+  });
+}
