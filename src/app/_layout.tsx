@@ -5,14 +5,12 @@ import React from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Toaster } from "sonner-native";
 
-import { AnimatedSplashOverlay } from "@/components/animated-icon";
 import { AppProviders } from "@/components/app-providers";
 
 export default function RootLayout() {
   return (
     <GestureHandlerRootView className="flex-1">
       <AppProviders>
-        <AnimatedSplashOverlay />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="(auth)" />

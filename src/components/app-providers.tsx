@@ -1,5 +1,6 @@
 import { ClerkProvider, useAuth } from "@clerk/expo";
 import { useFonts } from "expo-font";
+import * as ExpoSplashScreen from "expo-splash-screen";
 import {
   DarkTheme,
   DefaultTheme,
@@ -15,13 +16,14 @@ import {
   type TextProps,
 } from "react-native";
 
-import { SplashScreen } from "@/components/splash-screen";
 import { AuthAccessProvider, useAuthAccess } from "@/features/auth/access";
 import { clerkPublishableKey, clerkTokenCache } from "@/lib/clerk";
 import { optionalEnv } from "@/lib/env";
 import { appFonts, FontFamily } from "@/lib/fonts";
 import { getThemePreference } from "@/lib/local-storage";
 import { setSupabaseAccessTokenGetter } from "@/lib/supabase";
+
+void ExpoSplashScreen.preventAutoHideAsync();
 
 let defaultTextFontsConfigured = false;
 
@@ -71,14 +73,6 @@ function SupabaseAuthBridge({ children }: PropsWithChildren) {
   return children;
 }
 
-function LoadingScreen({
-  label = "Preparing your account",
-}: {
-  label?: string;
-}) {
-  return <SplashScreen label={label} />;
-}
-
 function AuthGate({ children }: PropsWithChildren) {
   const {
     isAuthLoaded,
@@ -124,29 +118,35 @@ function AuthGate({ children }: PropsWithChildren) {
     router,
   ]);
 
-  if (!isAuthLoaded) {
-    return <LoadingScreen label="Loading secure session" />;
-  }
-
-  if (isSignedIn && isProfileLoading && isOnboardingRoute) {
-    return <LoadingScreen />;
-  }
-
   return children;
 }
 
 export function AppProviders({ children }: PropsWithChildren) {
-  const [fontsLoaded] = useFonts(appFonts);
+  const [fontsLoaded, fontError] = useFonts(appFonts);
   const colorScheme = useColorScheme();
   const [themePreference] = useState(() => getThemePreference());
   const resolvedColorScheme =
     themePreference === "system" ? colorScheme : themePreference;
 
-  if (!fontsLoaded) {
-    return <SplashScreen label="Loading app fonts" />;
+  useEffect(() => {
+    if (!fontsLoaded && !fontError) {
+      return;
+    }
+
+    if (fontError) {
+      console.warn("Unable to load app fonts", fontError);
+    }
+
+    void ExpoSplashScreen.hideAsync();
+  }, [fontError, fontsLoaded]);
+
+  if (fontsLoaded) {
+    configureDefaultTextFonts();
   }
 
-  configureDefaultTextFonts();
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
 
   return (
     <ClerkProvider
