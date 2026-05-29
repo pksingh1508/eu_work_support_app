@@ -183,7 +183,7 @@ export default function ForgotPasswordScreen() {
 
       <Pressable className="items-center" hitSlop={10} onPress={goBack}>
         <Text className="text-sm font-bold tracking-normal text-diplomatic-primary">
-          Back to sign in
+          Back to login
         </Text>
       </Pressable>
     </AuthCard>

@@ -1,28 +1,25 @@
-import { createContext, PropsWithChildren, useContext } from 'react';
+import { PropsWithChildren } from "react";
 
-type AuthProfileContextValue = {
-  isProfileLoading: boolean;
-  onboardingCompleted: boolean | null;
-  markOnboardingCompleted: () => void;
-  refreshProfile: () => Promise<void>;
-};
-
-const AuthProfileContext = createContext<AuthProfileContextValue | undefined>(undefined);
+import { useAuthAccess } from "@/features/auth/access";
 
 export function AuthProfileProvider({
   children,
-  value,
-}: PropsWithChildren<{ value: AuthProfileContextValue }>) {
-  return <AuthProfileContext.Provider value={value}>{children}</AuthProfileContext.Provider>;
+}: PropsWithChildren<{ value?: unknown }>) {
+  return <>{children}</>;
 }
 
 export function useAuthProfile() {
-  const value = useContext(AuthProfileContext);
+  const {
+    isProfileLoading,
+    onboardingCompleted,
+    markOnboardingCompleted,
+    refreshProfile,
+  } = useAuthAccess();
 
-  if (!value) {
-    throw new Error('useAuthProfile must be used inside AuthProfileProvider');
-  }
-
-  return value;
+  return {
+    isProfileLoading,
+    onboardingCompleted,
+    markOnboardingCompleted,
+    refreshProfile,
+  };
 }
-

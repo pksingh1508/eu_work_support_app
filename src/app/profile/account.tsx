@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { PremiumGuard } from "@/features/auth/components/premium-guard";
 import { clearCachedAuthSnapshot } from "@/lib/local-storage";
 
 type AccountRowProps = {
@@ -14,6 +15,14 @@ type AccountRowProps = {
 };
 
 export default function ProfileAccountScreen() {
+  return (
+    <PremiumGuard>
+      <ProfileAccountContent />
+    </PremiumGuard>
+  );
+}
+
+function ProfileAccountContent() {
   const router = useRouter();
   const { signOut } = useClerk();
 

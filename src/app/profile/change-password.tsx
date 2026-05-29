@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CustomLoading } from "@/components/custom-loading";
+import { PremiumGuard } from "@/features/auth/components/premium-guard";
 import { getAuthErrorMessage } from "@/features/auth/errors";
 
 type PasswordUser = {
@@ -26,6 +27,14 @@ type PasswordUser = {
 };
 
 export default function ChangePasswordScreen() {
+  return (
+    <PremiumGuard>
+      <ChangePasswordContent />
+    </PremiumGuard>
+  );
+}
+
+function ChangePasswordContent() {
   const router = useRouter();
   const { user } = useUser();
   const [currentPassword, setCurrentPassword] = useState("");

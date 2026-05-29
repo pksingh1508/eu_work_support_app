@@ -1,6 +1,15 @@
 import { ScreenPlaceholder } from '@/components/ui/screen-placeholder';
+import { PremiumGuard } from "@/features/auth/components/premium-guard";
 
 export default function ProfileSavedItemsScreen() {
+  return (
+    <PremiumGuard>
+      <ProfileSavedItemsContent />
+    </PremiumGuard>
+  );
+}
+
+function ProfileSavedItemsContent() {
   return (
     <ScreenPlaceholder
       eyebrow="Profile"

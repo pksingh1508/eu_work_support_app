@@ -121,7 +121,7 @@ export default function OnboardingStartScreen() {
       console.warn("Unable to complete onboarding", submitError);
       setError(
         isSupabaseJwtDecodeError(submitError)
-          ? "Supabase cannot verify the Clerk session yet. Enable Clerk under Supabase Auth > Third-Party Auth, then sign out and sign in again."
+          ? "Supabase cannot verify the Clerk session yet. Enable Clerk under Supabase Auth > Third-Party Auth, then log out and login again."
           : "We could not finish onboarding yet. Please try again.",
       );
     } finally {

@@ -8,6 +8,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BottomTabInset } from "@/constants/theme";
+import { PremiumGuard } from "@/features/auth/components/premium-guard";
 import { supabase } from "@/lib/supabase";
 
 type AppUserProfile = {
@@ -25,6 +26,14 @@ type MenuRowProps = {
 };
 
 export default function ProfileScreen() {
+  return (
+    <PremiumGuard>
+      <ProfileContent />
+    </PremiumGuard>
+  );
+}
+
+function ProfileContent() {
   const router = useRouter();
   const { user } = useUser();
   const [profile, setProfile] = useState<AppUserProfile | null>(null);
@@ -34,14 +43,14 @@ export default function ProfileScreen() {
     .join(" ")
     .trim();
   const fullName =
-    databaseName || user?.fullName || user?.firstName || "Name";
+    databaseName || user?.fullName || user?.firstName || "Welcome";
   const initials = databaseName
     ? `${profile?.first_name?.trim().charAt(0) ?? ""}${
         profile?.last_name?.trim().charAt(0) ??
         profile?.first_name?.trim().charAt(1) ??
         ""
       }`.toUpperCase()
-    : "";
+    : fullName.trim().charAt(0).toUpperCase();
 
   useFocusEffect(
     useCallback(() => {
@@ -90,7 +99,11 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View className="px-5 pt-7">
-          <View className="rounded-[34px] border border-[#E8E8EC] bg-white px-5 py-6">
+          <Text className="text-center text-[30px] font-serif font-extrabold tracking-normal text-[#202124]">
+            Profile
+          </Text>
+
+          <View className="mt-6 rounded-[34px] border border-[#E8E8EC] bg-white px-5 py-6">
             <View className="flex-row items-center">
               <ProfileAvatar initials={initials} imageUrl={profile?.image_url} />
 

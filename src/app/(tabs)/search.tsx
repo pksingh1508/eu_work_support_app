@@ -6,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CustomLoading } from "@/components/custom-loading";
 import { BottomTabInset } from "@/constants/theme";
+import { PremiumGuard } from "@/features/auth/components/premium-guard";
 import { appStorage } from "@/lib/local-storage";
 import { supabase } from "@/lib/supabase";
 
@@ -308,6 +309,14 @@ async function searchPublishedDocuments(query: string) {
 }
 
 export default function SearchScreen() {
+  return (
+    <PremiumGuard>
+      <SearchContent />
+    </PremiumGuard>
+  );
+}
+
+function SearchContent() {
   const router = useRouter();
   const requestIdRef = useRef(0);
   const [query, setQuery] = useState("");

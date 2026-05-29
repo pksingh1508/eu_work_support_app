@@ -5,9 +5,18 @@ import { useState } from "react";
 import { Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { PremiumGuard } from "@/features/auth/components/premium-guard";
 import { clearCachedAuthSnapshot } from "@/lib/local-storage";
 
 export default function ProfileSettingsScreen() {
+  return (
+    <PremiumGuard>
+      <ProfileSettingsContent />
+    </PremiumGuard>
+  );
+}
+
+function ProfileSettingsContent() {
   const router = useRouter();
   const { signOut } = useClerk();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);

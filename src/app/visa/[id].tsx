@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CustomLoading } from "@/components/custom-loading";
+import { PremiumGuard } from "@/features/auth/components/premium-guard";
 import { isDocumentSaved, setDocumentSaved } from "@/lib/saved-items";
 import { supabase } from "@/lib/supabase";
 import { showSavedToast, showUnsavedToast } from "@/lib/toast";
@@ -206,6 +207,14 @@ async function fetchVisaDocument(id: string) {
 }
 
 export default function VisaDocumentScreen() {
+  return (
+    <PremiumGuard>
+      <VisaDocumentContent />
+    </PremiumGuard>
+  );
+}
+
+function VisaDocumentContent() {
   const router = useRouter();
   const { userId } = useAuth();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -302,7 +311,7 @@ export default function VisaDocumentScreen() {
     }
 
     if (!userId) {
-      Alert.alert("Sign in required", "Please sign in to save documents.");
+      Alert.alert("Login required", "Please login to save documents.");
       return;
     }
 

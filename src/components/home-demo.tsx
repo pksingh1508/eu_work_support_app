@@ -1,5 +1,4 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useAuth } from "@clerk/expo";
 import { useFocusEffect } from "@react-navigation/native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
@@ -27,6 +26,7 @@ import {
   topRated,
 } from "@/constants/country";
 import { BottomTabInset } from "@/constants/theme";
+import { useAuthAccess } from "@/features/auth/access";
 import {
   fetchCountryIdBySlug,
   fetchSavedCountrySlugs,
@@ -225,7 +225,7 @@ function getFlagUrl(country: CountryName) {
 
 export function HomeDemo() {
   const router = useRouter();
-  const { userId } = useAuth();
+  const { userId, hasPremiumAccess } = useAuthAccess();
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
   const [savedCountrySlugs, setSavedCountrySlugs] = useState<Set<string>>(
     () => new Set(),
@@ -333,7 +333,7 @@ export function HomeDemo() {
       let isActive = true;
 
       async function loadSavedCountries() {
-        if (!userId) {
+        if (!hasPremiumAccess || !userId) {
           setSavedCountrySlugs(new Set());
           return;
         }
@@ -354,13 +354,13 @@ export function HomeDemo() {
       return () => {
         isActive = false;
       };
-    }, [userId]),
+    }, [hasPremiumAccess, userId]),
   );
 
   const toggleSavedCountry = useCallback(
     async (country: CountryName) => {
-      if (!userId) {
-        Alert.alert("Sign in required", "Please sign in to save countries.");
+      if (!hasPremiumAccess || !userId) {
+        router.push("/saved");
         return;
       }
 
@@ -419,7 +419,7 @@ export function HomeDemo() {
         setSavingCountrySlug(null);
       }
     },
-    [countryIdsBySlug, savedCountrySlugs, userId],
+    [countryIdsBySlug, hasPremiumAccess, router, savedCountrySlugs, userId],
   );
 
   return (
@@ -537,6 +537,7 @@ export function HomeDemo() {
                   visibleCountryKeys.has(`${activeFilter}-${country}`)
                 }
                 onPress={openCountry}
+                canSave={hasPremiumAccess}
                 isSaved={savedCountrySlugs.has(getCountrySlug(country))}
                 isSaving={savingCountrySlug === getCountrySlug(country)}
                 onToggleSave={toggleSavedCountry}
@@ -608,6 +609,7 @@ function AnimatedCountryListCard({
   index,
   isVisible,
   onPress,
+  canSave,
   isSaved,
   isSaving,
   onToggleSave,
@@ -617,6 +619,7 @@ function AnimatedCountryListCard({
   index: number;
   isVisible: boolean;
   onPress: (country: CountryName) => void;
+  canSave: boolean;
   isSaved: boolean;
   isSaving: boolean;
   onToggleSave: (country: CountryName) => void;
@@ -662,6 +665,7 @@ function AnimatedCountryListCard({
       <CountryListCard
         country={country}
         onPress={onPress}
+        canSave={canSave}
         isSaved={isSaved}
         isSaving={isSaving}
         onToggleSave={onToggleSave}
@@ -725,12 +729,14 @@ function PopularDestinationCard({
 function CountryListCard({
   country,
   onPress,
+  canSave,
   isSaved,
   isSaving,
   onToggleSave,
 }: {
   country: CountryName;
   onPress: (country: CountryName) => void;
+  canSave: boolean;
   isSaved: boolean;
   isSaving: boolean;
   onToggleSave: (country: CountryName) => void;
@@ -750,25 +756,29 @@ function CountryListCard({
           style={{ width: 30, height: 20, borderRadius: 3 }}
           contentFit="cover"
         />
-        <Pressable
-          onPress={(event: GestureResponderEvent) => {
-            event.stopPropagation();
-            onToggleSave(country);
-          }}
-          disabled={isSaving}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel={isSaved ? `Unsave ${country}` : `Save ${country}`}
-          className={`h-8 w-8 items-center justify-center rounded-full active:opacity-70 disabled:opacity-60 ${
-            isSaved ? "bg-[#DFF3E6]" : "bg-transparent"
-          }`}
-        >
-          <Ionicons
-            name={bookmarkIcon}
-            size={21}
-            color={isSaved ? "#183B2B" : "#2F3A4A"}
-          />
-        </Pressable>
+        {canSave ? (
+          <Pressable
+            onPress={(event: GestureResponderEvent) => {
+              event.stopPropagation();
+              onToggleSave(country);
+            }}
+            disabled={isSaving}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel={
+              isSaved ? `Unsave ${country}` : `Save ${country}`
+            }
+            className={`h-8 w-8 items-center justify-center rounded-full active:opacity-70 disabled:opacity-60 ${
+              isSaved ? "bg-[#DFF3E6]" : "bg-transparent"
+            }`}
+          >
+            <Ionicons
+              name={bookmarkIcon}
+              size={21}
+              color={isSaved ? "#183B2B" : "#2F3A4A"}
+            />
+          </Pressable>
+        ) : null}
       </View>
       <Text className="mt-7 text-[20px] font-serif font-extrabold tracking-normal text-diplomatic-ink">
         {country}

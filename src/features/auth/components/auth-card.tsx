@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useRouter } from 'expo-router';
 import { PropsWithChildren } from 'react';
 import {
   KeyboardAvoidingView,
@@ -17,9 +18,8 @@ import { CustomLoading } from "@/components/custom-loading";
 type AuthCardProps = PropsWithChildren<{
   title: string;
   subtitle: string;
+  headerTitle?: string;
   error?: string | null;
-  activeTab?: 'sign-in' | 'sign-up';
-  onTabChange?: (tab: 'sign-in' | 'sign-up') => void;
 }>;
 
 type AuthTextFieldProps = TextInputProps & {
@@ -39,11 +39,12 @@ type AuthPrimaryButtonProps = {
 export function AuthCard({
   title,
   subtitle,
+  headerTitle = title,
   error,
-  activeTab,
-  onTabChange,
   children,
 }: AuthCardProps) {
+  const router = useRouter();
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.select({ ios: 'padding', default: undefined })}
@@ -51,7 +52,21 @@ export function AuthCard({
       <ScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerClassName="min-h-full px-5 pb-10 pt-7">
-        <SafeAreaView className="flex-1 justify-center">
+        <SafeAreaView className="flex-1">
+          <View className="mb-8 flex-row items-center justify-between">
+            <Pressable
+              onPress={() => router.back()}
+              className="h-11 w-11 items-center justify-center rounded-full border border-[#E6E6EA] bg-white"
+              accessibilityRole="button"
+            >
+              <Ionicons name="chevron-back" size={23} color="#202124" />
+            </Pressable>
+            <Text className="mx-3 min-w-0 flex-1 text-center text-[30px] font-extrabold tracking-normal text-[#202124]">
+              {headerTitle}
+            </Text>
+            <View className="h-11 w-11" />
+          </View>
+
           <View className="rounded-[30px] border border-[#EDEDF0] bg-white px-5 py-6">
             <Text className="text-[30px] font-extrabold leading-9 tracking-normal text-[#202124]">
               {title}
@@ -59,21 +74,6 @@ export function AuthCard({
             <Text className="mt-3 text-base font-semibold leading-7 tracking-normal text-[#707684]">
               {subtitle}
             </Text>
-
-            {activeTab ? (
-              <View className="mt-6 h-12 flex-row rounded-[20px] bg-[#F4F4F5] p-1">
-                <AuthTabButton
-                  label="Sign In"
-                  isActive={activeTab === 'sign-in'}
-                  onPress={() => onTabChange?.('sign-in')}
-                />
-                <AuthTabButton
-                  label="Sign Up"
-                  isActive={activeTab === 'sign-up'}
-                  onPress={() => onTabChange?.('sign-up')}
-                />
-              </View>
-            ) : null}
 
             {error ? (
               <View className="mt-5 rounded-[18px] bg-[#FFF1F1] px-4 py-3">
@@ -90,31 +90,6 @@ export function AuthCard({
         </SafeAreaView>
       </ScrollView>
     </KeyboardAvoidingView>
-  );
-}
-
-function AuthTabButton({
-  label,
-  isActive,
-  onPress,
-}: {
-  label: string;
-  isActive: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      className={`flex-1 items-center justify-center rounded-[16px] ${
-        isActive ? 'bg-white' : 'bg-transparent'
-      }`}>
-      <Text
-        className={`text-base font-extrabold tracking-normal ${
-          isActive ? 'text-diplomatic-primary' : 'text-[#707684]'
-        }`}>
-        {label}
-      </Text>
-    </Pressable>
   );
 }
 

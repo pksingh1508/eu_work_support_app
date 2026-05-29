@@ -6,6 +6,7 @@ import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CustomLoading } from "@/components/custom-loading";
+import { PremiumGuard } from "@/features/auth/components/premium-guard";
 import { clearCachedAuthSnapshot } from "@/lib/local-storage";
 
 type DeletableUser = {
@@ -13,6 +14,14 @@ type DeletableUser = {
 };
 
 export default function DangerZoneScreen() {
+  return (
+    <PremiumGuard>
+      <DangerZoneContent />
+    </PremiumGuard>
+  );
+}
+
+function DangerZoneContent() {
   const router = useRouter();
   const { user } = useUser();
   const { signOut } = useClerk();

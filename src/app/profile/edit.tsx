@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CustomLoading } from "@/components/custom-loading";
+import { PremiumGuard } from "@/features/auth/components/premium-guard";
 import { supabase } from "@/lib/supabase";
 
 type EditableProfile = {
@@ -22,6 +23,14 @@ type EditableProfile = {
 };
 
 export default function EditProfileScreen() {
+  return (
+    <PremiumGuard>
+      <EditProfileContent />
+    </PremiumGuard>
+  );
+}
+
+function EditProfileContent() {
   const router = useRouter();
   const { userId } = useAuth();
   const { user } = useUser();

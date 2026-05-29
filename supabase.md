@@ -57,6 +57,7 @@ create table public.app_users (
   preferences jsonb not null default '{}'::jsonb,
   clerk_created_at timestamptz,
   clerk_updated_at timestamptz,
+  user_plan text default 'Free',
   deleted_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -1431,7 +1432,7 @@ Recommended setup:
 The app is already configured to send Clerk's session token to Supabase with:
 
 ```ts
-accessToken: async () => session?.getToken() ?? null
+accessToken: async () => session?.getToken() ?? null;
 ```
 
 After the Third-Party Auth integration is enabled, Supabase can verify the Clerk token and the existing RLS policies using `auth.jwt()->>'sub'` will work.

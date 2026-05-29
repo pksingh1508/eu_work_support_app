@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CustomLoading } from "@/components/custom-loading";
 import { BottomTabInset } from "@/constants/theme";
+import { PremiumGuard } from "@/features/auth/components/premium-guard";
 import {
   fetchSavedItems,
   SavedCountry,
@@ -43,6 +44,14 @@ function formatSavedDate(value: string) {
 }
 
 export default function SavedScreen() {
+  return (
+    <PremiumGuard>
+      <SavedContent />
+    </PremiumGuard>
+  );
+}
+
+function SavedContent() {
   const router = useRouter();
   const { userId } = useAuth();
   const [savedItems, setSavedItems] = useState<SavedItem[]>([]);
@@ -120,7 +129,7 @@ export default function SavedScreen() {
 
   const unsaveItem = async (item: SavedItem) => {
     if (!userId) {
-      Alert.alert("Sign in required", "Please sign in to update saved items.");
+      Alert.alert("Login required", "Please login to update saved items.");
       return;
     }
 

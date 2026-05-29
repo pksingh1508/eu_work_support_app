@@ -15,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CustomLoading } from "@/components/custom-loading";
 import { BottomTabInset } from "@/constants/theme";
+import { PremiumGuard } from "@/features/auth/components/premium-guard";
 import { isCountrySaved, setCountrySaved } from "@/lib/saved-items";
 import { supabase } from "@/lib/supabase";
 import { showSavedToast, showUnsavedToast } from "@/lib/toast";
@@ -239,6 +240,14 @@ async function fetchCountry(slug: string) {
 }
 
 export default function CountryDetailScreen() {
+  return (
+    <PremiumGuard>
+      <CountryDetailContent />
+    </PremiumGuard>
+  );
+}
+
+function CountryDetailContent() {
   const router = useRouter();
   const { userId } = useAuth();
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -343,7 +352,7 @@ export default function CountryDetailScreen() {
     }
 
     if (!userId) {
-      Alert.alert("Sign in required", "Please sign in to save countries.");
+      Alert.alert("Login required", "Please login to save countries.");
       return;
     }
 

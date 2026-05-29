@@ -1,5 +1,5 @@
-import { AuthSwitcher } from '@/features/auth/components/auth-switcher';
+import { Redirect, type Href } from "expo-router";
 
 export default function SignUpScreen() {
-  return <AuthSwitcher initialTab="sign-up" />;
+  return <Redirect href={"/verify" as Href} />;
 }

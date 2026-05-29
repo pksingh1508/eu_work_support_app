@@ -1,43 +1,46 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useSignIn, useSignUp } from '@clerk/expo/legacy';
-import { Link } from 'expo-router';
+import { useSignIn } from '@clerk/expo/legacy';
+import { Link, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { AuthCard, AuthPrimaryButton, AuthTextField } from '@/features/auth/components/auth-card';
 import { getAuthErrorMessage } from '@/features/auth/errors';
+import { isEmailProUser } from '@/lib/pro-account';
+import { showInfoToast } from '@/lib/toast';
 
-type AuthTab = 'sign-in' | 'sign-up';
-
-export function AuthSwitcher({ initialTab = 'sign-in' }: { initialTab?: AuthTab }) {
-  const [activeTab, setActiveTab] = useState<AuthTab>(initialTab);
-  const isSignIn = activeTab === 'sign-in';
-
-  const title = isSignIn ? 'Welcome back' : 'Create account';
-  const subtitle = isSignIn
-    ? 'Sign in to continue your country research, saved guides, and premium support.'
-    : 'Create your secure account to save guides and track your Europe plans.';
-
+export function AuthSwitcher() {
   return (
     <AuthCard
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
-      title={title}
-      subtitle={subtitle}
+      headerTitle="Login"
+      title="Welcome back"
+      subtitle="Login to continue your country research, saved guides, and premium support."
       error={null}>
-      {isSignIn ? <SignInForm /> : <SignUpForm />}
+      <SignInForm />
     </AuthCard>
   );
 }
 
 function SignInForm() {
   const { isLoaded, signIn, setActive } = useSignIn();
+  const router = useRouter();
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string | string[] }>();
   const [emailAddress, setEmailAddress] = useState('');
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const requestedReturnTo = Array.isArray(returnTo) ? returnTo[0] : returnTo;
+  const safeReturnTo =
+    requestedReturnTo &&
+    requestedReturnTo.startsWith('/') &&
+    !requestedReturnTo.startsWith('//') &&
+    requestedReturnTo !== '/sign-in'
+      ? requestedReturnTo
+      : '/';
 
   const handleSignIn = async () => {
     if (!isLoaded || isSubmitting) {
@@ -45,31 +48,63 @@ function SignInForm() {
     }
 
     setError(null);
+    setUnverifiedEmail(null);
     setIsSubmitting(true);
+    const normalizedEmail = emailAddress.trim().toLowerCase();
 
     try {
+      const isVerified = await isEmailProUser(normalizedEmail);
+
+      if (!isVerified) {
+        setUnverifiedEmail(normalizedEmail);
+        showInfoToast(
+          "Your account is not verified",
+          "Please verify your account.",
+        );
+        return;
+      }
+
       const result = await signIn.create({
-        identifier: emailAddress.trim(),
+        identifier: normalizedEmail,
         password,
         strategy: 'password',
       });
 
       if (result.status === 'complete' && result.createdSessionId) {
         await setActive({ session: result.createdSessionId });
+        router.replace(safeReturnTo as Href);
         return;
       }
 
-      setError('This account needs another verification step before sign in can continue.');
+      setError('This account needs website verification before login can continue.');
     } catch (authError) {
-      setError(getAuthErrorMessage(authError, 'Unable to sign in with those details.'));
+      setError(getAuthErrorMessage(authError, 'Unable to login with those details.'));
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const openVerifyPage = () => {
+    const email = unverifiedEmail ?? emailAddress.trim();
+    router.push(
+      `/verify?email=${encodeURIComponent(email)}&returnTo=${encodeURIComponent(
+        safeReturnTo,
+      )}` as Href,
+    );
+  };
+
   return (
     <>
       {error ? <AuthFormError message={error} /> : null}
+
+      {unverifiedEmail ? (
+        <View className="rounded-[18px] bg-[#EEF7FF] px-4 py-4">
+          <Text className="text-sm font-semibold leading-5 tracking-normal text-[#202124]">
+            Your account is not verified yet. Verify it first, then come back to
+            login.
+          </Text>
+        </View>
+      ) : null}
 
       <AuthTextField
         label="Email"
@@ -122,136 +157,24 @@ function SignInForm() {
         </Link>
       </View>
 
-      <AuthPrimaryButton label="Sign In" isLoading={isSubmitting} onPress={handleSignIn} />
-    </>
-  );
-}
-
-function SignUpForm() {
-  const { isLoaded, signUp, setActive } = useSignUp();
-  const [emailAddress, setEmailAddress] = useState('');
-  const [password, setPassword] = useState('');
-  const [verificationCode, setVerificationCode] = useState('');
-  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-  const [isVerificationPending, setIsVerificationPending] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleCreateAccount = async () => {
-    if (!isLoaded || isSubmitting) {
-      return;
-    }
-
-    setError(null);
-    setIsSubmitting(true);
-
-    try {
-      const result = await signUp.create({
-        emailAddress: emailAddress.trim(),
-        password,
-      });
-
-      if (result.status === 'complete' && result.createdSessionId) {
-        await setActive({ session: result.createdSessionId });
-        return;
-      }
-
-      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-      setIsVerificationPending(true);
-    } catch (authError) {
-      setError(getAuthErrorMessage(authError, 'Unable to create your account.'));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleVerifyEmail = async () => {
-    if (!isLoaded || isSubmitting) {
-      return;
-    }
-
-    setError(null);
-    setIsSubmitting(true);
-
-    try {
-      const result = await signUp.attemptEmailAddressVerification({
-        code: verificationCode.trim(),
-      });
-
-      if (result.status === 'complete' && result.createdSessionId) {
-        await setActive({ session: result.createdSessionId });
-        return;
-      }
-
-      setError('We could not complete verification yet. Please check the code and try again.');
-    } catch (authError) {
-      setError(getAuthErrorMessage(authError, 'Unable to verify that code.'));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return isVerificationPending ? (
-    <>
-      {error ? <AuthFormError message={error} /> : null}
-
-      <AuthTextField
-        label="Verification Code"
-        icon="code"
-        value={verificationCode}
-        onChangeText={setVerificationCode}
-        autoCapitalize="none"
-        keyboardType="number-pad"
-        placeholder="123456"
-        textContentType="oneTimeCode"
-      />
-
-      <AuthPrimaryButton label="Verify Email" isLoading={isSubmitting} onPress={handleVerifyEmail} />
-
-      <Pressable
-        onPress={() => setIsVerificationPending(false)}
-        className="items-center"
-        hitSlop={10}>
-        <Text className="text-sm font-bold tracking-normal text-diplomatic-primary">
-          Edit email address
-        </Text>
-      </Pressable>
-    </>
-  ) : (
-    <>
-      {error ? <AuthFormError message={error} /> : null}
-
-      <AuthTextField
-        label="Email"
-        icon="mail"
-        value={emailAddress}
-        onChangeText={setEmailAddress}
-        autoCapitalize="none"
-        autoComplete="email"
-        keyboardType="email-address"
-        placeholder="name@example.com"
-        textContentType="emailAddress"
-      />
-
-      <AuthTextField
-        label="Password"
-        icon="lock"
-        actionLabel={isPasswordVisible ? 'Hide' : 'Show'}
-        onActionPress={() => setIsPasswordVisible((current) => !current)}
-        value={password}
-        onChangeText={setPassword}
-        autoCapitalize="none"
-        autoComplete="new-password"
-        placeholder="Create a password"
-        secureTextEntry={!isPasswordVisible}
-        textContentType="newPassword"
-      />
-
       <AuthPrimaryButton
-        label="Create Account"
+        label="Login"
         isLoading={isSubmitting}
-        onPress={handleCreateAccount}
+        disabled={!emailAddress.trim() || !password}
+        onPress={handleSignIn}
       />
+
+      {unverifiedEmail ? (
+        <Pressable
+          onPress={openVerifyPage}
+          className="h-14 items-center justify-center rounded-[22px] border border-[#CFE0F7] bg-[#EEF7FF] active:opacity-80"
+          accessibilityRole="button"
+        >
+          <Text className="text-base font-extrabold tracking-normal text-diplomatic-primary">
+            Go to Verify Page
+          </Text>
+        </Pressable>
+      ) : null}
     </>
   );
 }
