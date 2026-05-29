@@ -3,6 +3,7 @@ type RequiredPublicEnv = {
   supabaseUrl: string;
   supabasePublishableKey: string;
   oneSignalAppId: string;
+  xApiKey: string;
 };
 
 type OptionalPublicEnv = {
@@ -13,8 +14,10 @@ const requiredEnv = {
   clerkPublishableKey: process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY,
   supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
   supabasePublishableKey:
-    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.EXPO_PUBLIC_SUPABASE_KEY,
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+    process.env.EXPO_PUBLIC_SUPABASE_KEY,
   oneSignalAppId: process.env.EXPO_PUBLIC_ONESIGNAL_APP_ID,
+  xApiKey: process.env.X_API_KEY,
 } satisfies Record<keyof RequiredPublicEnv, string | undefined>;
 
 const missingEnv = Object.entries(requiredEnv)
@@ -22,11 +25,14 @@ const missingEnv = Object.entries(requiredEnv)
   .map(([key]) => key);
 
 if (missingEnv.length > 0) {
-  throw new Error(`Missing required public environment variables: ${missingEnv.join(', ')}`);
+  throw new Error(
+    `Missing required public environment variables: ${missingEnv.join(", ")}`,
+  );
 }
 
 export const env = requiredEnv as RequiredPublicEnv;
 
 export const optionalEnv: OptionalPublicEnv = {
-  clerkSupabaseJwtTemplate: process.env.EXPO_PUBLIC_CLERK_SUPABASE_JWT_TEMPLATE || undefined,
+  clerkSupabaseJwtTemplate:
+    process.env.EXPO_PUBLIC_CLERK_SUPABASE_JWT_TEMPLATE || undefined,
 };
