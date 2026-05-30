@@ -77,7 +77,6 @@ function AuthGate({ children }: PropsWithChildren) {
   const {
     isAuthLoaded,
     isSignedIn,
-    hasPremiumAccess,
     isProfileLoading,
     onboardingCompleted,
   } = useAuthAccess();
@@ -92,7 +91,6 @@ function AuthGate({ children }: PropsWithChildren) {
     if (
       !isAuthLoaded ||
       !isSignedIn ||
-      !hasPremiumAccess ||
       isProfileLoading ||
       onboardingCompleted === null
     ) {
@@ -110,7 +108,6 @@ function AuthGate({ children }: PropsWithChildren) {
   }, [
     isAuthLoaded,
     isSignedIn,
-    hasPremiumAccess,
     isProfileLoading,
     onboardingCompleted,
     isAuthRoute,

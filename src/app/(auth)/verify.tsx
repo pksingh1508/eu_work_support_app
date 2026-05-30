@@ -89,8 +89,8 @@ export default function VerifyScreen() {
       title={hasSentLink ? "Check your email" : "Verify your account"}
       subtitle={
         hasSentLink
-          ? "Open the website link we sent, complete verification, then return to the app."
-          : "Enter your email and we will send the website link for account verification."
+          ? "Open the email we sent, complete verification, then return to the app."
+          : "Enter your email and we will send an email for account verification."
       }
       error={error}
     >

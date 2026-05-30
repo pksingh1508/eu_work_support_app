@@ -161,7 +161,7 @@ export function AuthAccessProvider({ children }: PropsWithChildren) {
       isSignedIn: Boolean(isSignedIn),
       userId,
       userPlan,
-      hasPremiumAccess: Boolean(isSignedIn) && userPlan === "PRO",
+      hasPremiumAccess: Boolean(isSignedIn),
       onboardingCompleted,
       isProfileLoading,
       refreshProfile,

@@ -30,6 +30,7 @@
       "favicon": "./assets/images/adaptive-icon.png"
     },
     "plugins": [
+      "expo-secure-store",
       "@clerk/expo",
       "expo-router",
       [

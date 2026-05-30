@@ -12,11 +12,21 @@ export function setSupabaseAccessTokenGetter(getter: ClerkAccessTokenGetter) {
   clerkAccessTokenGetter = getter;
 }
 
-export const supabase = createClient(env.supabaseUrl, env.supabasePublishableKey, {
-  accessToken: async () => clerkAccessTokenGetter(),
+const publicClientOptions = {
   auth: {
     persistSession: false,
     autoRefreshToken: false,
     detectSessionInUrl: false,
   },
+} as const;
+
+export const publicSupabase = createClient(
+  env.supabaseUrl,
+  env.supabasePublishableKey,
+  publicClientOptions,
+);
+
+export const supabase = createClient(env.supabaseUrl, env.supabasePublishableKey, {
+  ...publicClientOptions,
+  accessToken: async () => clerkAccessTokenGetter(),
 });

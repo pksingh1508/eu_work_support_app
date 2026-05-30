@@ -10,7 +10,7 @@ type PremiumGuardProps = PropsWithChildren<{
 }>;
 
 export function PremiumGuard({ children, returnTo }: PremiumGuardProps) {
-  const { isSignedIn, hasPremiumAccess, isProfileLoading } = useAuthAccess();
+  const { isSignedIn, isProfileLoading } = useAuthAccess();
 
   if (!isSignedIn) {
     return <UnAuthenticated returnTo={returnTo} />;
@@ -25,10 +25,6 @@ export function PremiumGuard({ children, returnTo }: PremiumGuardProps) {
         </Text>
       </View>
     );
-  }
-
-  if (!hasPremiumAccess) {
-    return <UnAuthenticated returnTo={returnTo} />;
   }
 
   return <>{children}</>;
