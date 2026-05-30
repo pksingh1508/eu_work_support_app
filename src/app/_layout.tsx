@@ -14,7 +14,6 @@ export default function RootLayout() {
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="(auth)" />
-          <Stack.Screen name="onboarding" />
           <Stack.Screen name="country/[slug]" />
           <Stack.Screen name="visa/[id]" />
           <Stack.Screen name="profile/account" />

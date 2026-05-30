@@ -15,14 +15,12 @@ export type ThemePreference = 'system' | 'light' | 'dark';
 export type CachedAuthSnapshot = {
   lastSignedIn: boolean;
   userId: string | null;
-  onboardingCompleted: boolean | null;
   userPlan: string | null;
 };
 
 export const localStorageKeys = {
   authLastSignedIn: 'auth.lastSignedIn',
   authLastUserId: 'auth.lastUserId',
-  authOnboardingCompleted: 'auth.onboardingCompleted',
   authUserPlan: 'auth.userPlan',
   themePreference: 'settings.themePreference',
 } as const;
@@ -65,7 +63,6 @@ export function getCachedAuthSnapshot(): CachedAuthSnapshot {
   return {
     lastSignedIn: appStorage.getBoolean(localStorageKeys.authLastSignedIn) ?? false,
     userId: appStorage.getString(localStorageKeys.authLastUserId) ?? null,
-    onboardingCompleted: appStorage.getBoolean(localStorageKeys.authOnboardingCompleted) ?? null,
     userPlan: appStorage.getString(localStorageKeys.authUserPlan) ?? null,
   };
 }
@@ -79,12 +76,6 @@ export function setCachedAuthSnapshot(snapshot: CachedAuthSnapshot) {
     appStorage.remove(localStorageKeys.authLastUserId);
   }
 
-  if (typeof snapshot.onboardingCompleted === 'boolean') {
-    appStorage.set(localStorageKeys.authOnboardingCompleted, snapshot.onboardingCompleted);
-  } else {
-    appStorage.remove(localStorageKeys.authOnboardingCompleted);
-  }
-
   if (snapshot.userPlan) {
     appStorage.set(localStorageKeys.authUserPlan, snapshot.userPlan);
   } else {
@@ -96,7 +87,6 @@ export function clearCachedAuthSnapshot() {
   setCachedAuthSnapshot({
     lastSignedIn: false,
     userId: null,
-    onboardingCompleted: null,
     userPlan: null,
   });
 }

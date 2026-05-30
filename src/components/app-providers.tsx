@@ -74,44 +74,25 @@ function SupabaseAuthBridge({ children }: PropsWithChildren) {
 }
 
 function AuthGate({ children }: PropsWithChildren) {
-  const {
-    isAuthLoaded,
-    isSignedIn,
-    isProfileLoading,
-    onboardingCompleted,
-  } = useAuthAccess();
+  const { isAuthLoaded, isSignedIn } = useAuthAccess();
   const router = useRouter();
   const segments = useSegments();
 
   const firstSegment = segments[0];
   const isAuthRoute = firstSegment === "(auth)";
-  const isOnboardingRoute = firstSegment === "onboarding";
 
   useEffect(() => {
-    if (
-      !isAuthLoaded ||
-      !isSignedIn ||
-      isProfileLoading ||
-      onboardingCompleted === null
-    ) {
+    if (!isAuthLoaded || !isSignedIn) {
       return;
     }
 
-    if (!onboardingCompleted && !isOnboardingRoute) {
-      router.replace("/onboarding");
-      return;
-    }
-
-    if (onboardingCompleted && (isAuthRoute || isOnboardingRoute)) {
+    if (isAuthRoute) {
       router.replace("/");
     }
   }, [
     isAuthLoaded,
     isSignedIn,
-    isProfileLoading,
-    onboardingCompleted,
     isAuthRoute,
-    isOnboardingRoute,
     router,
   ]);
 

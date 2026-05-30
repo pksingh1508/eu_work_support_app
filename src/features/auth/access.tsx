@@ -19,7 +19,6 @@ import { supabase } from "@/lib/supabase";
 export type UserPlan = "Free" | "PRO";
 
 export type AuthAccessProfile = {
-  onboardingCompleted: boolean;
   userPlan: UserPlan;
 };
 
@@ -29,10 +28,8 @@ export type AuthAccessContextValue = {
   userId: string | null | undefined;
   userPlan: UserPlan | null;
   hasPremiumAccess: boolean;
-  onboardingCompleted: boolean | null;
   isProfileLoading: boolean;
   refreshProfile: () => Promise<AuthAccessProfile | null>;
-  markOnboardingCompleted: () => void;
 };
 
 const defaultUserPlan: UserPlan = "Free";
@@ -52,14 +49,10 @@ export function normalizeUserPlan(value: unknown): UserPlan {
 export function AuthAccessProvider({ children }: PropsWithChildren) {
   const { isLoaded, isSignedIn, userId } = useAuth();
   const [isProfileLoading, setIsProfileLoading] = useState(false);
-  const [onboardingCompleted, setOnboardingCompleted] = useState<
-    boolean | null
-  >(null);
   const [userPlan, setUserPlan] = useState<UserPlan | null>(null);
 
   const refreshProfile = useCallback(async () => {
     if (!userId) {
-      setOnboardingCompleted(null);
       setUserPlan(null);
       return null;
     }
@@ -69,11 +62,9 @@ export function AuthAccessProvider({ children }: PropsWithChildren) {
     const canUseCachedProfile =
       cachedProfile.lastSignedIn &&
       cachedProfile.userId === userId &&
-      typeof cachedProfile.onboardingCompleted === "boolean" &&
       typeof cachedProfile.userPlan === "string";
 
     if (canUseCachedProfile) {
-      setOnboardingCompleted(cachedProfile.onboardingCompleted);
       setUserPlan(cachedUserPlan);
     }
 
@@ -84,7 +75,7 @@ export function AuthAccessProvider({ children }: PropsWithChildren) {
 
       const { data, error } = await supabase
         .from("app_users")
-        .select("onboarding_completed, user_plan")
+        .select("user_plan")
         .eq("clerk_user_id", userId)
         .maybeSingle();
 
@@ -93,17 +84,14 @@ export function AuthAccessProvider({ children }: PropsWithChildren) {
       }
 
       const nextProfile = {
-        onboardingCompleted: Boolean(data?.onboarding_completed),
         userPlan: normalizeUserPlan(data?.user_plan),
       };
 
       setCachedAuthSnapshot({
         lastSignedIn: true,
         userId,
-        onboardingCompleted: nextProfile.onboardingCompleted,
         userPlan: nextProfile.userPlan,
       });
-      setOnboardingCompleted(nextProfile.onboardingCompleted);
       setUserPlan(nextProfile.userPlan);
 
       return nextProfile;
@@ -111,13 +99,11 @@ export function AuthAccessProvider({ children }: PropsWithChildren) {
       console.warn("Unable to load Supabase user profile", error);
 
       if (!canUseCachedProfile) {
-        setOnboardingCompleted(false);
         setUserPlan(defaultUserPlan);
       }
 
       return canUseCachedProfile
         ? {
-            onboardingCompleted: cachedProfile.onboardingCompleted ?? false,
             userPlan: cachedUserPlan,
           }
         : null;
@@ -126,19 +112,6 @@ export function AuthAccessProvider({ children }: PropsWithChildren) {
     }
   }, [userId]);
 
-  const markOnboardingCompleted = useCallback(() => {
-    if (userId) {
-      setCachedAuthSnapshot({
-        lastSignedIn: true,
-        userId,
-        onboardingCompleted: true,
-        userPlan: userPlan ?? defaultUserPlan,
-      });
-    }
-
-    setOnboardingCompleted(true);
-  }, [userId, userPlan]);
-
   useEffect(() => {
     if (!isLoaded) {
       return;
@@ -146,7 +119,6 @@ export function AuthAccessProvider({ children }: PropsWithChildren) {
 
     if (!isSignedIn) {
       clearCachedAuthSnapshot();
-      setOnboardingCompleted(null);
       setUserPlan(null);
       setIsProfileLoading(false);
       return;
@@ -162,20 +134,16 @@ export function AuthAccessProvider({ children }: PropsWithChildren) {
       userId,
       userPlan,
       hasPremiumAccess: Boolean(isSignedIn),
-      onboardingCompleted,
       isProfileLoading,
       refreshProfile,
-      markOnboardingCompleted,
     }),
     [
       isLoaded,
       isSignedIn,
       userId,
       userPlan,
-      onboardingCompleted,
       isProfileLoading,
       refreshProfile,
-      markOnboardingCompleted,
     ],
   );
 
