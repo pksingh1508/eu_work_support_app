@@ -7,7 +7,7 @@ export async function sendWebsitePaymentLink(email: string) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        X_API_KEY: env.xApiKey,
+        "x-api-key": env.xApiKey,
       },
       body: JSON.stringify({
         email,
