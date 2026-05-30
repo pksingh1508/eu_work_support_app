@@ -10,10 +10,13 @@ type PremiumGuardProps = PropsWithChildren<{
 }>;
 
 export function PremiumGuard({ children, returnTo }: PremiumGuardProps) {
-  const { isAuthLoaded, isSignedIn, hasPremiumAccess, isProfileLoading } =
-    useAuthAccess();
+  const { isSignedIn, hasPremiumAccess, isProfileLoading } = useAuthAccess();
 
-  if (!isAuthLoaded || (isSignedIn && isProfileLoading)) {
+  if (!isSignedIn) {
+    return <UnAuthenticated returnTo={returnTo} />;
+  }
+
+  if (isProfileLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-diplomatic-surface px-5">
         <CustomLoading />
