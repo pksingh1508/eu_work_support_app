@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
-import { Alert, Linking, Pressable, ScrollView, Text, View } from "react-native";
+import { Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const supportEmail = "support@euworksupport.com";
@@ -37,9 +37,7 @@ export default function SupportScreen() {
           <SupportRow
             icon="help-circle-outline"
             title="FAQ"
-            onPress={() =>
-              Alert.alert("FAQ", "Frequently asked questions are coming soon.")
-            }
+            onPress={() => router.push("/profile/faq")}
           />
         </View>
       </ScrollView>

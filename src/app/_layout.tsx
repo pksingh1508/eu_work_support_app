@@ -22,6 +22,7 @@ export default function RootLayout() {
           <Stack.Screen name="profile/legal/[policy]" />
           <Stack.Screen name="profile/support" />
           <Stack.Screen name="profile/danger-zone" />
+          <Stack.Screen name="profile/faq" />
           <Stack.Screen name="profile/app-info" />
           <Stack.Screen name="profile/settings" />
           <Stack.Screen name="profile/edit" />
