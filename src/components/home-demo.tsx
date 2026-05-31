@@ -4,7 +4,6 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Alert,
   Animated,
   Easing,
   FlatList,
@@ -28,11 +27,13 @@ import {
 import { BottomTabInset } from "@/constants/theme";
 import { useAuthAccess } from "@/features/auth/access";
 import {
+  useSavedCountrySlugs,
+  useSavedStore,
+} from "@/features/saved/saved-store";
+import {
   fetchCountryIdBySlug,
-  fetchSavedCountrySlugs,
-  setCountrySaved,
 } from "@/lib/saved-items";
-import { showSavedToast, showUnsavedToast } from "@/lib/toast";
+import { showErrorToast, showSavedToast, showUnsavedToast } from "@/lib/toast";
 
 type FilterKey = "all" | "top-rated" | "easiest-visa";
 
@@ -225,16 +226,23 @@ function getFlagUrl(country: CountryName) {
 
 export function HomeDemo() {
   const router = useRouter();
-  const { userId, hasPremiumAccess } = useAuthAccess();
+  const { isAuthLoaded, userId, hasPremiumAccess } = useAuthAccess();
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
-  const [savedCountrySlugs, setSavedCountrySlugs] = useState<Set<string>>(
-    () => new Set(),
-  );
   const [countryIdsBySlug, setCountryIdsBySlug] = useState<
     Record<string, string>
   >({});
-  const [savingCountrySlug, setSavingCountrySlug] = useState<string | null>(
+  const [resolvingCountrySlug, setResolvingCountrySlug] = useState<string | null>(
     null,
+  );
+  const savedCountrySlugs = useSavedCountrySlugs();
+  const pendingMutations = useSavedStore((state) => state.pendingMutations);
+  const hydrateSavedForUser = useSavedStore((state) => state.hydrateForUser);
+  const resetSavedStore = useSavedStore((state) => state.reset);
+  const saveCountryOptimistic = useSavedStore(
+    (state) => state.saveCountryOptimistic,
+  );
+  const unsaveCountryOptimistic = useSavedStore(
+    (state) => state.unsaveCountryOptimistic,
   );
   const activeFilterRef = useRef(activeFilter);
   const filterDockedRef = useRef(false);
@@ -330,31 +338,23 @@ export function HomeDemo() {
 
   useFocusEffect(
     useCallback(() => {
-      let isActive = true;
-
-      async function loadSavedCountries() {
-        if (!hasPremiumAccess || !userId) {
-          setSavedCountrySlugs(new Set());
-          return;
-        }
-
-        try {
-          const slugs = await fetchSavedCountrySlugs(userId);
-
-          if (isActive) {
-            setSavedCountrySlugs(new Set(slugs));
-          }
-        } catch (error) {
-          console.warn("Unable to load saved countries", error);
-        }
+      if (!isAuthLoaded) {
+        return;
       }
 
-      void loadSavedCountries();
+      if (!hasPremiumAccess || !userId) {
+        resetSavedStore();
+        return;
+      }
 
-      return () => {
-        isActive = false;
-      };
-    }, [hasPremiumAccess, userId]),
+      void hydrateSavedForUser(userId);
+    }, [
+      hasPremiumAccess,
+      hydrateSavedForUser,
+      isAuthLoaded,
+      resetSavedStore,
+      userId,
+    ]),
   );
 
   const toggleSavedCountry = useCallback(
@@ -366,20 +366,7 @@ export function HomeDemo() {
 
       const slug = getCountrySlug(country);
       const shouldSave = !savedCountrySlugs.has(slug);
-      const previousSavedSlugs = savedCountrySlugs;
-
-      setSavingCountrySlug(slug);
-      setSavedCountrySlugs((currentSlugs) => {
-        const nextSlugs = new Set(currentSlugs);
-
-        if (shouldSave) {
-          nextSlugs.add(slug);
-        } else {
-          nextSlugs.delete(slug);
-        }
-
-        return nextSlugs;
-      });
+      setResolvingCountrySlug(slug);
 
       try {
         let countryId = countryIdsBySlug[slug];
@@ -397,29 +384,59 @@ export function HomeDemo() {
           }));
         }
 
-        await setCountrySaved({
-          clerkUserId: userId,
-          countryId,
-          shouldSave,
-        });
-
         if (shouldSave) {
+          void saveCountryOptimistic({
+            clerkUserId: userId,
+            countryId,
+            country: {
+              id: `country:${countryId}`,
+              countryId,
+              slug,
+              name: country,
+              flagEmoji: null,
+              shortDescription: countryDetails[country].summary,
+              createdAt: new Date().toISOString(),
+            },
+          }).catch((error) => {
+            console.warn("Unable to update saved country", error);
+            showErrorToast(
+              "Could not save country",
+              "Please try again in a moment.",
+            );
+          });
           showSavedToast(country, "country");
         } else {
+          void unsaveCountryOptimistic({
+            clerkUserId: userId,
+            countryId,
+          }).catch((error) => {
+            console.warn("Unable to update saved country", error);
+            showErrorToast(
+              "Could not remove country",
+              "Please try again in a moment.",
+            );
+          });
           showUnsavedToast(country, "country");
         }
       } catch (error) {
         console.warn("Unable to update saved country", error);
-        setSavedCountrySlugs(previousSavedSlugs);
-        Alert.alert(
+        showErrorToast(
           "Could not update saved country",
           "Please try again in a moment.",
         );
       } finally {
-        setSavingCountrySlug(null);
+        setResolvingCountrySlug(null);
       }
     },
-    [countryIdsBySlug, hasPremiumAccess, router, savedCountrySlugs, userId],
+    [
+      countryIdsBySlug,
+      hasPremiumAccess,
+      router,
+      saveCountryOptimistic,
+      savedCountrySlugs,
+      unsaveCountryOptimistic,
+      userId,
+    ],
   );
 
   return (
@@ -525,6 +542,8 @@ export function HomeDemo() {
 
           const country = item.country;
           const countryIndex = item.countryIndex;
+          const slug = getCountrySlug(country);
+          const countryId = countryIdsBySlug[slug];
 
           return (
             <View className={`${countryIndex === 0 ? "mt-4" : ""} mb-5 px-5`}>
@@ -538,8 +557,13 @@ export function HomeDemo() {
                 }
                 onPress={openCountry}
                 canSave={hasPremiumAccess}
-                isSaved={savedCountrySlugs.has(getCountrySlug(country))}
-                isSaving={savingCountrySlug === getCountrySlug(country)}
+                isSaved={savedCountrySlugs.has(slug)}
+                isSaving={
+                  resolvingCountrySlug === slug ||
+                  Boolean(
+                    countryId && pendingMutations[`country:${countryId}`],
+                  )
+                }
                 onToggleSave={toggleSavedCountry}
               />
             </View>

@@ -16,9 +16,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { CustomLoading } from "@/components/custom-loading";
 import { BottomTabInset } from "@/constants/theme";
 import { PremiumGuard } from "@/features/auth/components/premium-guard";
-import { isCountrySaved, setCountrySaved } from "@/lib/saved-items";
+import {
+  useIsCountrySaved,
+  useSavedStore,
+} from "@/features/saved/saved-store";
 import { supabase } from "@/lib/supabase";
-import { showSavedToast, showUnsavedToast } from "@/lib/toast";
+import { showErrorToast, showSavedToast, showUnsavedToast } from "@/lib/toast";
 
 const countrySelect = `
   id,
@@ -256,9 +259,19 @@ function CountryDetailContent() {
   const [selectedDocument, setSelectedDocument] =
     useState<CountryDocument | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isCountrySavedState, setIsCountrySavedState] = useState(false);
-  const [isSavingCountry, setIsSavingCountry] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isCountrySavedState = useIsCountrySaved(country?.id);
+  const pendingCountryMutation = useSavedStore((state) =>
+    country?.id ? state.pendingMutations[`country:${country.id}`] : undefined,
+  );
+  const hydrateSavedForUser = useSavedStore((state) => state.hydrateForUser);
+  const saveCountryOptimistic = useSavedStore(
+    (state) => state.saveCountryOptimistic,
+  );
+  const unsaveCountryOptimistic = useSavedStore(
+    (state) => state.unsaveCountryOptimistic,
+  );
+  const isSavingCountry = Boolean(pendingCountryMutation);
 
   useEffect(() => {
     let isMounted = true;
@@ -302,31 +315,10 @@ function CountryDetailContent() {
   }, [countrySlug]);
 
   useEffect(() => {
-    let isMounted = true;
-
-    async function loadSavedState() {
-      if (!userId || !country?.id) {
-        setIsCountrySavedState(false);
-        return;
-      }
-
-      try {
-        const nextIsSaved = await isCountrySaved(userId, country.id);
-
-        if (isMounted) {
-          setIsCountrySavedState(nextIsSaved);
-        }
-      } catch (error) {
-        console.warn("Unable to load saved country state", error);
-      }
+    if (userId) {
+      void hydrateSavedForUser(userId);
     }
-
-    void loadSavedState();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [country?.id, userId]);
+  }, [hydrateSavedForUser, userId]);
 
   const overviewText =
     country?.shortDescription ??
@@ -358,31 +350,41 @@ function CountryDetailContent() {
 
     const nextIsSaved = !isCountrySavedState;
 
-    setIsSavingCountry(true);
-    setIsCountrySavedState(nextIsSaved);
-
-    try {
-      await setCountrySaved({
+    if (nextIsSaved) {
+      void saveCountryOptimistic({
         clerkUserId: userId,
         countryId: country.id,
-        shouldSave: nextIsSaved,
+        country: {
+          id: `country:${country.id}`,
+          countryId: country.id,
+          slug: country.slug,
+          name: country.name,
+          flagEmoji: country.flagEmoji,
+          shortDescription: country.shortDescription,
+          createdAt: new Date().toISOString(),
+        },
+      }).catch((error) => {
+        console.warn("Unable to update saved country", error);
+        showErrorToast(
+          "Could not save country",
+          "Please try again in a moment.",
+        );
       });
+      showSavedToast(country.name, "country");
+      return;
+    }
 
-      if (nextIsSaved) {
-        showSavedToast(country.name, "country");
-      } else {
-        showUnsavedToast(country.name, "country");
-      }
-    } catch (error) {
+    void unsaveCountryOptimistic({
+      clerkUserId: userId,
+      countryId: country.id,
+    }).catch((error) => {
       console.warn("Unable to update saved country", error);
-      setIsCountrySavedState(!nextIsSaved);
-      Alert.alert(
-        "Could not update saved country",
+      showErrorToast(
+        "Could not remove country",
         "Please try again in a moment.",
       );
-    } finally {
-      setIsSavingCountry(false);
-    }
+    });
+    showUnsavedToast(country.name, "country");
   };
 
   return (

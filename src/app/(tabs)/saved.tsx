@@ -2,7 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@clerk/expo";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Animated,
@@ -17,14 +17,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { CustomLoading } from "@/components/custom-loading";
 import { BottomTabInset } from "@/constants/theme";
 import { PremiumGuard } from "@/features/auth/components/premium-guard";
-import {
-  fetchSavedItems,
-  SavedCountry,
-  SavedDocument,
-  setCountrySaved,
-  setDocumentSaved,
-} from "@/lib/saved-items";
-import { showUnsavedToast } from "@/lib/toast";
+import { useSavedStore } from "@/features/saved/saved-store";
+import { SavedCountry, SavedDocument } from "@/lib/saved-items";
+import { showErrorToast, showUnsavedToast } from "@/lib/toast";
 
 type SavedItem =
   | ({ type: "country" } & SavedCountry)
@@ -54,65 +49,50 @@ export default function SavedScreen() {
 function SavedContent() {
   const router = useRouter();
   const { userId } = useAuth();
-  const [savedItems, setSavedItems] = useState<SavedItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [updatingItemKey, setUpdatingItemKey] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const countries = useSavedStore((state) => state.countries);
+  const documents = useSavedStore((state) => state.documents);
+  const status = useSavedStore((state) => state.status);
+  const pendingMutations = useSavedStore((state) => state.pendingMutations);
+  const hydrateForUser = useSavedStore((state) => state.hydrateForUser);
+  const resetSavedStore = useSavedStore((state) => state.reset);
+  const unsaveCountryOptimistic = useSavedStore(
+    (state) => state.unsaveCountryOptimistic,
+  );
+  const unsaveDocumentOptimistic = useSavedStore(
+    (state) => state.unsaveDocumentOptimistic,
+  );
+
+  const savedItems = useMemo(
+    () =>
+      [
+        ...countries.map((country) => ({
+          ...country,
+          type: "country" as const,
+        })),
+        ...documents.map((document) => ({
+          ...document,
+          type: "document" as const,
+        })),
+      ].sort(
+        (left, right) =>
+          new Date(right.createdAt).getTime() -
+          new Date(left.createdAt).getTime(),
+      ),
+    [countries, documents],
+  );
+  const isLoading = status === "loading" && savedItems.length === 0;
+  const error =
+    status === "error" ? "Unable to load saved guides right now." : null;
 
   useFocusEffect(
     useCallback(() => {
-      let isActive = true;
-
-      async function loadSavedItems() {
-        if (!userId) {
-          setSavedItems([]);
-          setIsLoading(false);
-          return;
-        }
-
-        setIsLoading(true);
-        setError(null);
-
-        try {
-          const items = await fetchSavedItems(userId);
-          const nextSavedItems = [
-            ...items.countries.map((country) => ({
-              ...country,
-              type: "country" as const,
-            })),
-            ...items.documents.map((document) => ({
-              ...document,
-              type: "document" as const,
-            })),
-          ].sort(
-            (left, right) =>
-              new Date(right.createdAt).getTime() -
-              new Date(left.createdAt).getTime(),
-          );
-
-          if (isActive) {
-            setSavedItems(nextSavedItems);
-          }
-        } catch (error) {
-          console.warn("Unable to load saved items", error);
-
-          if (isActive) {
-            setError("Unable to load saved guides right now.");
-            setSavedItems([]);
-          }
-        } finally {
-          if (isActive) {
-            setIsLoading(false);
-          }
-        }
+      if (!userId) {
+        resetSavedStore();
+        return;
       }
 
-      void loadSavedItems();
-
-      return () => {
-        isActive = false;
-      };
-    }, [userId]),
+      void hydrateForUser(userId);
+    }, [hydrateForUser, resetSavedStore, userId]),
   );
 
   const openSavedItem = (item: SavedItem) => {
@@ -133,45 +113,34 @@ function SavedContent() {
       return;
     }
 
-    const itemKey = `${item.type}-${item.id}`;
-    const previousItems = savedItems;
-
-    setUpdatingItemKey(itemKey);
-    setSavedItems((currentItems) =>
-      currentItems.filter(
-        (currentItem) => `${currentItem.type}-${currentItem.id}` !== itemKey,
-      ),
-    );
-
-    try {
-      if (item.type === "country") {
-        await setCountrySaved({
-          clerkUserId: userId,
-          countryId: item.countryId,
-          shouldSave: false,
-        });
-      } else {
-        await setDocumentSaved({
-          clerkUserId: userId,
-          documentId: item.documentId,
-          shouldSave: false,
-        });
-      }
-
-      showUnsavedToast(
-        item.type === "country" ? item.name : item.title,
-        item.type,
-      );
-    } catch (error) {
-      console.warn("Unable to remove saved item", error);
-      setSavedItems(previousItems);
-      Alert.alert(
-        "Could not remove saved item",
-        "Please try again in a moment.",
-      );
-    } finally {
-      setUpdatingItemKey(null);
+    if (item.type === "country") {
+      void unsaveCountryOptimistic({
+        clerkUserId: userId,
+        countryId: item.countryId,
+      }).catch((error) => {
+        console.warn("Unable to remove saved item", error);
+        showErrorToast(
+          "Could not remove saved item",
+          "Please try again in a moment.",
+        );
+      });
+    } else {
+      void unsaveDocumentOptimistic({
+        clerkUserId: userId,
+        documentId: item.documentId,
+      }).catch((error) => {
+        console.warn("Unable to remove saved item", error);
+        showErrorToast(
+          "Could not remove saved item",
+          "Please try again in a moment.",
+        );
+      });
     }
+
+    showUnsavedToast(
+      item.type === "country" ? item.name : item.title,
+      item.type,
+    );
   };
 
   return (
@@ -225,7 +194,13 @@ function SavedContent() {
                 <SavedGuideCard
                   key={`${item.type}-${item.id}`}
                   item={item}
-                  isUpdating={updatingItemKey === `${item.type}-${item.id}`}
+                  isUpdating={
+                    item.type === "country"
+                      ? pendingMutations[`country:${item.countryId}`] ===
+                        "removing"
+                      : pendingMutations[`document:${item.documentId}`] ===
+                        "removing"
+                  }
                   onPress={() => openSavedItem(item)}
                   onUnsave={() => unsaveItem(item)}
                 />

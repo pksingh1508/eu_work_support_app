@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CustomLoading } from "@/components/custom-loading";
+import { useAuthAccess } from "@/features/auth/access";
 import { PremiumGuard } from "@/features/auth/components/premium-guard";
 import { supabase } from "@/lib/supabase";
 
@@ -34,6 +35,7 @@ function EditProfileContent() {
   const router = useRouter();
   const { userId } = useAuth();
   const { user } = useUser();
+  const { refreshProfile } = useAuthAccess();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -119,6 +121,7 @@ function EditProfileContent() {
         throw updateError;
       }
 
+      await refreshProfile();
       router.back();
     } catch (updateError) {
       console.warn("Unable to update profile", updateError);

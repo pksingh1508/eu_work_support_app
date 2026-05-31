@@ -27,3 +27,10 @@ export function showInfoToast(title: string, description?: string) {
     duration: toastDuration,
   });
 }
+
+export function showErrorToast(title: string, description?: string) {
+  toast.error(title, {
+    description,
+    duration: toastDuration,
+  });
+}

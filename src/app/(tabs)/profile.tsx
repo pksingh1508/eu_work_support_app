@@ -3,20 +3,13 @@ import { useUser } from "@clerk/expo";
 import { useFocusEffect } from "@react-navigation/native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BottomTabInset } from "@/constants/theme";
+import { useAuthAccess } from "@/features/auth/access";
 import { PremiumGuard } from "@/features/auth/components/premium-guard";
-import { supabase } from "@/lib/supabase";
-
-type AppUserProfile = {
-  first_name: string | null;
-  last_name: string | null;
-  email: string | null;
-  image_url: string | null;
-};
 
 type MenuRowProps = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -36,59 +29,26 @@ export default function ProfileScreen() {
 function ProfileContent() {
   const router = useRouter();
   const { user } = useUser();
-  const [profile, setProfile] = useState<AppUserProfile | null>(null);
+  const { profile, refreshProfile } = useAuthAccess();
   const email = profile?.email ?? user?.primaryEmailAddress?.emailAddress ?? "";
-  const databaseName = [profile?.first_name, profile?.last_name]
+  const databaseName = [profile?.firstName, profile?.lastName]
     .filter(Boolean)
     .join(" ")
     .trim();
   const fullName =
     databaseName || user?.fullName || user?.firstName || "Welcome";
   const initials = databaseName
-    ? `${profile?.first_name?.trim().charAt(0) ?? ""}${
-        profile?.last_name?.trim().charAt(0) ??
-        profile?.first_name?.trim().charAt(1) ??
+    ? `${profile?.firstName?.trim().charAt(0) ?? ""}${
+        profile?.lastName?.trim().charAt(0) ??
+        profile?.firstName?.trim().charAt(1) ??
         ""
       }`.toUpperCase()
     : fullName.trim().charAt(0).toUpperCase();
 
   useFocusEffect(
     useCallback(() => {
-      let isActive = true;
-
-      async function loadProfile() {
-        if (!user?.id) {
-          setProfile(null);
-          return;
-        }
-
-        try {
-          await supabase.rpc("ensure_user_profile");
-
-          const { data, error } = await supabase
-            .from("app_users")
-            .select("first_name, last_name, email, image_url")
-            .eq("clerk_user_id", user.id)
-            .maybeSingle();
-
-          if (error) {
-            throw error;
-          }
-
-          if (isActive) {
-            setProfile((data as AppUserProfile | null) ?? null);
-          }
-        } catch (error) {
-          console.warn("Unable to load profile details", error);
-        }
-      }
-
-      void loadProfile();
-
-      return () => {
-        isActive = false;
-      };
-    }, [user?.id]),
+      void refreshProfile();
+    }, [refreshProfile]),
   );
 
   return (
@@ -105,7 +65,7 @@ function ProfileContent() {
 
           <View className="mt-6 rounded-[34px] border border-[#E8E8EC] bg-white px-5 py-6">
             <View className="flex-row items-center">
-              <ProfileAvatar initials={initials} imageUrl={profile?.image_url} />
+              <ProfileAvatar initials={initials} imageUrl={profile?.imageUrl} />
 
               <View className="ml-5 min-w-0 flex-1">
                 <Text className="text-[24px] font-extrabold leading-8 tracking-normal text-[#202124]">
@@ -168,16 +128,6 @@ function ProfileAvatar({
   initials: string;
   imageUrl?: string | null;
 }) {
-  if (initials) {
-    return (
-      <View className="h-[86px] w-[86px] items-center justify-center rounded-full bg-[#C9C9CC]">
-        <Text className="text-[28px] font-extrabold tracking-normal text-white">
-          {initials}
-        </Text>
-      </View>
-    );
-  }
-
   if (imageUrl) {
     return (
       <Image
@@ -186,6 +136,16 @@ function ProfileAvatar({
         contentFit="cover"
         transition={180}
       />
+    );
+  }
+
+  if (initials) {
+    return (
+      <View className="h-[86px] w-[86px] items-center justify-center rounded-full bg-[#C9C9CC]">
+        <Text className="text-[28px] font-extrabold tracking-normal text-white">
+          {initials}
+        </Text>
+      </View>
     );
   }
 

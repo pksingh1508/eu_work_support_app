@@ -15,13 +15,24 @@ export type ThemePreference = 'system' | 'light' | 'dark';
 export type CachedAuthSnapshot = {
   lastSignedIn: boolean;
   userId: string | null;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  imageUrl: string | null;
   userPlan: string | null;
+  cachedAt: number | null;
 };
 
 export const localStorageKeys = {
   authLastSignedIn: 'auth.lastSignedIn',
   authLastUserId: 'auth.lastUserId',
+  authEmail: 'auth.email',
+  authFirstName: 'auth.firstName',
+  authLastName: 'auth.lastName',
+  authImageUrl: 'auth.imageUrl',
   authUserPlan: 'auth.userPlan',
+  authCachedAt: 'auth.cachedAt',
+  savedItemsSnapshot: 'saved.itemsSnapshot',
   themePreference: 'settings.themePreference',
 } as const;
 
@@ -63,23 +74,38 @@ export function getCachedAuthSnapshot(): CachedAuthSnapshot {
   return {
     lastSignedIn: appStorage.getBoolean(localStorageKeys.authLastSignedIn) ?? false,
     userId: appStorage.getString(localStorageKeys.authLastUserId) ?? null,
+    email: appStorage.getString(localStorageKeys.authEmail) ?? null,
+    firstName: appStorage.getString(localStorageKeys.authFirstName) ?? null,
+    lastName: appStorage.getString(localStorageKeys.authLastName) ?? null,
+    imageUrl: appStorage.getString(localStorageKeys.authImageUrl) ?? null,
     userPlan: appStorage.getString(localStorageKeys.authUserPlan) ?? null,
+    cachedAt: appStorage.getNumber(localStorageKeys.authCachedAt) ?? null,
   };
+}
+
+function setOptionalString(key: string, value: string | null) {
+  if (value) {
+    appStorage.set(key, value);
+    return;
+  }
+
+  appStorage.remove(key);
 }
 
 export function setCachedAuthSnapshot(snapshot: CachedAuthSnapshot) {
   appStorage.set(localStorageKeys.authLastSignedIn, snapshot.lastSignedIn);
 
-  if (snapshot.userId) {
-    appStorage.set(localStorageKeys.authLastUserId, snapshot.userId);
-  } else {
-    appStorage.remove(localStorageKeys.authLastUserId);
-  }
+  setOptionalString(localStorageKeys.authLastUserId, snapshot.userId);
+  setOptionalString(localStorageKeys.authEmail, snapshot.email);
+  setOptionalString(localStorageKeys.authFirstName, snapshot.firstName);
+  setOptionalString(localStorageKeys.authLastName, snapshot.lastName);
+  setOptionalString(localStorageKeys.authImageUrl, snapshot.imageUrl);
+  setOptionalString(localStorageKeys.authUserPlan, snapshot.userPlan);
 
-  if (snapshot.userPlan) {
-    appStorage.set(localStorageKeys.authUserPlan, snapshot.userPlan);
+  if (typeof snapshot.cachedAt === 'number') {
+    appStorage.set(localStorageKeys.authCachedAt, snapshot.cachedAt);
   } else {
-    appStorage.remove(localStorageKeys.authUserPlan);
+    appStorage.remove(localStorageKeys.authCachedAt);
   }
 }
 
@@ -87,7 +113,12 @@ export function clearCachedAuthSnapshot() {
   setCachedAuthSnapshot({
     lastSignedIn: false,
     userId: null,
+    email: null,
+    firstName: null,
+    lastName: null,
+    imageUrl: null,
     userPlan: null,
+    cachedAt: null,
   });
 }
 

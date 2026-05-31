@@ -17,6 +17,7 @@ import {
 } from "react-native";
 
 import { AuthAccessProvider, useAuthAccess } from "@/features/auth/access";
+import { useSavedStore } from "@/features/saved/saved-store";
 import { clerkPublishableKey, clerkTokenCache } from "@/lib/clerk";
 import { optionalEnv } from "@/lib/env";
 import { appFonts, FontFamily } from "@/lib/fonts";
@@ -99,6 +100,33 @@ function AuthGate({ children }: PropsWithChildren) {
   return children;
 }
 
+function SavedItemsHydrator() {
+  const { isAuthLoaded, isSignedIn, userId } = useAuthAccess();
+  const hydrateForUser = useSavedStore((state) => state.hydrateForUser);
+  const resetSavedStore = useSavedStore((state) => state.reset);
+
+  useEffect(() => {
+    if (!isAuthLoaded) {
+      return;
+    }
+
+    if (!isSignedIn || !userId) {
+      resetSavedStore();
+      return;
+    }
+
+    void hydrateForUser(userId);
+  }, [
+    hydrateForUser,
+    isAuthLoaded,
+    isSignedIn,
+    resetSavedStore,
+    userId,
+  ]);
+
+  return null;
+}
+
 export function AppProviders({ children }: PropsWithChildren) {
   const [fontsLoaded, fontError] = useFonts(appFonts);
   const colorScheme = useColorScheme();
@@ -136,6 +164,7 @@ export function AppProviders({ children }: PropsWithChildren) {
           value={resolvedColorScheme === "dark" ? DarkTheme : DefaultTheme}
         >
           <AuthAccessProvider>
+            <SavedItemsHydrator />
             <AuthGate>{children}</AuthGate>
           </AuthAccessProvider>
         </ThemeProvider>

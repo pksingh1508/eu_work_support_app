@@ -14,9 +14,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CustomLoading } from "@/components/custom-loading";
 import { PremiumGuard } from "@/features/auth/components/premium-guard";
-import { isDocumentSaved, setDocumentSaved } from "@/lib/saved-items";
+import {
+  useIsDocumentSaved,
+  useSavedStore,
+} from "@/features/saved/saved-store";
 import { supabase } from "@/lib/supabase";
-import { showSavedToast, showUnsavedToast } from "@/lib/toast";
+import { showErrorToast, showSavedToast, showUnsavedToast } from "@/lib/toast";
 
 const documentSelect = `
   id,
@@ -221,9 +224,21 @@ function VisaDocumentContent() {
   const documentId = Array.isArray(id) ? id[0] : id;
   const [document, setDocument] = useState<VisaDocument | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDocumentSavedState, setIsDocumentSavedState] = useState(false);
-  const [isSavingDocument, setIsSavingDocument] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isDocumentSavedState = useIsDocumentSaved(document?.id);
+  const pendingDocumentMutation = useSavedStore((state) =>
+    document?.id
+      ? state.pendingMutations[`document:${document.id}`]
+      : undefined,
+  );
+  const hydrateSavedForUser = useSavedStore((state) => state.hydrateForUser);
+  const saveDocumentOptimistic = useSavedStore(
+    (state) => state.saveDocumentOptimistic,
+  );
+  const unsaveDocumentOptimistic = useSavedStore(
+    (state) => state.unsaveDocumentOptimistic,
+  );
+  const isSavingDocument = Boolean(pendingDocumentMutation);
 
   useEffect(() => {
     let isMounted = true;
@@ -267,31 +282,10 @@ function VisaDocumentContent() {
   }, [documentId]);
 
   useEffect(() => {
-    let isMounted = true;
-
-    async function loadSavedState() {
-      if (!userId || !document?.id) {
-        setIsDocumentSavedState(false);
-        return;
-      }
-
-      try {
-        const nextIsSaved = await isDocumentSaved(userId, document.id);
-
-        if (isMounted) {
-          setIsDocumentSavedState(nextIsSaved);
-        }
-      } catch (error) {
-        console.warn("Unable to load saved document state", error);
-      }
+    if (userId) {
+      void hydrateSavedForUser(userId);
     }
-
-    void loadSavedState();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [document?.id, userId]);
+  }, [hydrateSavedForUser, userId]);
 
   const overviewText = useMemo(() => {
     if (!document) {
@@ -317,31 +311,47 @@ function VisaDocumentContent() {
 
     const nextIsSaved = !isDocumentSavedState;
 
-    setIsSavingDocument(true);
-    setIsDocumentSavedState(nextIsSaved);
-
-    try {
-      await setDocumentSaved({
+    if (nextIsSaved) {
+      void saveDocumentOptimistic({
         clerkUserId: userId,
         documentId: document.id,
-        shouldSave: nextIsSaved,
+        document: {
+          id: `document:${document.id}`,
+          documentId: document.id,
+          title: document.title,
+          slug: document.slug,
+          shortDescription: document.shortDescription,
+          intro: document.intro,
+          countryName: document.countryName,
+          countrySlug: document.countrySlug,
+          countryFlagEmoji: document.countryFlagEmoji,
+          categoryName: document.categoryName,
+          categorySlug: document.categorySlug,
+          categoryIcon: document.categoryIcon,
+          createdAt: new Date().toISOString(),
+        },
+      }).catch((error) => {
+        console.warn("Unable to update saved document", error);
+        showErrorToast(
+          "Could not save document",
+          "Please try again in a moment.",
+        );
       });
+      showSavedToast(document.title, "document");
+      return;
+    }
 
-      if (nextIsSaved) {
-        showSavedToast(document.title, "document");
-      } else {
-        showUnsavedToast(document.title, "document");
-      }
-    } catch (error) {
+    void unsaveDocumentOptimistic({
+      clerkUserId: userId,
+      documentId: document.id,
+    }).catch((error) => {
       console.warn("Unable to update saved document", error);
-      setIsDocumentSavedState(!nextIsSaved);
-      Alert.alert(
-        "Could not update saved document",
+      showErrorToast(
+        "Could not remove document",
         "Please try again in a moment.",
       );
-    } finally {
-      setIsSavingDocument(false);
-    }
+    });
+    showUnsavedToast(document.title, "document");
   };
 
   return (
