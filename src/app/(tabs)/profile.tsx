@@ -1,7 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useUser } from "@clerk/expo";
 import { useFocusEffect } from "@react-navigation/native";
-import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useCallback } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -37,13 +36,7 @@ function ProfileContent() {
     .trim();
   const fullName =
     databaseName || user?.fullName || user?.firstName || "Welcome";
-  const initials = databaseName
-    ? `${profile?.firstName?.trim().charAt(0) ?? ""}${
-        profile?.lastName?.trim().charAt(0) ??
-        profile?.firstName?.trim().charAt(1) ??
-        ""
-      }`.toUpperCase()
-    : fullName.trim().charAt(0).toUpperCase();
+  const initials = getInitials(fullName);
 
   useFocusEffect(
     useCallback(() => {
@@ -65,7 +58,7 @@ function ProfileContent() {
 
           <View className="mt-6 rounded-[34px] border border-[#E8E8EC] bg-white px-5 py-6">
             <View className="flex-row items-center">
-              <ProfileAvatar initials={initials} imageUrl={profile?.imageUrl} />
+              <ProfileAvatar initials={initials} />
 
               <View className="ml-5 min-w-0 flex-1">
                 <Text className="text-[24px] font-extrabold leading-8 tracking-normal text-[#202124]">
@@ -121,24 +114,17 @@ function ProfileContent() {
   );
 }
 
-function ProfileAvatar({
-  initials,
-  imageUrl,
-}: {
-  initials: string;
-  imageUrl?: string | null;
-}) {
-  if (imageUrl) {
-    return (
-      <Image
-        source={{ uri: imageUrl }}
-        className="h-[86px] w-[86px] rounded-full bg-[#C9C9CC]"
-        contentFit="cover"
-        transition={180}
-      />
-    );
-  }
+function getInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const [firstName = "", lastName = ""] = parts;
+  const fallbackSecondLetter = firstName.charAt(1);
 
+  return `${firstName.charAt(0)}${
+    lastName.charAt(0) || fallbackSecondLetter
+  }`.toUpperCase();
+}
+
+function ProfileAvatar({ initials }: { initials: string }) {
   if (initials) {
     return (
       <View className="h-[86px] w-[86px] items-center justify-center rounded-full bg-[#C9C9CC]">

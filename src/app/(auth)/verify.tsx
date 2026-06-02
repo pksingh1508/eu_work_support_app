@@ -8,7 +8,7 @@ import {
   AuthTextField,
 } from "@/features/auth/components/auth-card";
 import { isEmailProUser } from "@/lib/pro-account";
-import { sendWebsitePaymentLink } from "@/lib/send-website-payment-link";
+import { sendWebsitePaymentLink } from "@/lib/send-email";
 import { showInfoToast } from "@/lib/toast";
 
 function getParamValue(value: string | string[] | undefined) {
@@ -54,10 +54,7 @@ export default function VerifyScreen() {
       const alreadyVerified = await isEmailProUser(normalizedEmail);
 
       if (alreadyVerified) {
-        showInfoToast(
-          "You are a verified user",
-          "Please login to access the content.",
-        );
+        showInfoToast("You have access", "Please login to access.");
         openLogin();
         return;
       }
@@ -68,7 +65,7 @@ export default function VerifyScreen() {
       const message =
         verificationError instanceof Error
           ? verificationError.message
-          : "Unable to send verification link right now.";
+          : "Unable to send email right now.";
       setError(message);
     } finally {
       setIsSubmitting(false);
@@ -85,20 +82,19 @@ export default function VerifyScreen() {
 
   return (
     <AuthCard
-      headerTitle="Verify Account"
-      title={hasSentLink ? "Check your email" : "Verify your account"}
+      headerTitle="Request Access"
+      title={
+        hasSentLink ? "Check your email" : "Request access to EU Work Support"
+      }
       subtitle={
-        hasSentLink
-          ? "Open the email we sent, complete verification, then return to the app."
-          : "Enter your email and we will send an email for account verification."
+        hasSentLink ? "We sent an email." : "Enter email to Request Access."
       }
       error={error}
     >
       {hasSentLink ? (
         <View className="rounded-[18px] bg-[#EEF7FF] px-4 py-4">
           <Text className="text-base font-semibold leading-7 tracking-normal text-[#202124]">
-            Hello, we have sent a link to your email. Please check your inbox or
-            spam folder, click the link, verify your account, and then log in.
+            We sent an email, check that.
           </Text>
         </View>
       ) : (
@@ -120,7 +116,7 @@ export default function VerifyScreen() {
         <AuthPrimaryButton label="Login" onPress={openLogin} />
       ) : (
         <AuthPrimaryButton
-          label="Verify"
+          label="Request Access"
           isLoading={isSubmitting}
           disabled={!canSubmit}
           onPress={sendVerificationLink}
@@ -130,7 +126,7 @@ export default function VerifyScreen() {
       {!hasSentLink ? (
         <Pressable className="items-center" hitSlop={10} onPress={openLogin}>
           <Text className="text-sm font-bold tracking-normal text-diplomatic-primary">
-            Already verified? Login
+            You have access? Login
           </Text>
         </Pressable>
       ) : null}
