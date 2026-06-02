@@ -10,8 +10,8 @@ type UnAuthenticatedProps = {
 };
 
 export function UnAuthenticated({
-  title = "Login or Verify to Access this content",
-  message = "If you verified your account, Click Login. Otherwise click Verify to verify your account.",
+  title = "Login or Request Access",
+  message = "if you have Access, click Login. Otherwise click Request Access to get Access.",
   returnTo,
 }: UnAuthenticatedProps) {
   const router = useRouter();
@@ -63,7 +63,7 @@ export function UnAuthenticated({
             >
               <Ionicons name="mail-unread-outline" size={20} color="#1E7AF2" />
               <Text className="ml-2 text-base font-extrabold tracking-normal text-diplomatic-primary">
-                Verify
+                Request Access
               </Text>
             </Pressable>
           </View>

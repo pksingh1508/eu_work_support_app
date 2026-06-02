@@ -94,7 +94,8 @@ export default function VerifyScreen() {
       {hasSentLink ? (
         <View className="rounded-[18px] bg-[#EEF7FF] px-4 py-4">
           <Text className="text-base font-semibold leading-7 tracking-normal text-[#202124]">
-            We sent an email, check that.
+            We have successfully sent an email, click on email to Request
+            Access.
           </Text>
         </View>
       ) : (
