@@ -12,10 +12,12 @@
     },
     "development": {
       "developmentClient": true,
+      "environment": "development",
       "distribution": "internal"
     },
     "preview": {
       "distribution": "internal",
+      "environment": "preview",
       "android": {
         "buildType": "apk"
       }
@@ -27,6 +29,7 @@
       "distribution": "internal"
     },
     "production": {
+      "environment": "production",
       "android": {
         "buildType": "app-bundle"
       }
