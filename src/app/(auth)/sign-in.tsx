@@ -17,7 +17,11 @@ const CLERK_SIGN_IN_TIMEOUT_MS = 20000;
 
 type SecondFactorMethod = "email_code" | "phone_code";
 
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  message: string,
+) {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
   const timeoutPromise = new Promise<never>((_, reject) => {
@@ -104,7 +108,9 @@ export default function SignInScreen() {
       );
 
       if (sendError) {
-        setError(getAuthErrorMessage(sendError, "Unable to send verification code."));
+        setError(
+          getAuthErrorMessage(sendError, "Unable to send verification code."),
+        );
         return;
       }
 
@@ -122,7 +128,9 @@ export default function SignInScreen() {
       );
 
       if (sendError) {
-        setError(getAuthErrorMessage(sendError, "Unable to send verification code."));
+        setError(
+          getAuthErrorMessage(sendError, "Unable to send verification code."),
+        );
         return;
       }
 
@@ -132,7 +140,9 @@ export default function SignInScreen() {
       return;
     }
 
-    setError("This account needs a second factor that this app does not support yet.");
+    setError(
+      "This account needs a second factor that this app does not support yet.",
+    );
   };
 
   const handleSignIn = async () => {
@@ -152,10 +162,7 @@ export default function SignInScreen() {
       const isVerified = await isEmailProUser(normalizedEmail);
 
       if (!isVerified) {
-        showInfoToast(
-          "Account not verified",
-          "Please verify your account before logging in.",
-        );
+        showInfoToast("Not Access", "Please Request Access.");
         setUnverifiedEmail(normalizedEmail);
         openVerifyPage(normalizedEmail);
         return;
@@ -228,7 +235,9 @@ export default function SignInScreen() {
             );
 
       if (verifyError) {
-        setError(getAuthErrorMessage(verifyError, "Unable to verify that code."));
+        setError(
+          getAuthErrorMessage(verifyError, "Unable to verify that code."),
+        );
         return;
       }
 
@@ -257,8 +266,8 @@ export default function SignInScreen() {
       {unverifiedEmail ? (
         <View className="rounded-[18px] bg-[#EEF7FF] px-4 py-4">
           <Text className="text-sm font-semibold leading-5 tracking-normal text-[#202124]">
-            Your account is not verified yet. Verify it first, then come back to
-            login.
+            You don't have Access, Please Request Access and wait for access
+            granted.
           </Text>
         </View>
       ) : null}
