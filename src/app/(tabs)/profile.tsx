@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useUser } from "@clerk/expo";
 import { useFocusEffect } from "@react-navigation/native";
-import { useRouter } from "expo-router";
+import { type Href, useRouter } from "expo-router";
 import { useCallback } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -90,6 +90,13 @@ function ProfileContent() {
               icon="document-text-outline"
               label="Legal"
               onPress={() => router.push("/profile/legal")}
+            />
+            <ProfileMenuRow
+              icon="library-outline"
+              label="Sources and Disclaimer"
+              onPress={() =>
+                router.push("/profile/sources-and-disclaimer" as Href)
+              }
             />
             <ProfileMenuRow
               icon="help-circle-outline"

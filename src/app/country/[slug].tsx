@@ -30,6 +30,9 @@ const countrySelect = `
   flag_emoji,
   short_description,
   popularity_rank,
+  official_url,
+  official_immigration_url,
+  last_reviewed_at,
   country_documents (
     id,
     title,
@@ -82,6 +85,9 @@ type CountryResponse = {
   flag_emoji: string | null;
   short_description: string | null;
   popularity_rank: number | null;
+  official_url: string | null;
+  official_immigration_url: string | null;
+  last_reviewed_at: string | null;
   country_documents: RawCountryDocument[] | null;
 };
 
@@ -120,6 +126,9 @@ type CountryState = {
   flagEmoji: string | null;
   shortDescription: string | null;
   popularityRank: number | null;
+  officialUrl: string | null;
+  officialImmigrationUrl: string | null;
+  lastReviewedAt: string | null;
   documents: CountryDocument[];
 };
 
@@ -183,6 +192,9 @@ function mapCountryResponse(row: CountryResponse): CountryState {
     flagEmoji: row.flag_emoji,
     shortDescription: row.short_description,
     popularityRank: row.popularity_rank,
+    officialUrl: row.official_url,
+    officialImmigrationUrl: row.official_immigration_url,
+    lastReviewedAt: row.last_reviewed_at,
     documents,
   };
 }
@@ -223,6 +235,47 @@ function stringifyValue(value: unknown) {
   }
 
   return "";
+}
+
+function normalizeExternalUrl(value: string | null) {
+  const trimmedValue = value?.trim();
+
+  if (!trimmedValue) {
+    return null;
+  }
+
+  const normalizedValue = /^https?:\/\//i.test(trimmedValue)
+    ? trimmedValue
+    : `https://${trimmedValue}`;
+
+  try {
+    const parsedUrl = new URL(normalizedValue);
+
+    return parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:"
+      ? parsedUrl.toString()
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function formatLastReviewedAt(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
 }
 
 async function fetchCountry(slug: string) {
@@ -337,6 +390,14 @@ function CountryDetailContent() {
       ? firstThreeCategories.join(", ")
       : "visa, permits, documents";
   }, [country]);
+
+  const officialUrl = normalizeExternalUrl(country?.officialUrl ?? null);
+  const officialImmigrationUrl = normalizeExternalUrl(
+    country?.officialImmigrationUrl ?? null,
+  );
+  const lastReviewedDate = formatLastReviewedAt(
+    country?.lastReviewedAt ?? null,
+  );
 
   const toggleSavedCountry = async () => {
     if (!country) {
@@ -541,6 +602,12 @@ function CountryDetailContent() {
                   ))}
                 </View>
               </View>
+
+              <SourceAndReviewDetails
+                officialUrl={officialUrl}
+                officialImmigrationUrl={officialImmigrationUrl}
+                lastReviewedDate={lastReviewedDate}
+              />
             </>
           ) : null}
         </View>
@@ -551,6 +618,83 @@ function CountryDetailContent() {
         onClose={() => setSelectedDocument(null)}
       />
     </SafeAreaView>
+  );
+}
+
+function SourceAndReviewDetails({
+  officialUrl,
+  officialImmigrationUrl,
+  lastReviewedDate,
+}: {
+  officialUrl: string | null;
+  officialImmigrationUrl: string | null;
+  lastReviewedDate: string | null;
+}) {
+  if (!officialUrl && !officialImmigrationUrl && !lastReviewedDate) {
+    return null;
+  }
+
+  return (
+    <View className="mt-4 rounded-[24px] border border-[#E3E4E8] bg-[#F3F4F6] px-5 py-5">
+      <Text className="text-xs font-extrabold uppercase tracking-[0.8px] text-[#6B7280]">
+        Source information
+      </Text>
+
+      {lastReviewedDate ? (
+        <View className="mt-4 flex-row items-center">
+          <Ionicons name="checkmark-circle-outline" size={18} color="#6B7280" />
+          <Text className="ml-2 text-sm font-semibold tracking-normal text-[#626876]">
+            Last reviewed: {lastReviewedDate}
+          </Text>
+        </View>
+      ) : null}
+
+      {officialUrl ? (
+        <OfficialSourceLink title="Official website" url={officialUrl} />
+      ) : null}
+
+      {officialImmigrationUrl ? (
+        <OfficialSourceLink
+          title="Official immigration website"
+          url={officialImmigrationUrl}
+        />
+      ) : null}
+    </View>
+  );
+}
+
+function OfficialSourceLink({ title, url }: { title: string; url: string }) {
+  const openWebsite = () => {
+    void Linking.openURL(url).catch(() => {
+      Alert.alert(
+        "Unable to open website",
+        `Please try opening the ${title.toLowerCase()} again.`,
+      );
+    });
+  };
+
+  return (
+    <Pressable
+      onPress={openWebsite}
+      className="mt-3 min-h-11 flex-row items-center rounded-[16px] bg-[#E8E9EC] px-4 py-3 active:opacity-70"
+      accessibilityRole="link"
+      accessibilityLabel={`Open ${title.toLowerCase()}`}
+      accessibilityHint="Opens the website in your browser"
+    >
+      <Ionicons name="globe-outline" size={19} color="#4B5563" />
+      <View className="ml-3 min-w-0 flex-1">
+        <Text className="text-sm font-extrabold tracking-normal text-[#4B5563] underline">
+          {title}
+        </Text>
+        <Text
+          numberOfLines={1}
+          className="mt-1 text-xs font-semibold tracking-normal text-[#737985]"
+        >
+          {url}
+        </Text>
+      </View>
+      <Ionicons name="open-outline" size={17} color="#4B5563" />
+    </Pressable>
   );
 }
 
