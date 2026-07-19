@@ -36,6 +36,12 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "eucareerserwis@gmail.com",
+        "ascAppId": "6789513990",
+        "appleTeamId": "8BVR5DJC47"
+      }
+    }
   }
 }
