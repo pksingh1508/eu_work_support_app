@@ -4,7 +4,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const appInfo = [
-  ["Version", "1.0.0"],
+  ["Version", "1.0.4"],
   ["Developer Name", "EU Work Support"],
 ];
 
