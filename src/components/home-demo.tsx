@@ -33,6 +33,7 @@ import {
   useSavedCountrySlugs,
   useSavedStore,
 } from "@/features/saved/saved-store";
+import { FontFamily } from "@/lib/fonts";
 import {
   fetchCountryIdBySlug,
 } from "@/lib/saved-items";
@@ -71,6 +72,24 @@ const headerGradientBands: Record<HeaderGradientSection, string[]> = {
   status: createGradientBands([214, 232, 255], [226, 239, 255]),
   top: createGradientBands([226, 239, 255], [234, 243, 255]),
   bottom: createGradientBands([234, 243, 255], [248, 251, 255]),
+};
+
+const destinationScrimOpacities = [
+  0.02, 0.06, 0.12, 0.2, 0.32, 0.48, 0.64, 0.78,
+];
+
+const cornerGradientBands = [
+  ...createGradientBands([7, 67, 42], [121, 177, 139], 24),
+  ...createGradientBands([121, 177, 139], [8, 75, 46], 24),
+];
+
+const popularDestinationTaglines: Record<
+  (typeof popularDestinations)[number],
+  string
+> = {
+  France: "Tech visa program active.",
+  Germany: "Leading tech hub with visa routes.",
+  Greece: "Fresh work and study routes.",
 };
 
 const countryDetails: Record<CountryName, CountryDetails> = {
@@ -470,7 +489,7 @@ export function HomeDemo() {
   );
 
   return (
-    <View className="flex-1 bg-diplomatic-surface">
+    <View className="flex-1 bg-white">
       <StatusBar style="dark" backgroundColor="#D6E8FF" />
       <View
         pointerEvents="none"
@@ -622,7 +641,7 @@ export function HomeDemo() {
             </View>
           );
         }}
-        className="flex-1 bg-diplomatic-surface"
+        className="flex-1 bg-white"
         contentContainerStyle={{ paddingBottom: BottomTabInset }}
         showsVerticalScrollIndicator={false}
         initialNumToRender={9}
@@ -649,7 +668,7 @@ function FilterTabs({
 }) {
   return (
     <View
-      className={onGradient ? "bg-transparent" : "bg-diplomatic-surface px-5"}
+      className={onGradient ? "bg-transparent" : "bg-white px-5"}
     >
       <ScrollView
         horizontal
@@ -718,6 +737,18 @@ const premiumHeaderStyles = StyleSheet.create({
       shadowOpacity: 0.12,
       shadowRadius: 24,
       elevation: 6,
+    },
+  }),
+  popularCardShadow: Platform.select({
+    web: {
+      boxShadow: "0 18px 34px rgba(15, 35, 66, 0.18)",
+    },
+    default: {
+      shadowColor: "#0F2342",
+      shadowOffset: { width: 0, height: 14 },
+      shadowOpacity: 0.18,
+      shadowRadius: 22,
+      elevation: 8,
     },
   }),
 });
@@ -800,48 +831,93 @@ function PopularDestinationCard({
   country: (typeof popularDestinations)[number];
   onPress: (country: CountryName) => void;
 }) {
-  const details = countryDetails[country];
-
   return (
-    <Pressable
-      onPress={() => onPress(country)}
-      className="h-[260px] w-[310px] overflow-hidden rounded-atelier bg-diplomatic-ink"
-      accessibilityRole="button"
+    <View
+      style={premiumHeaderStyles.popularCardShadow}
+      className="h-[260px] w-[310px] rounded-[26px]"
     >
-      <Image
-        source={{ uri: popularDestinationImages[country] }}
-        style={{ height: 260, width: "100%", opacity: 0.55 }}
-        contentFit="cover"
-      />
-      <View className="absolute inset-0 justify-end p-5">
-        <View className="absolute inset-x-0 bottom-0 h-28 bg-diplomatic-ink opacity-50" />
-        <View className="mb-6 flex-row items-center gap-2">
-          <Image
-            source={{ uri: getFlagUrl(country) }}
-            style={{ width: 28, height: 18, borderRadius: 3 }}
-            contentFit="cover"
+      <Pressable
+        onPress={() => onPress(country)}
+        className="h-full w-full overflow-hidden rounded-[26px] bg-diplomatic-ink active:opacity-95"
+        accessibilityRole="button"
+        accessibilityLabel={`Explore ${country}`}
+      >
+        <Image
+          source={{ uri: popularDestinationImages[country] }}
+          style={{ height: 260, width: "100%" }}
+          contentFit="cover"
+          transition={250}
+        />
+
+        <View
+          className="absolute inset-0"
+          style={{ backgroundColor: "rgba(10, 21, 16, 0.16)" }}
+        />
+        <View className="absolute inset-x-0 bottom-0 h-[155px]">
+          {destinationScrimOpacities.map((opacity, index) => (
+            <View
+              key={`${country}-scrim-${index}`}
+              style={{
+                flex: 1,
+                backgroundColor: `rgba(5, 12, 25, ${opacity})`,
+              }}
+            />
+          ))}
+        </View>
+
+        <View className="absolute inset-x-5 bottom-5 pr-[62px]">
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.76}
+            style={{
+              fontFamily: FontFamily.headingBlack,
+              fontSize: 36,
+              lineHeight: 41,
+              letterSpacing: -1.1,
+            }}
+            className="uppercase text-white"
+          >
+            {country.toUpperCase()}
+          </Text>
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.72}
+            style={{
+              fontFamily: Platform.select({
+                ios: "Georgia",
+                android: "serif",
+                default: "Georgia, serif",
+              }),
+            }}
+            className="mt-1 text-[16px] leading-5 tracking-[-0.2px] text-white/90"
+          >
+            {popularDestinationTaglines[country]}
+          </Text>
+        </View>
+
+        <View className="absolute -bottom-[59px] -right-[59px] h-[140px] w-[140px] rotate-45 overflow-hidden">
+          <View className="absolute inset-0 flex-row">
+            {cornerGradientBands.map((backgroundColor, index) => (
+              <View
+                key={`${country}-corner-${index}`}
+                style={{ flex: 1, backgroundColor }}
+              />
+            ))}
+          </View>
+        </View>
+        <View className="absolute bottom-[17px] right-[16px] h-11 w-11 items-center justify-center">
+          <Ionicons
+            name="arrow-forward"
+            size={31}
+            color="rgba(3, 45, 28, 0.38)"
+            style={{ position: "absolute", left: 8, top: 9 }}
           />
-          <View className="rounded-full bg-[#8B2330] px-3 py-1">
-            <Text className="text-xs font-extrabold uppercase tracking-normal text-white">
-              {details.demand}
-            </Text>
-          </View>
+          <Ionicons name="arrow-forward" size={31} color="#DCE8D9" />
         </View>
-        <View className="flex-row items-end justify-between gap-4">
-          <View className="flex-1">
-            <Text className="text-[29px] font-serif font-extrabold tracking-normal text-white">
-              {country}
-            </Text>
-            <Text className="mt-1 text-[15px] font-semibold leading-5 tracking-normal text-white opacity-85">
-              {details.summary}
-            </Text>
-          </View>
-          <View className="h-12 w-12 items-center justify-center rounded-full bg-white">
-            <Ionicons name="arrow-forward" size={22} color="#0058BC" />
-          </View>
-        </View>
-      </View>
-    </Pressable>
+      </Pressable>
+    </View>
   );
 }
 
