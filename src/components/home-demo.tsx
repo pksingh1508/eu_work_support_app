@@ -2,6 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useFocusEffect } from "@react-navigation/native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
@@ -10,13 +11,15 @@ import {
   GestureResponderEvent,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  Platform,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   type ViewToken,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   easiestVisaCountries,
@@ -61,6 +64,14 @@ const filters: Array<{ key: FilterKey; label: string }> = [
 const countryEntryDistance = 34;
 const countryEntryDuration = 380;
 const initiallyAnimatedCountryCount = 6;
+
+type HeaderGradientSection = "status" | "top" | "bottom";
+
+const headerGradientBands: Record<HeaderGradientSection, string[]> = {
+  status: createGradientBands([214, 232, 255], [226, 239, 255]),
+  top: createGradientBands([226, 239, 255], [234, 243, 255]),
+  bottom: createGradientBands([234, 243, 255], [248, 251, 255]),
+};
 
 const countryDetails: Record<CountryName, CountryDetails> = {
   Austria: {
@@ -224,8 +235,27 @@ function getFlagUrl(country: CountryName) {
   return `https://flagcdn.com/w80/${countryDetails[country].code}.png`;
 }
 
+function createGradientBands(
+  startColor: [number, number, number],
+  endColor: [number, number, number],
+  count = 20,
+) {
+  return Array.from({ length: count }, (_, index) => {
+    const progress = index / (count - 1);
+    const channels = startColor.map((startChannel, channelIndex) =>
+      Math.round(
+        startChannel +
+          (endColor[channelIndex] - startChannel) * progress,
+      ),
+    );
+
+    return `rgb(${channels[0]}, ${channels[1]}, ${channels[2]})`;
+  });
+}
+
 export function HomeDemo() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { isAuthLoaded, userId, hasPremiumAccess } = useAuthAccess();
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
   const [countryIdsBySlug, setCountryIdsBySlug] = useState<
@@ -440,7 +470,15 @@ export function HomeDemo() {
   );
 
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-diplomatic-surface">
+    <View className="flex-1 bg-diplomatic-surface">
+      <StatusBar style="dark" backgroundColor="#D6E8FF" />
+      <View
+        pointerEvents="none"
+        style={{ height: insets.top }}
+        className="overflow-hidden"
+      >
+        <PremiumHeaderBackdrop section="status" />
+      </View>
       <FlatList
         data={homeListData}
         keyExtractor={(item) => {
@@ -453,34 +491,48 @@ export function HomeDemo() {
         renderItem={({ item }) => {
           if (item.type === "welcome") {
             return (
-            <View
-              onLayout={(event) =>
-                setWelcomeSectionLayout(event.nativeEvent.layout.height)
-              }
-              className="px-5 pt-7"
-            >
-              <Text className="text-[32px] font-serif font-extrabold leading-9 tracking-normal text-diplomatic-ink">
-                Welcome
-              </Text>
-              <Text className="mt-2 text-[17px] font-semibold leading-6 tracking-normal text-diplomatic-secondaryText">
-                Your journey to working in Europe begins here.
-              </Text>
-            </View>
+              <View
+                onLayout={(event) =>
+                  setWelcomeSectionLayout(event.nativeEvent.layout.height)
+                }
+                className="relative overflow-hidden bg-[#EEF4FF] px-5 pb-5 pt-6"
+              >
+                <PremiumHeaderBackdrop section="top" />
+
+                <Text className="text-[36px] font-serif font-extrabold leading-[42px] tracking-[-0.6px] text-diplomatic-ink">
+                  Welcome
+                </Text>
+                <Text className="mt-2 max-w-[330px] text-[17px] font-semibold leading-6 tracking-normal text-[#53627A]">
+                  Your journey to working in Europe begins here.
+                </Text>
+              </View>
             );
           }
 
           if (item.type === "search") {
             return (
-              <View className="bg-diplomatic-surface px-5 pb-4 pt-5">
+              <View className="relative overflow-hidden rounded-b-[28px] bg-[#EEF4FF] px-5 pb-6 pt-1">
+                <PremiumHeaderBackdrop section="bottom" />
+
                 <Pressable
                   onPress={() => router.push("/search")}
-                  className="h-16 flex-row items-center rounded-full border border-[#AEB5C2] bg-white px-7"
+                  style={premiumHeaderStyles.searchShadow}
+                  className="h-[68px] w-full flex-row items-center rounded-[24px] border border-white bg-white/95 px-4 active:opacity-90"
                   accessibilityRole="button"
+                  accessibilityLabel="Search countries, visas, and topics"
                 >
-                  <Ionicons name="search" size={24} color="#8C95A6" />
-                  <Text className="ml-4 text-[17px] font-semibold tracking-normal text-[#A4ABB8]">
-                    Search countries and topics
+                  <View className="h-10 w-10 items-center justify-center rounded-full bg-[#EDF4FF]">
+                    <Ionicons name="search" size={21} color="#0058BC" />
+                  </View>
+                  <Text
+                    numberOfLines={1}
+                    className="ml-3 min-w-0 flex-1 text-[15px] font-semibold tracking-normal text-[#7A8495]"
+                  >
+                    Search countries, visas &amp; more
                   </Text>
+                  <View className="h-9 w-9 items-center justify-center rounded-full bg-diplomatic-primary">
+                    <Ionicons name="arrow-forward" size={17} color="#FFFFFF" />
+                  </View>
                 </Pressable>
 
                 {isFilterDocked ? (
@@ -488,6 +540,7 @@ export function HomeDemo() {
                     <FilterTabs
                       activeFilter={activeFilter}
                       onChange={setActiveFilter}
+                      onGradient
                     />
                   </View>
                 ) : null}
@@ -569,7 +622,7 @@ export function HomeDemo() {
             </View>
           );
         }}
-        className="flex-1"
+        className="flex-1 bg-diplomatic-surface"
         contentContainerStyle={{ paddingBottom: BottomTabInset }}
         showsVerticalScrollIndicator={false}
         initialNumToRender={9}
@@ -581,19 +634,23 @@ export function HomeDemo() {
         viewabilityConfig={viewabilityConfig}
         windowSize={5}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 function FilterTabs({
   activeFilter,
   onChange,
+  onGradient = false,
 }: {
   activeFilter: FilterKey;
   onChange: (filter: FilterKey) => void;
+  onGradient?: boolean;
 }) {
   return (
-    <View className="bg-diplomatic-surface px-5">
+    <View
+      className={onGradient ? "bg-transparent" : "bg-diplomatic-surface px-5"}
+    >
       <ScrollView
         horizontal
         contentContainerClassName="gap-3"
@@ -626,6 +683,44 @@ function FilterTabs({
     </View>
   );
 }
+
+function PremiumHeaderBackdrop({
+  section,
+}: {
+  section: HeaderGradientSection;
+}) {
+  const bands = headerGradientBands[section];
+
+  return (
+    <View
+      pointerEvents="none"
+      style={StyleSheet.absoluteFill}
+      className="overflow-hidden"
+    >
+      {bands.map((backgroundColor, index) => (
+        <View
+          key={`${section}-${index}`}
+          style={{ flex: 1, backgroundColor }}
+        />
+      ))}
+    </View>
+  );
+}
+
+const premiumHeaderStyles = StyleSheet.create({
+  searchShadow: Platform.select({
+    web: {
+      boxShadow: "0 12px 24px rgba(18, 60, 115, 0.12)",
+    },
+    default: {
+      shadowColor: "#123C73",
+      shadowOffset: { width: 0, height: 12 },
+      shadowOpacity: 0.12,
+      shadowRadius: 24,
+      elevation: 6,
+    },
+  }),
+});
 
 function AnimatedCountryListCard({
   animationKey,

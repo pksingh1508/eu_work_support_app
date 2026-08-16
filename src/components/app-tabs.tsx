@@ -37,7 +37,11 @@ export default function AppTabs() {
       rippleColor={colors.backgroundSelected}
       shadowColor={colors.outlineVariant}
       tintColor={colors.primary}>
-      <NativeTabs.Trigger name="index" disableTransparentOnScrollEdge>
+      <NativeTabs.Trigger
+        name="index"
+        contentStyle={{ backgroundColor: '#D6E8FF' }}
+        disableAutomaticContentInsets
+        disableTransparentOnScrollEdge>
         <NativeTabs.Trigger.Icon
           md="home"
           sf={{ default: 'house', selected: 'house.fill' }}
