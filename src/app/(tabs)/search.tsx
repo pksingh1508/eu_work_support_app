@@ -1,10 +1,11 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CustomLoading } from "@/components/custom-loading";
+import { SearchPill } from "@/components/ui/search-pill";
 import { BottomTabInset } from "@/constants/theme";
 import { PremiumGuard } from "@/features/auth/components/premium-guard";
 import { appStorage } from "@/lib/local-storage";
@@ -399,32 +400,12 @@ function SearchContent() {
         contentContainerStyle={{ paddingBottom: BottomTabInset + 24 }}
         showsVerticalScrollIndicator={false}
       >
-        <View className="px-6 pt-8">
-          <View className="h-14 flex-row items-center rounded-[26px] border border-[#A4AAB8] bg-white px-4">
-            <Ionicons name="search" size={19} color="#8E95A3" />
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              onSubmitEditing={() => submitSearch()}
-              returnKeyType="search"
-              autoCapitalize="none"
-              autoCorrect={false}
-              placeholder="Search countries and topics"
-              placeholderTextColor="#A8AEBA"
-              className="ml-3 min-w-0 flex-1 text-base font-semibold tracking-normal text-diplomatic-ink"
-            />
-            {query.length > 0 ? (
-              <Pressable
-                onPress={() => {
-                  setQuery("");
-                  setDebouncedQuery("");
-                }}
-                hitSlop={10}
-              >
-                <Ionicons name="close-circle" size={20} color="#8E95A3" />
-              </Pressable>
-            ) : null}
-          </View>
+        <View className="px-5 pt-8">
+          <SearchPill
+            value={query}
+            onChangeText={setQuery}
+            onSubmit={() => submitSearch()}
+          />
 
           {!shouldSearch ? (
             <>

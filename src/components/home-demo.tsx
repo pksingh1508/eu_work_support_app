@@ -21,6 +21,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { SearchPill } from "@/components/ui/search-pill";
 import {
   easiestVisaCountries,
   europeanCountryNames,
@@ -533,26 +534,7 @@ export function HomeDemo() {
               <View className="relative overflow-hidden rounded-b-[28px] bg-[#EEF4FF] px-5 pb-6 pt-1">
                 <PremiumHeaderBackdrop section="bottom" />
 
-                <Pressable
-                  onPress={() => router.push("/search")}
-                  style={premiumHeaderStyles.searchShadow}
-                  className="h-[68px] w-full flex-row items-center rounded-[24px] border border-white bg-white/95 px-4 active:opacity-90"
-                  accessibilityRole="button"
-                  accessibilityLabel="Search countries, visas, and topics"
-                >
-                  <View className="h-10 w-10 items-center justify-center rounded-full bg-[#EDF4FF]">
-                    <Ionicons name="search" size={21} color="#0058BC" />
-                  </View>
-                  <Text
-                    numberOfLines={1}
-                    className="ml-3 min-w-0 flex-1 text-[15px] font-semibold tracking-normal text-[#7A8495]"
-                  >
-                    Search countries, visas &amp; more
-                  </Text>
-                  <View className="h-9 w-9 items-center justify-center rounded-full bg-diplomatic-primary">
-                    <Ionicons name="arrow-forward" size={17} color="#FFFFFF" />
-                  </View>
-                </Pressable>
+                <SearchPill onPress={() => router.push("/search")} />
 
                 {isFilterDocked ? (
                   <View className="mt-4">
@@ -727,18 +709,6 @@ function PremiumHeaderBackdrop({
 }
 
 const premiumHeaderStyles = StyleSheet.create({
-  searchShadow: Platform.select({
-    web: {
-      boxShadow: "0 12px 24px rgba(18, 60, 115, 0.12)",
-    },
-    default: {
-      shadowColor: "#123C73",
-      shadowOffset: { width: 0, height: 12 },
-      shadowOpacity: 0.12,
-      shadowRadius: 24,
-      elevation: 6,
-    },
-  }),
   popularCardShadow: Platform.select({
     web: {
       boxShadow: "0 18px 34px rgba(15, 35, 66, 0.18)",
