@@ -85,7 +85,23 @@ export function AuthCard({
           </View>
 
           <Text className="mt-6 px-2 text-center text-sm font-semibold leading-5 tracking-normal text-[#707684]">
-            By continuing, you agree to the Terms and Privacy Policy.
+            By continuing, you agree to the{" "}
+            <Text
+              onPress={() => router.push("/profile/legal/terms-and-conditions")}
+              accessibilityRole="link"
+              className="text-diplomatic-primary underline"
+            >
+              Terms
+            </Text>{" "}
+            and{" "}
+            <Text
+              onPress={() => router.push("/profile/legal/privacy-policy")}
+              accessibilityRole="link"
+              className="text-diplomatic-primary underline"
+            >
+              Privacy Policy
+            </Text>
+            .
           </Text>
         </SafeAreaView>
       </ScrollView>

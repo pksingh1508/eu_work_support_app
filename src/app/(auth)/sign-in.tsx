@@ -258,7 +258,7 @@ export default function SignInScreen() {
     <AuthCard
       headerTitle="Login"
       title="Welcome back"
-      subtitle="Login to continue your country research, saved guides, and premium support."
+      subtitle="Login to continue your country research, saved guides, and more support."
       error={null}
     >
       {error ? <AuthFormError message={error} /> : null}
