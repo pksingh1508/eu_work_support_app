@@ -16,8 +16,8 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  type ViewToken,
   View,
+  type ViewToken,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -35,9 +35,7 @@ import {
   useSavedStore,
 } from "@/features/saved/saved-store";
 import { FontFamily } from "@/lib/fonts";
-import {
-  fetchCountryIdBySlug,
-} from "@/lib/saved-items";
+import { fetchCountryIdBySlug } from "@/lib/saved-items";
 import { showErrorToast, showSavedToast, showUnsavedToast } from "@/lib/toast";
 
 type FilterKey = "all" | "top-rated" | "easiest-visa";
@@ -264,8 +262,7 @@ function createGradientBands(
     const progress = index / (count - 1);
     const channels = startColor.map((startChannel, channelIndex) =>
       Math.round(
-        startChannel +
-          (endColor[channelIndex] - startChannel) * progress,
+        startChannel + (endColor[channelIndex] - startChannel) * progress,
       ),
     );
 
@@ -281,9 +278,9 @@ export function HomeDemo() {
   const [countryIdsBySlug, setCountryIdsBySlug] = useState<
     Record<string, string>
   >({});
-  const [resolvingCountrySlug, setResolvingCountrySlug] = useState<string | null>(
-    null,
-  );
+  const [resolvingCountrySlug, setResolvingCountrySlug] = useState<
+    string | null
+  >(null);
   const savedCountrySlugs = useSavedCountrySlugs();
   const pendingMutations = useSavedStore((state) => state.pendingMutations);
   const hydrateSavedForUser = useSavedStore((state) => state.hydrateForUser);
@@ -348,11 +345,7 @@ export function HomeDemo() {
         const nextKeys = new Set(currentKeys);
 
         viewableItems.forEach((item) => {
-          if (
-            item.isViewable &&
-            item.item &&
-            item.item.type === "country"
-          ) {
+          if (item.isViewable && item.item && item.item.type === "country") {
             nextKeys.add(`${filterKey}-${item.item.country}`);
           }
         });
@@ -375,8 +368,7 @@ export function HomeDemo() {
       const threshold =
         welcomeSectionHeightRef.current + popularSectionHeightRef.current;
       const shouldDock =
-        threshold > 0 &&
-        event.nativeEvent.contentOffset.y >= threshold;
+        threshold > 0 && event.nativeEvent.contentOffset.y >= threshold;
 
       if (shouldDock !== filterDockedRef.current) {
         filterDockedRef.current = shouldDock;
@@ -551,35 +543,35 @@ export function HomeDemo() {
 
           if (item.type === "popular") {
             return (
-            <View
-              onLayout={(event) =>
-                setPopularSectionLayout(event.nativeEvent.layout.height)
-              }
-              className="pt-4"
-            >
-              <View className="px-5">
-                <Text className="text-[25px] font-serif font-extrabold tracking-normal text-diplomatic-ink">
-                  Popular Destinations
-                </Text>
-              </View>
-
-              <ScrollView
-                horizontal
-                className="mt-5"
-                contentContainerClassName="gap-4 px-5"
-                showsHorizontalScrollIndicator={false}
+              <View
+                onLayout={(event) =>
+                  setPopularSectionLayout(event.nativeEvent.layout.height)
+                }
+                className="pt-4"
               >
-                {popularDestinations.map((country) => (
-                  <PopularDestinationCard
-                    key={country}
-                    country={country}
-                    onPress={openCountry}
-                  />
-                ))}
-              </ScrollView>
+                <View className="px-5">
+                  <Text className="text-[25px] font-serif font-extrabold tracking-normal text-diplomatic-ink">
+                    Popular Destinations
+                  </Text>
+                </View>
 
-              <View className="mt-6" />
-            </View>
+                <ScrollView
+                  horizontal
+                  className="mt-5"
+                  contentContainerClassName="gap-4 px-5"
+                  showsHorizontalScrollIndicator={false}
+                >
+                  {popularDestinations.map((country) => (
+                    <PopularDestinationCard
+                      key={country}
+                      country={country}
+                      onPress={openCountry}
+                    />
+                  ))}
+                </ScrollView>
+
+                <View className="mt-6" />
+              </View>
             );
           }
 
@@ -614,9 +606,7 @@ export function HomeDemo() {
                 isSaved={savedCountrySlugs.has(slug)}
                 isSaving={
                   resolvingCountrySlug === slug ||
-                  Boolean(
-                    countryId && pendingMutations[`country:${countryId}`],
-                  )
+                  Boolean(countryId && pendingMutations[`country:${countryId}`])
                 }
                 onToggleSave={toggleSavedCountry}
               />
@@ -649,9 +639,7 @@ function FilterTabs({
   onGradient?: boolean;
 }) {
   return (
-    <View
-      className={onGradient ? "bg-transparent" : "bg-white px-5"}
-    >
+    <View className={onGradient ? "bg-transparent" : "bg-white px-5"}>
       <ScrollView
         horizontal
         contentContainerClassName="gap-3"
