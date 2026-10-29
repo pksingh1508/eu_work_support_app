@@ -61,30 +61,30 @@ export function AuthCard({
             >
               <Ionicons name="chevron-back" size={23} color="#202124" />
             </Pressable>
-            <Text className="mx-3 min-w-0 flex-1 text-center text-[30px] font-extrabold tracking-normal text-[#202124]">
+            <Text className="mx-3 min-w-0 flex-1 text-center text-[30px] font-inter-bold tracking-normal text-[#202124]">
               {headerTitle}
             </Text>
             <View className="h-11 w-11" />
           </View>
 
           <View className="rounded-[30px] border border-[#EDEDF0] bg-white px-5 py-6">
-            <Text className="text-[30px] font-extrabold leading-9 tracking-normal text-[#202124]">
+            <Text className="text-[30px] font-inter-bold leading-9 tracking-normal text-[#202124]">
               {title}
             </Text>
-            <Text className="mt-3 text-base font-semibold leading-7 tracking-normal text-[#707684]">
+            <Text className="mt-3 text-base font-inter-medium leading-7 tracking-normal text-[#707684]">
               {subtitle}
             </Text>
 
             {error ? (
               <View className="mt-5 rounded-[18px] bg-[#FFF1F1] px-4 py-3">
-                <Text className="text-sm font-semibold tracking-normal text-[#D83B3B]">{error}</Text>
+                <Text className="text-sm font-inter-medium tracking-normal text-[#D83B3B]">{error}</Text>
               </View>
             ) : null}
 
             <View className="mt-6 gap-4">{children}</View>
           </View>
 
-          <Text className="mt-6 px-2 text-center text-sm font-semibold leading-5 tracking-normal text-[#707684]">
+          <Text className="mt-6 px-2 text-center text-sm font-inter-medium leading-5 tracking-normal text-[#707684]">
             By continuing, you agree to the{" "}
             <Text
               onPress={() => router.push("/profile/legal/terms-and-conditions")}
@@ -120,7 +120,7 @@ export function AuthTextField({
   return (
     <View>
       <View className="mb-2 flex-row items-center justify-between">
-        <Text className="text-sm font-extrabold tracking-normal text-[#202124]">{label}</Text>
+        <Text className="text-sm font-inter-bold tracking-normal text-[#202124]">{label}</Text>
       </View>
 
       <View className="h-14 flex-row items-center rounded-[20px] border border-[#E2E2E6] bg-[#FAFAFB] px-4">
@@ -128,7 +128,7 @@ export function AuthTextField({
           {...props}
           secureTextEntry={secureTextEntry}
           placeholderTextColor="#A1A6B1"
-          className="min-w-0 flex-1 text-base font-semibold tracking-normal text-[#202124] outline-none"
+          className="min-w-0 flex-1 text-base font-inter-medium tracking-normal text-[#202124] outline-none"
         />
         {actionLabel ? (
           <Pressable onPress={onActionPress} hitSlop={10} className="ml-3">
@@ -165,7 +165,7 @@ export function AuthPrimaryButton({ label, isLoading, disabled, onPress }: AuthP
       {isLoading ? (
         <CustomLoading size={28} />
       ) : (
-        <Text className="text-base font-extrabold tracking-normal text-white">{label}</Text>
+        <Text className="text-base font-inter-bold tracking-normal text-white">{label}</Text>
       )}
     </Pressable>
   );
@@ -182,7 +182,7 @@ export function AuthInlineLink({
 }) {
   return (
     <Pressable onPress={onPress} className="items-center" hitSlop={10}>
-      <Text className="text-center text-sm font-semibold tracking-normal text-[#707684]">
+      <Text className="text-center text-sm font-inter-medium tracking-normal text-[#707684]">
         {text} <Text className="text-diplomatic-primary">{action}</Text>
       </Text>
     </Pressable>

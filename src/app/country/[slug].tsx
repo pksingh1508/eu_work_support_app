@@ -1,6 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@clerk/expo";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Alert,
@@ -8,18 +9,34 @@ import {
   Modal,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import Animated, {
+  useAnimatedReaction,
+  useAnimatedScrollHandler,
+  useSharedValue,
+} from "react-native-reanimated";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { scheduleOnRN } from "react-native-worklets";
 
+import { CollapsingTopBar } from "@/components/country/collapsing-top-bar";
+import {
+  COUNTRY_HERO_HEIGHT,
+  CountryHero,
+} from "@/components/country/country-hero";
 import { CustomLoading } from "@/components/custom-loading";
-import { BottomTabInset } from "@/constants/theme";
+import { FadeInView } from "@/components/ui/fade-in-view";
+import { FocusStatusBar } from "@/components/ui/focus-status-bar";
+import { PressableScale } from "@/components/ui/pressable-scale";
+import { BottomTabInset, Elevation, Palette } from "@/constants/theme";
 import { PremiumGuard } from "@/features/auth/components/premium-guard";
 import {
   useIsCountrySaved,
   useSavedStore,
 } from "@/features/saved/saved-store";
+import { FontFamily } from "@/lib/fonts";
 import { supabase } from "@/lib/supabase";
 import { showErrorToast, showSavedToast, showUnsavedToast } from "@/lib/toast";
 
@@ -303,6 +320,8 @@ export default function CountryDetailScreen() {
   );
 }
 
+const COLLAPSE_AT = COUNTRY_HERO_HEIGHT - 120;
+
 function CountryDetailContent() {
   const router = useRouter();
   const { userId } = useAuth();
@@ -325,6 +344,22 @@ function CountryDetailContent() {
     (state) => state.unsaveCountryOptimistic,
   );
   const isSavingCountry = Boolean(pendingCountryMutation);
+  const insets = useSafeAreaInsets();
+  const scrollY = useSharedValue(0);
+  const [isBarSolid, setIsBarSolid] = useState(false);
+
+  const onScroll = useAnimatedScrollHandler((event) => {
+    scrollY.value = event.contentOffset.y;
+  });
+
+  useAnimatedReaction(
+    () => scrollY.value > COLLAPSE_AT - 40,
+    (solid, previous) => {
+      if (solid !== previous) {
+        scheduleOnRN(setIsBarSolid, solid);
+      }
+    },
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -449,158 +484,111 @@ function CountryDetailContent() {
   };
 
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-[#FAFAFB]">
-      <ScrollView
-        className="flex-1"
+    <View style={styles.screen}>
+      <FocusStatusBar style={isBarSolid || !country ? "dark" : "light"} />
+      <CollapsingTopBar
+        title={country?.name ?? "Country"}
+        topInset={insets.top}
+        scrollY={scrollY}
+        collapseAt={country ? COLLAPSE_AT : 0}
+        onBack={() => router.back()}
+        rightAction={
+          <PressableScale
+            onPress={toggleSavedCountry}
+            disabled={!country || isSavingCountry}
+            style={[
+              styles.saveButton,
+              isCountrySavedState && styles.saveButtonActive,
+              (!country || isSavingCountry) && styles.disabled,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={
+              isCountrySavedState
+                ? `Unsave ${country?.name ?? "country"}`
+                : `Save ${country?.name ?? "country"}`
+            }
+          >
+            <Ionicons
+              name={isCountrySavedState ? "bookmark" : "bookmark-outline"}
+              size={19}
+              color={isCountrySavedState ? "#FFFFFF" : Palette.ink}
+            />
+          </PressableScale>
+        }
+      />
+
+      <Animated.ScrollView
+        style={styles.screen}
         contentContainerStyle={{ paddingBottom: BottomTabInset + 24 }}
         showsVerticalScrollIndicator={false}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
       >
-        <View className="px-5 pt-7">
-          <Header
-            title={country?.name ?? "Country"}
-            onBack={() => router.back()}
-            rightAction={
-              <Pressable
-                onPress={toggleSavedCountry}
-                disabled={!country || isSavingCountry}
-                className={`h-11 w-11 items-center justify-center rounded-full border border-[#E6E6EA] active:opacity-70 disabled:opacity-60 ${
-                  isCountrySavedState ? "bg-[#DFF3E6]" : "bg-white"
-                }`}
-                accessibilityRole="button"
-                accessibilityLabel={
-                  isCountrySavedState
-                    ? `Unsave ${country?.name ?? "country"}`
-                    : `Save ${country?.name ?? "country"}`
-                }
-              >
-                <Ionicons
-                  name={isCountrySavedState ? "bookmark" : "bookmark-outline"}
-                  size={21}
-                  color={isCountrySavedState ? "#183B2B" : "#202124"}
-                />
-              </Pressable>
-            }
-          />
+        {isLoading ? (
+          <View style={[styles.stateCard, Elevation.card, { marginTop: insets.top + 90 }]}>
+            <CustomLoading />
+            <Text style={styles.stateText}>Loading country guide…</Text>
+          </View>
+        ) : null}
 
-          {isLoading ? (
-            <View className="mt-16 items-center justify-center rounded-[30px] border border-[#EDEDF0] bg-white px-6 py-12">
-              <CustomLoading />
-              <Text className="mt-4 text-base font-bold tracking-normal text-[#707684]">
-                Loading country guide...
-              </Text>
+        {!isLoading && error ? (
+          <FadeInView style={[styles.stateCard, Elevation.card, { marginTop: insets.top + 90 }]}>
+            <View style={styles.stateIcon}>
+              <Ionicons name="alert-circle" size={26} color={Palette.danger} />
             </View>
-          ) : null}
+            <Text style={styles.stateTitle}>{error}</Text>
+            <PressableScale
+              onPress={() => router.back()}
+              style={styles.primaryButton}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <Text style={styles.primaryButtonText}>Go back</Text>
+            </PressableScale>
+          </FadeInView>
+        ) : null}
 
-          {!isLoading && error ? (
-            <View className="mt-8 rounded-[30px] border border-[#EDEDF0] bg-white px-6 py-8">
-              <Ionicons name="alert-circle-outline" size={30} color="#BA1A1A" />
-              <Text className="mt-4 text-xl font-extrabold tracking-normal text-[#202124]">
-                {error}
-              </Text>
-              <Pressable
-                onPress={() => router.back()}
-                className="mt-6 h-12 items-center justify-center rounded-[22px] bg-diplomatic-primary"
-              >
-                <Text className="text-base font-extrabold tracking-normal text-white">
-                  Go back
-                </Text>
-              </Pressable>
-            </View>
-          ) : null}
+        {!isLoading && country ? (
+          <>
+            <CountryHero
+              name={country.name}
+              subtitle={heroSubtitle}
+              flagEmoji={country.flagEmoji}
+              documentCount={country.documents.length}
+              topInset={insets.top}
+              scrollY={scrollY}
+            />
 
-          {!isLoading && country ? (
-            <>
-              <View className="mt-8 min-h-[190px] rounded-[30px] bg-[#111827] p-5">
-                <View className="flex-row items-start justify-between">
-                  <View className="h-16 w-16 items-center justify-center">
-                    {country.flagEmoji ? (
-                      <Text className="text-[48px] tracking-normal">
-                        {country.flagEmoji}
-                      </Text>
-                    ) : (
-                      <Ionicons name="flag-outline" size={44} color="#FFFFFF" />
-                    )}
+            <View style={styles.body}>
+              <FadeInView index={1}>
+                <View style={[styles.overview, Elevation.card]}>
+                  <View style={styles.overviewIcon}>
+                    <Ionicons name="compass-outline" size={20} color={Palette.primary} />
                   </View>
-                  <View className="flex-row items-center rounded-[16px] bg-diplomatic-primary px-3 py-2">
-                    <Ionicons
-                      name="radio-button-on-outline"
-                      size={13}
-                      color="#FFFFFF"
-                    />
-                    <Text className="ml-2 text-xs font-extrabold tracking-normal text-white">
-                      Popular
-                    </Text>
+                  <View style={styles.overviewText}>
+                    <Text style={styles.overviewTitle}>Immigration overview</Text>
+                    <Text style={styles.overviewBody}>{overviewText}</Text>
                   </View>
                 </View>
+              </FadeInView>
 
-                <Text className="mt-4 text-[34px] font-extrabold leading-10 tracking-normal text-white">
-                  {country.name}
-                </Text>
-                <Text className="mt-1 text-base font-semibold leading-6 tracking-normal text-white opacity-80">
-                  {heroSubtitle}
-                </Text>
-
-                <View className="mt-4 flex-row gap-3">
-                  <View className="flex-1 rounded-[20px] bg-white/10 px-4 py-4">
-                    <Text className="text-lg font-extrabold tracking-normal text-white">
-                      4-12 weeks
-                    </Text>
-                    <Text className="mt-1 text-sm font-semibold tracking-normal text-white opacity-70">
-                      typical process
-                    </Text>
-                  </View>
-                  <View className="flex-1 rounded-[20px] bg-white/10 px-4 py-4">
-                    <Text className="text-lg font-extrabold tracking-normal text-white">
-                      {country.documents.length} docs
-                    </Text>
-                    <Text className="mt-1 text-sm font-semibold tracking-normal text-white opacity-70">
-                      checklist items
-                    </Text>
-                  </View>
+              <FadeInView index={2} style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Guides & documents</Text>
+                <View style={styles.countPill}>
+                  <Text style={styles.countPillText}>{country.documents.length}</Text>
                 </View>
-              </View>
+              </FadeInView>
 
-              <View className="mt-5 rounded-[30px] border border-[#EDEDF0] bg-white px-5 py-5">
-                <View className="flex-row items-start justify-between">
-                  <View className="min-w-0 flex-1 flex-row items-start">
-                    <Ionicons
-                      name="information-circle-outline"
-                      size={20}
-                      color="#1E7AF2"
-                    />
-                    <View className="ml-3 min-w-0 flex-1">
-                      <Text className="text-base font-extrabold tracking-normal text-[#202124]">
-                        Immigration overview
-                      </Text>
-                      <Text className="mt-2 text-sm font-semibold leading-6 tracking-normal text-[#707684]">
-                        {overviewText}
-                      </Text>
-                    </View>
-                  </View>
-                  <Ionicons name="chevron-up" size={18} color="#7C8497" />
-                </View>
-              </View>
-
-              <View className="mt-6 rounded-[30px] border border-[#EDEDF0] bg-white px-5 py-5">
-                <View className="flex-row items-center justify-between">
-                  <Text className="text-xl font-extrabold tracking-normal text-[#202124]">
-                    Document Lists
-                  </Text>
-                  <Text className="text-sm font-extrabold tracking-normal text-diplomatic-primary">
-                    {country.documents.length} items
-                  </Text>
-                </View>
-
-                <View className="mt-5 gap-3">
-                  {country.documents.map((document, index) => (
+              <View style={styles.documents}>
+                {country.documents.map((document, index) => (
+                  <FadeInView key={document.id} index={index + 3}>
                     <DocumentRow
-                      key={document.id}
                       document={document}
                       index={index}
                       onPress={() => setSelectedDocument(document)}
                     />
-                  ))}
-                </View>
+                  </FadeInView>
+                ))}
               </View>
 
               <SourceAndReviewDetails
@@ -608,16 +596,16 @@ function CountryDetailContent() {
                 officialImmigrationUrl={officialImmigrationUrl}
                 lastReviewedDate={lastReviewedDate}
               />
-            </>
-          ) : null}
-        </View>
-      </ScrollView>
+            </View>
+          </>
+        ) : null}
+      </Animated.ScrollView>
 
       <DocumentModal
         document={selectedDocument}
         onClose={() => setSelectedDocument(null)}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -636,14 +624,14 @@ function SourceAndReviewDetails({
 
   return (
     <View className="mt-4 rounded-[24px] border border-[#E3E4E8] bg-[#F3F4F6] px-5 py-5">
-      <Text className="text-xs font-extrabold uppercase tracking-[0.8px] text-[#6B7280]">
+      <Text className="text-xs font-inter-bold uppercase tracking-[0.8px] text-[#6B7280]">
         Source information
       </Text>
 
       {lastReviewedDate ? (
         <View className="mt-4 flex-row items-center">
           <Ionicons name="checkmark-circle-outline" size={18} color="#6B7280" />
-          <Text className="ml-2 text-sm font-semibold tracking-normal text-[#626876]">
+          <Text className="ml-2 text-sm font-inter-medium tracking-normal text-[#626876]">
             Last reviewed: {lastReviewedDate}
           </Text>
         </View>
@@ -683,47 +671,18 @@ function OfficialSourceLink({ title, url }: { title: string; url: string }) {
     >
       <Ionicons name="globe-outline" size={19} color="#4B5563" />
       <View className="ml-3 min-w-0 flex-1">
-        <Text className="text-sm font-extrabold tracking-normal text-[#4B5563] underline">
+        <Text className="text-sm font-inter-bold tracking-normal text-[#4B5563] underline">
           {title}
         </Text>
         <Text
           numberOfLines={1}
-          className="mt-1 text-xs font-semibold tracking-normal text-[#737985]"
+          className="mt-1 text-xs font-inter-medium tracking-normal text-[#737985]"
         >
           {url}
         </Text>
       </View>
       <Ionicons name="open-outline" size={17} color="#4B5563" />
     </Pressable>
-  );
-}
-
-function Header({
-  title,
-  onBack,
-  rightAction,
-}: {
-  title: string;
-  onBack: () => void;
-  rightAction?: ReactNode;
-}) {
-  return (
-    <View className="flex-row items-center justify-between">
-      <Pressable
-        onPress={onBack}
-        className="h-11 w-11 items-center justify-center rounded-full border border-[#E6E6EA] bg-white"
-        accessibilityRole="button"
-      >
-        <Ionicons name="chevron-back" size={21} color="#202124" />
-      </Pressable>
-      <Text
-        className="mx-3 min-w-0 flex-1 text-center text-[28px] font-extrabold tracking-normal text-[#202124]"
-        numberOfLines={1}
-      >
-        {title}
-      </Text>
-      {rightAction ?? <View className="h-11 w-11" />}
-    </View>
   );
 }
 
@@ -737,59 +696,42 @@ function DocumentRow({
   onPress: () => void;
 }) {
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
-      className="rounded-[24px] border border-[#E2E2E6] bg-[#FAFAFB] px-4 py-4 active:opacity-80"
+      style={[styles.docCard, Elevation.card]}
       accessibilityRole="button"
+      accessibilityLabel={`Open ${document.title}`}
     >
-      <View className="flex-row items-start">
-        <View className="h-11 w-11 items-center justify-center rounded-[16px] bg-[#EEF7FF]">
-          <Ionicons
-            name={
-              index === 0
-                ? "information-circle-outline"
-                : getCategoryIcon(document.categoryIcon)
-            }
-            size={23}
-            color="#1E7AF2"
-          />
-        </View>
-        <View className="ml-3 min-w-0 flex-1">
-          <Text className="text-base font-extrabold leading-6 tracking-normal text-[#202124]">
-            {document.title}
-          </Text>
-          <Text className="mt-2 text-sm font-semibold leading-5 tracking-normal text-[#707684]">
-            {document.shortDescription ?? document.intro ?? "Complete guide"}
-          </Text>
-        </View>
+      <View style={styles.docIcon}>
+        <Ionicons
+          name={
+            index === 0
+              ? "information-circle-outline"
+              : getCategoryIcon(document.categoryIcon)
+          }
+          size={22}
+          color={Palette.primary}
+        />
       </View>
-      <View className="mt-4 flex-row items-center justify-between">
-        <View className="min-w-0 flex-1 flex-row items-center gap-2">
-          <View className="flex-row items-center rounded-full bg-white px-3 py-2">
-            <Ionicons
-              name={getCategoryIcon(document.categoryIcon)}
-              size={15}
-              color="#1E7AF2"
-            />
-            <Text
-              numberOfLines={1}
-              className="ml-2 max-w-[170px] text-xs font-extrabold tracking-normal text-diplomatic-primary"
-            >
-              {document.categoryName}
-            </Text>
-          </View>
+      <View style={styles.docBody}>
+        <View style={styles.docMeta}>
+          <Text style={styles.docCategory} numberOfLines={1}>
+            {document.categoryName}
+          </Text>
           {document.isPremium ? (
-            <View className="flex-row items-center rounded-full bg-[#EEF7FF] px-3 py-2">
-              <Ionicons name="sparkles-outline" size={14} color="#1E7AF2" />
-              <Text className="ml-1 text-xs font-extrabold tracking-normal text-diplomatic-primary">
-                Pro
-              </Text>
+            <View style={styles.proBadge}>
+              <Ionicons name="sparkles" size={10} color="#FFFFFF" />
+              <Text style={styles.proText}>PRO</Text>
             </View>
           ) : null}
         </View>
-        <Ionicons name="chevron-down" size={21} color="#7C8497" />
+        <Text style={styles.docTitle}>{document.title}</Text>
+        <Text style={styles.docDescription} numberOfLines={2}>
+          {document.shortDescription ?? document.intro ?? "Complete guide"}
+        </Text>
       </View>
-    </Pressable>
+      <Ionicons name="chevron-forward" size={18} color={Palette.subtle} />
+    </PressableScale>
   );
 }
 
@@ -813,13 +755,14 @@ function DocumentModal({
       >
         {document ? (
           <>
+            <StatusBar style="dark" />
             <View className="border-b border-[#E0E5EF] bg-white px-5 py-4">
               <View className="flex-row items-start justify-between gap-4">
                 <View className="min-w-0 flex-1">
-                  <Text className="text-sm font-extrabold uppercase tracking-normal text-diplomatic-primary">
+                  <Text className="text-sm font-inter-bold uppercase tracking-normal text-diplomatic-primary">
                     {document.categoryName}
                   </Text>
-                  <Text className="mt-1 text-2xl font-serif font-extrabold tracking-normal text-diplomatic-ink">
+                  <Text className="mt-1 text-2xl font-heading tracking-normal text-diplomatic-ink">
                     {document.title}
                   </Text>
                 </View>
@@ -840,7 +783,7 @@ function DocumentModal({
             >
               {document.intro ? (
                 <View className="rounded-interactive bg-white px-4 py-4">
-                  <Text className="text-lg font-semibold leading-7 tracking-normal text-diplomatic-secondaryText">
+                  <Text className="text-lg font-inter-medium leading-7 tracking-normal text-diplomatic-secondaryText">
                     {document.intro}
                   </Text>
                 </View>
@@ -890,12 +833,12 @@ function ContentSectionView({ section }: { section: ContentSection }) {
   return (
     <View className={`rounded-interactive border px-4 py-4 ${sectionTone}`}>
       {title ? (
-        <Text className="text-lg font-extrabold tracking-normal text-diplomatic-ink">
+        <Text className="text-lg font-inter-bold tracking-normal text-diplomatic-ink">
           {title}
         </Text>
       ) : null}
       {content ? (
-        <Text className="mt-2 text-base font-semibold leading-6 tracking-normal text-diplomatic-secondaryText">
+        <Text className="mt-2 text-base font-inter-medium leading-6 tracking-normal text-diplomatic-secondaryText">
           {content}
         </Text>
       ) : null}
@@ -910,11 +853,11 @@ function ContentSectionView({ section }: { section: ContentSection }) {
               {isChecklist ? (
                 <Ionicons name="checkmark-circle" size={17} color="#1E7AF2" />
               ) : (
-                <Text className="w-7 text-base font-extrabold tracking-normal text-diplomatic-primary">
+                <Text className="w-7 text-base font-inter-bold tracking-normal text-diplomatic-primary">
                   {isNumbered ? `${index + 1}.` : "•"}
                 </Text>
               )}
-              <Text className="ml-2 min-w-0 flex-1 text-base font-semibold leading-6 tracking-normal text-diplomatic-secondaryText">
+              <Text className="ml-2 min-w-0 flex-1 text-base font-inter-medium leading-6 tracking-normal text-diplomatic-secondaryText">
                 {stringifyValue(item)}
               </Text>
             </View>
@@ -939,7 +882,7 @@ function TableSection({ section }: { section: ContentSection }) {
   return (
     <View className="rounded-interactive border border-[#E0E5EF] bg-white px-4 py-4">
       {section.title ? (
-        <Text className="text-lg font-extrabold tracking-normal text-diplomatic-ink">
+        <Text className="text-lg font-inter-bold tracking-normal text-diplomatic-ink">
           {section.title}
         </Text>
       ) : null}
@@ -958,7 +901,7 @@ function TableSection({ section }: { section: ContentSection }) {
               {columns.map((column) => (
                 <Text
                   key={column}
-                  className="px-3 py-3 text-left text-sm font-extrabold uppercase tracking-normal text-diplomatic-ink"
+                  className="px-3 py-3 text-left text-sm font-inter-bold uppercase tracking-normal text-diplomatic-ink"
                   style={{ width: columnWidth, textAlign: "left" }}
                 >
                   {column}
@@ -975,7 +918,7 @@ function TableSection({ section }: { section: ContentSection }) {
               {(Array.isArray(row) ? row : []).map((cell, cellIndex) => (
                 <Text
                   key={`${rowIndex}-${cellIndex}`}
-                  className="px-3 py-4 text-left text-sm font-semibold leading-6 tracking-normal text-diplomatic-secondaryText"
+                  className="px-3 py-4 text-left text-sm font-inter-medium leading-6 tracking-normal text-diplomatic-secondaryText"
                   style={{ width: columnWidth, textAlign: "left" }}
                 >
                   {stringifyValue(cell)}
@@ -995,7 +938,7 @@ function FaqSection({ section }: { section: ContentSection }) {
   return (
     <View className="rounded-interactive border border-[#E0E5EF] bg-white px-4 py-4">
       {section.title ? (
-        <Text className="text-lg font-extrabold tracking-normal text-diplomatic-ink">
+        <Text className="text-lg font-inter-bold tracking-normal text-diplomatic-ink">
           {section.title}
         </Text>
       ) : null}
@@ -1006,10 +949,10 @@ function FaqSection({ section }: { section: ContentSection }) {
 
           return (
             <View key={`${stringifyValue(faq.question)}-${index}`}>
-              <Text className="text-base font-extrabold leading-6 tracking-normal text-diplomatic-ink">
+              <Text className="text-base font-inter-bold leading-6 tracking-normal text-diplomatic-ink">
                 {stringifyValue(faq.question)}
               </Text>
-              <Text className="mt-1 text-base font-semibold leading-6 tracking-normal text-diplomatic-secondaryText">
+              <Text className="mt-1 text-base font-inter-medium leading-6 tracking-normal text-diplomatic-secondaryText">
                 {stringifyValue(faq.answer)}
               </Text>
             </View>
@@ -1026,7 +969,7 @@ function SourceLinksSection({ section }: { section: ContentSection }) {
   return (
     <View className="rounded-interactive border border-[#E0E5EF] bg-white px-4 py-4">
       {section.title ? (
-        <Text className="text-lg font-extrabold tracking-normal text-diplomatic-ink">
+        <Text className="text-lg font-inter-bold tracking-normal text-diplomatic-ink">
           {section.title}
         </Text>
       ) : null}
@@ -1047,7 +990,7 @@ function SourceLinksSection({ section }: { section: ContentSection }) {
               className="flex-row items-center"
             >
               <Ionicons name="link-outline" size={17} color="#1E7AF2" />
-              <Text className="ml-2 min-w-0 flex-1 text-base font-extrabold tracking-normal text-diplomatic-primary">
+              <Text className="ml-2 min-w-0 flex-1 text-base font-inter-bold tracking-normal text-diplomatic-primary">
                 {stringifyValue(source.label) || url}
               </Text>
             </Pressable>
@@ -1057,3 +1000,193 @@ function SourceLinksSection({ section }: { section: ContentSection }) {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: Palette.canvas,
+  },
+  saveButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Palette.card,
+  },
+  saveButtonActive: {
+    backgroundColor: Palette.primary,
+  },
+  disabled: {
+    opacity: 0.6,
+  },
+  stateCard: {
+    marginHorizontal: 20,
+    alignItems: "center",
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    borderRadius: 26,
+    backgroundColor: Palette.card,
+  },
+  stateIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Palette.dangerTint,
+  },
+  stateTitle: {
+    marginTop: 16,
+    textAlign: "center",
+    fontFamily: FontFamily.headingSemiBold,
+    fontSize: 18,
+    color: Palette.ink,
+  },
+  stateText: {
+    marginTop: 12,
+    fontFamily: FontFamily.bodyMedium,
+    fontSize: 15,
+    color: Palette.muted,
+  },
+  primaryButton: {
+    marginTop: 20,
+    height: 48,
+    paddingHorizontal: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 16,
+    backgroundColor: Palette.primary,
+  },
+  primaryButtonText: {
+    fontFamily: FontFamily.bodyBold,
+    fontSize: 15,
+    color: "#FFFFFF",
+  },
+  body: {
+    paddingHorizontal: 20,
+    marginTop: -28,
+  },
+  overview: {
+    flexDirection: "row",
+    gap: 14,
+    padding: 18,
+    borderRadius: 24,
+    backgroundColor: Palette.card,
+  },
+  overviewIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Palette.tint,
+  },
+  overviewText: {
+    flex: 1,
+  },
+  overviewTitle: {
+    fontFamily: FontFamily.headingSemiBold,
+    fontSize: 16,
+    color: Palette.ink,
+  },
+  overviewBody: {
+    marginTop: 6,
+    fontFamily: FontFamily.body,
+    fontSize: 14,
+    lineHeight: 22,
+    color: Palette.muted,
+  },
+  sectionHeader: {
+    marginTop: 28,
+    marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  sectionTitle: {
+    fontFamily: FontFamily.headingBold,
+    fontSize: 21,
+    letterSpacing: -0.3,
+    color: Palette.ink,
+  },
+  countPill: {
+    minWidth: 28,
+    height: 24,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Palette.tint,
+  },
+  countPillText: {
+    fontFamily: FontFamily.bodyBold,
+    fontSize: 12,
+    color: Palette.primary,
+  },
+  documents: {
+    gap: 12,
+  },
+  docCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    padding: 16,
+    borderRadius: 22,
+    backgroundColor: Palette.card,
+  },
+  docIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Palette.tint,
+  },
+  docBody: {
+    flex: 1,
+    minWidth: 0,
+  },
+  docMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  docCategory: {
+    flexShrink: 1,
+    fontFamily: FontFamily.bodyBold,
+    fontSize: 11,
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    color: Palette.primary,
+  },
+  proBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: Palette.ink,
+  },
+  proText: {
+    fontFamily: FontFamily.bodyBold,
+    fontSize: 9,
+    letterSpacing: 0.5,
+    color: "#FFFFFF",
+  },
+  docTitle: {
+    marginTop: 4,
+    fontFamily: FontFamily.headingSemiBold,
+    fontSize: 16,
+    lineHeight: 22,
+    color: Palette.ink,
+  },
+  docDescription: {
+    marginTop: 3,
+    fontFamily: FontFamily.body,
+    fontSize: 13,
+    lineHeight: 19,
+    color: Palette.muted,
+  },
+});

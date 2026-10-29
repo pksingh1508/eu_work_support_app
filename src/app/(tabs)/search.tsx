@@ -1,14 +1,19 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CustomLoading } from "@/components/custom-loading";
+import { FadeInView } from "@/components/ui/fade-in-view";
+import { FocusStatusBar } from "@/components/ui/focus-status-bar";
+import { PressableScale } from "@/components/ui/pressable-scale";
+import { ScreenHeader, SectionLabel } from "@/components/ui/screen-header";
 import { SearchPill } from "@/components/ui/search-pill";
-import { BottomTabInset } from "@/constants/theme";
+import { BottomTabInset, Elevation, Palette } from "@/constants/theme";
 import { PremiumGuard } from "@/features/auth/components/premium-guard";
 import { appStorage } from "@/lib/local-storage";
+import { FontFamily } from "@/lib/fonts";
 import { supabase } from "@/lib/supabase";
 
 const RECENT_SEARCHES_KEY = "search.recentQueries";
@@ -393,125 +398,133 @@ function SearchContent() {
   };
 
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-diplomatic-surface">
+    <SafeAreaView edges={["top"]} style={styles.screen}>
+      <FocusStatusBar style="dark" />
       <ScrollView
         keyboardShouldPersistTaps="handled"
-        className="flex-1"
-        contentContainerStyle={{ paddingBottom: BottomTabInset + 24 }}
+        style={styles.screen}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: BottomTabInset + 24 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
-        <View className="px-5 pt-8">
+        <ScreenHeader
+          eyebrow="Discover"
+          title="Search"
+          subtitle="Visas, permits and documents across 27 European countries."
+        />
+
+        <FadeInView index={1}>
           <SearchPill
             value={query}
             onChangeText={setQuery}
             onSubmit={() => submitSearch()}
           />
+        </FadeInView>
 
-          {!shouldSearch ? (
-            <>
-              <SectionTitle title="Recent Searches" className="mt-14" />
-              <View className="mt-6 gap-7">
-                {recentSearches.map((recentSearch) => (
+        {!shouldSearch ? (
+          <>
+            <FadeInView index={2} style={styles.block}>
+              <SectionLabel title="Recent searches" />
+              <View style={[styles.listCard, Elevation.card]}>
+                {recentSearches.map((recentSearch, index) => (
                   <QueryShortcut
                     key={recentSearch}
-                    icon="time-outline"
                     label={recentSearch}
+                    isLast={index === recentSearches.length - 1}
                     onPress={() => submitSearch(recentSearch)}
                   />
                 ))}
               </View>
+            </FadeInView>
 
-              <SectionTitle title="Trending Queries" className="mt-14" />
-              <View className="mt-5 flex-row flex-wrap gap-3">
+            <FadeInView index={3} style={styles.block}>
+              <SectionLabel title="Trending now" />
+              <View style={styles.chips}>
                 {trendingQueries.map((trendingQuery) => (
-                  <Pressable
+                  <PressableScale
                     key={trendingQuery}
                     onPress={() => submitSearch(trendingQuery)}
-                    className="min-h-11 min-w-[145px] items-center justify-center rounded-interactive bg-diplomatic-surfaceHigh px-4"
+                    style={styles.chip}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Search ${trendingQuery}`}
                   >
-                    <Text className="text-sm font-extrabold tracking-normal text-diplomatic-primary">
-                      {trendingQuery}
-                    </Text>
-                  </Pressable>
+                    <Ionicons name="trending-up" size={15} color={Palette.primary} />
+                    <Text style={styles.chipText}>{trendingQuery}</Text>
+                  </PressableScale>
                 ))}
               </View>
-            </>
-          ) : (
-            <View className="mt-9">
-              <View className="flex-row items-center justify-between">
-                <SectionTitle title="Results" />
-                {isSearching ? <CustomLoading size={32} /> : null}
+            </FadeInView>
+          </>
+        ) : (
+          <View style={styles.block}>
+            <SectionLabel
+              title={isSearching ? "Searching…" : `${results.length} results`}
+              action={isSearching ? <CustomLoading size={28} /> : null}
+            />
+
+            {error ? (
+              <View style={styles.errorBox}>
+                <Ionicons name="alert-circle" size={18} color={Palette.danger} />
+                <Text style={styles.errorText}>{error}</Text>
               </View>
+            ) : null}
 
-              {error ? (
-                <View className="mt-5 rounded-interactive bg-[#FFEDEA] px-4 py-3">
-                  <Text className="text-sm font-semibold tracking-normal text-[#BA1A1A]">
-                    {error}
-                  </Text>
+            {!isSearching && !error && results.length === 0 ? (
+              <FadeInView style={[styles.empty, Elevation.card]}>
+                <View style={styles.emptyIcon}>
+                  <Ionicons name="search" size={26} color={Palette.primary} />
                 </View>
-              ) : null}
+                <Text style={styles.emptyTitle}>No guides found</Text>
+                <Text style={styles.emptyText}>
+                  Try a country name, visa type, document, or permit topic.
+                </Text>
+              </FadeInView>
+            ) : null}
 
-              {!isSearching && !error && results.length === 0 ? (
-                <View className="mt-10 items-center rounded-atelier bg-white px-6 py-8">
-                  <Ionicons name="search" size={30} color="#8E95A3" />
-                  <Text className="mt-4 text-center text-lg font-extrabold tracking-normal text-diplomatic-ink">
-                    No guides found
-                  </Text>
-                  <Text className="mt-2 text-center text-sm font-semibold leading-5 tracking-normal text-diplomatic-secondaryText">
-                    Try a country name, visa type, document, or permit topic.
-                  </Text>
-                </View>
-              ) : null}
-
-              <View className="mt-5 gap-4">
-                {results.map((result) => (
+            <View style={styles.results}>
+              {results.map((result, index) => (
+                <FadeInView key={result.id} index={index}>
                   <SearchResultCard
-                    key={result.id}
                     result={result}
                     onPress={() => openResult(result)}
                   />
-                ))}
-              </View>
+                </FadeInView>
+              ))}
             </View>
-          )}
-        </View>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function SectionTitle({
-  title,
-  className = "",
-}: {
-  title: string;
-  className?: string;
-}) {
-  return (
-    <Text
-      className={`${className} text-lg font-extrabold tracking-normal text-diplomatic-ink`}
-    >
-      {title}
-    </Text>
-  );
-}
-
 function QueryShortcut({
-  icon,
   label,
+  isLast,
   onPress,
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
   label: string;
+  isLast: boolean;
   onPress: () => void;
 }) {
   return (
-    <Pressable onPress={onPress} className="flex-row items-center" hitSlop={10}>
-      <Ionicons name={icon} size={18} color="#8E95A3" />
-      <Text className="ml-3 text-base font-bold tracking-normal text-diplomatic-secondaryText">
+    <PressableScale
+      onPress={onPress}
+      scaleTo={0.98}
+      style={[styles.shortcut, !isLast && styles.shortcutGap]}
+      accessibilityRole="button"
+      accessibilityLabel={`Search ${label}`}
+    >
+      <View style={styles.shortcutIcon}>
+        <Ionicons name="time-outline" size={17} color={Palette.muted} />
+      </View>
+      <Text style={styles.shortcutText} numberOfLines={1}>
         {label}
       </Text>
-    </Pressable>
+      <Ionicons name="arrow-up-outline" size={16} color={Palette.subtle} style={styles.shortcutArrow} />
+    </PressableScale>
   );
 }
 
@@ -523,51 +536,236 @@ function SearchResultCard({
   onPress: () => void;
 }) {
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
-      className="rounded-atelier bg-white px-5 py-5"
+      style={[styles.resultCard, Elevation.card]}
       accessibilityRole="button"
+      accessibilityLabel={`Open ${result.title}`}
     >
-      <View className="flex-row items-start justify-between gap-4">
-        <View className="min-w-0 flex-1">
-          <View className="flex-row items-center gap-2">
-            {result.flagEmoji ? (
-              <Text className="text-xl tracking-normal">
-                {result.flagEmoji}
-              </Text>
-            ) : (
-              <Ionicons name="flag-outline" size={18} color="#8E95A3" />
-            )}
-            <Text className="text-xs font-extrabold uppercase tracking-normal text-diplomatic-primary">
-              {result.countryName}
-            </Text>
-            <Text className="text-xs font-bold tracking-normal text-diplomatic-secondaryText">
-              {result.categoryName}
-            </Text>
+      <View style={styles.resultMeta}>
+        {result.flagEmoji ? (
+          <Text style={styles.flagEmoji}>{result.flagEmoji}</Text>
+        ) : (
+          <Ionicons name="flag-outline" size={16} color={Palette.subtle} />
+        )}
+        <Text style={styles.resultCountry}>{result.countryName}</Text>
+        <View style={styles.metaDot} />
+        <Text style={styles.resultCategory} numberOfLines={1}>
+          {result.categoryName}
+        </Text>
+        {result.isPremium ? (
+          <View style={styles.premium}>
+            <Ionicons name="sparkles" size={10} color="#FFFFFF" />
+            <Text style={styles.premiumText}>Premium</Text>
           </View>
+        ) : null}
+      </View>
 
-          <Text className="mt-3 text-lg font-extrabold tracking-normal text-diplomatic-ink">
-            {result.title}
-          </Text>
+      <View style={styles.resultBody}>
+        <View style={styles.resultTextCol}>
+          <Text style={styles.resultTitle}>{result.title}</Text>
           {result.shortDescription ? (
-            <Text className="mt-2 text-sm font-semibold leading-5 tracking-normal text-diplomatic-secondaryText">
+            <Text style={styles.resultDescription} numberOfLines={2}>
               {result.shortDescription}
             </Text>
           ) : null}
         </View>
-
-        <View className="mt-1 h-10 w-10 items-center justify-center rounded-full bg-diplomatic-surfaceHigh">
-          <Ionicons name="arrow-forward" size={19} color="#0058BC" />
+        <View style={styles.resultArrow}>
+          <Ionicons name="arrow-forward" size={17} color={Palette.primary} />
         </View>
       </View>
-
-      {result.isPremium ? (
-        <View className="mt-4 self-start rounded-full bg-[#0A0F1A] px-3 py-1">
-          <Text className="text-xs font-extrabold uppercase tracking-normal text-white">
-            Premium
-          </Text>
-        </View>
-      ) : null}
-    </Pressable>
+    </PressableScale>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: Palette.canvas,
+  },
+  content: {
+    paddingHorizontal: 20,
+  },
+  block: {
+    marginTop: 28,
+  },
+  listCard: {
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+    borderRadius: 22,
+    backgroundColor: Palette.card,
+  },
+  shortcut: {
+    minHeight: 50,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    borderRadius: 16,
+  },
+  shortcutGap: {
+    marginBottom: 2,
+  },
+  shortcutIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Palette.canvas,
+  },
+  shortcutText: {
+    flex: 1,
+    marginLeft: 12,
+    fontFamily: FontFamily.bodyMedium,
+    fontSize: 15,
+    color: Palette.inkSoft,
+  },
+  shortcutArrow: {
+    transform: [{ rotate: "-45deg" }],
+  },
+  chips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  chip: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    backgroundColor: Palette.card,
+    borderWidth: 1,
+    borderColor: Palette.tintStrong,
+  },
+  chipText: {
+    fontFamily: FontFamily.bodySemiBold,
+    fontSize: 14,
+    color: Palette.primary,
+  },
+  errorBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: 14,
+    borderRadius: 16,
+    backgroundColor: Palette.dangerTint,
+  },
+  errorText: {
+    flex: 1,
+    fontFamily: FontFamily.bodyMedium,
+    fontSize: 14,
+    color: Palette.danger,
+  },
+  empty: {
+    alignItems: "center",
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    borderRadius: 24,
+    backgroundColor: Palette.card,
+  },
+  emptyIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Palette.tint,
+  },
+  emptyTitle: {
+    marginTop: 14,
+    fontFamily: FontFamily.headingSemiBold,
+    fontSize: 18,
+    color: Palette.ink,
+  },
+  emptyText: {
+    marginTop: 6,
+    textAlign: "center",
+    fontFamily: FontFamily.body,
+    fontSize: 14,
+    lineHeight: 20,
+    color: Palette.muted,
+  },
+  results: {
+    gap: 12,
+  },
+  resultCard: {
+    padding: 18,
+    borderRadius: 22,
+    backgroundColor: Palette.card,
+  },
+  resultMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  flagEmoji: {
+    fontSize: 16,
+  },
+  resultCountry: {
+    fontFamily: FontFamily.bodyBold,
+    fontSize: 12,
+    letterSpacing: 0.6,
+    color: Palette.primary,
+    textTransform: "uppercase",
+  },
+  metaDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: Palette.subtle,
+  },
+  resultCategory: {
+    flexShrink: 1,
+    fontFamily: FontFamily.bodyMedium,
+    fontSize: 12,
+    color: Palette.muted,
+  },
+  premium: {
+    marginLeft: "auto",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: Palette.ink,
+  },
+  premiumText: {
+    fontFamily: FontFamily.bodyBold,
+    fontSize: 10,
+    letterSpacing: 0.4,
+    color: "#FFFFFF",
+  },
+  resultBody: {
+    marginTop: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  resultTextCol: {
+    flex: 1,
+  },
+  resultTitle: {
+    fontFamily: FontFamily.headingSemiBold,
+    fontSize: 17,
+    lineHeight: 23,
+    color: Palette.ink,
+  },
+  resultDescription: {
+    marginTop: 4,
+    fontFamily: FontFamily.body,
+    fontSize: 13,
+    lineHeight: 19,
+    color: Palette.muted,
+  },
+  resultArrow: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Palette.tint,
+  },
+});

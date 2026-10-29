@@ -40,12 +40,12 @@ function ProfileSettingsContent() {
             accessibilityRole="button"
           >
             <Ionicons name="chevron-back" size={18} color="#0A0F1A" />
-            <Text className="ml-2 text-sm font-extrabold tracking-normal text-diplomatic-ink">
+            <Text className="ml-2 text-sm font-inter-bold tracking-normal text-diplomatic-ink">
               Profile
             </Text>
           </Pressable>
 
-          <Text className="text-[30px] font-serif font-extrabold tracking-normal text-diplomatic-ink">
+          <Text className="text-[30px] font-heading tracking-normal text-diplomatic-ink">
             Settings
           </Text>
         </View>
@@ -91,10 +91,10 @@ function ProfileSettingsContent() {
         </View>
 
         <View className="mt-4 rounded-interactive border border-[#CFE0F7] bg-diplomatic-surfaceHigh px-4 py-4">
-          <Text className="text-base font-extrabold tracking-normal text-diplomatic-ink">
+          <Text className="text-base font-inter-bold tracking-normal text-diplomatic-ink">
             Account safety
           </Text>
-          <Text className="mt-2 text-sm font-semibold leading-5 tracking-normal text-diplomatic-secondaryText">
+          <Text className="mt-2 text-sm font-inter-medium leading-5 tracking-normal text-diplomatic-secondaryText">
             Your saved guides are protected with secure account access.
           </Text>
         </View>
@@ -105,7 +105,7 @@ function ProfileSettingsContent() {
           accessibilityRole="button"
         >
           <Ionicons name="log-out-outline" size={18} color="#D83B3B" />
-          <Text className="ml-2 text-base font-extrabold tracking-normal text-[#D83B3B]">
+          <Text className="ml-2 text-base font-inter-bold tracking-normal text-[#D83B3B]">
             Logout
           </Text>
         </Pressable>
@@ -136,10 +136,10 @@ function SettingsRow({
     >
       <Ionicons name={icon} size={21} color="#1E7AF2" />
       <View className="ml-3 min-w-0 flex-1">
-        <Text className="text-base font-extrabold tracking-normal text-diplomatic-ink">
+        <Text className="text-base font-inter-bold tracking-normal text-diplomatic-ink">
           {title}
         </Text>
-        <Text className="mt-1 text-sm font-semibold tracking-normal text-diplomatic-secondaryText">
+        <Text className="mt-1 text-sm font-inter-medium tracking-normal text-diplomatic-secondaryText">
           {subtitle}
         </Text>
       </View>

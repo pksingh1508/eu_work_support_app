@@ -40,10 +40,10 @@ export default function PolicyDetailScreen() {
         <Header title="Legal" onBack={() => router.back()} />
 
         <View className="mt-8 rounded-[30px] border border-[#EDEDF0] bg-white px-5 py-6">
-          <Text className="text-[26px] font-extrabold leading-8 tracking-normal text-[#202124]">
+          <Text className="text-[26px] font-inter-bold leading-8 tracking-normal text-[#202124]">
             {policy.title}
           </Text>
-          <Text className="mt-2 text-sm font-bold tracking-normal text-[#707684]">
+          <Text className="mt-2 text-sm font-inter-semibold tracking-normal text-[#707684]">
             Last updated: {policy.lastUpdated}
           </Text>
 
@@ -71,7 +71,7 @@ function Header({ title, onBack }: { title: string; onBack: () => void }) {
       >
         <Ionicons name="chevron-back" size={21} color="#202124" />
       </Pressable>
-      <Text className="text-[28px] font-extrabold tracking-normal text-[#202124]">
+      <Text className="text-[28px] font-inter-bold tracking-normal text-[#202124]">
         {title}
       </Text>
       <View className="h-11 w-11" />
@@ -83,19 +83,19 @@ function PolicyBlockRenderer({ block }: { block: PolicyBlock }) {
   switch (block.type) {
     case "heading":
       return (
-        <Text className="mb-3 mt-6 text-xl font-extrabold tracking-normal text-[#202124]">
+        <Text className="mb-3 mt-6 text-xl font-inter-bold tracking-normal text-[#202124]">
           {block.text}
         </Text>
       );
     case "subheading":
       return (
-        <Text className="mb-2 mt-4 text-base font-extrabold tracking-normal text-[#202124]">
+        <Text className="mb-2 mt-4 text-base font-inter-bold tracking-normal text-[#202124]">
           {block.text}
         </Text>
       );
     case "paragraph":
       return (
-        <Text className="mb-4 text-base font-semibold leading-7 tracking-normal text-[#5F6673]">
+        <Text className="mb-4 text-base font-inter-medium leading-7 tracking-normal text-[#5F6673]">
           {block.text}
         </Text>
       );
@@ -104,10 +104,10 @@ function PolicyBlockRenderer({ block }: { block: PolicyBlock }) {
         <View className="mb-4 gap-2">
           {block.items.map((item) => (
             <View key={item} className="flex-row items-start">
-              <Text className="mr-2 mt-[2px] text-base font-extrabold text-[#202124]">
+              <Text className="mr-2 mt-[2px] text-base font-inter-bold text-[#202124]">
                 •
               </Text>
-              <Text className="min-w-0 flex-1 text-base font-semibold leading-7 tracking-normal text-[#5F6673]">
+              <Text className="min-w-0 flex-1 text-base font-inter-medium leading-7 tracking-normal text-[#5F6673]">
                 {item}
               </Text>
             </View>
@@ -121,7 +121,7 @@ function PolicyBlockRenderer({ block }: { block: PolicyBlock }) {
             {block.headers.map((header) => (
               <Text
                 key={header}
-                className="flex-1 text-xs font-extrabold tracking-normal text-[#202124]"
+                className="flex-1 text-xs font-inter-bold tracking-normal text-[#202124]"
               >
                 {header}
               </Text>
@@ -139,7 +139,7 @@ function PolicyBlockRenderer({ block }: { block: PolicyBlock }) {
               {row.map((cell, cellIndex) => (
                 <Text
                   key={`${row[0]}-${cellIndex}`}
-                  className="flex-1 pr-2 text-[11px] font-semibold leading-4 tracking-normal text-[#5F6673]"
+                  className="flex-1 pr-2 text-[11px] font-inter-medium leading-4 tracking-normal text-[#5F6673]"
                 >
                   {cell}
                 </Text>

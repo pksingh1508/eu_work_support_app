@@ -37,10 +37,10 @@ export function UnAuthenticated({
             <Ionicons name="lock-closed-outline" size={26} color="#1E7AF2" />
           </View>
 
-          <Text className="mt-6 text-[28px] font-serif font-extrabold leading-9 tracking-normal text-diplomatic-ink">
+          <Text className="mt-6 text-[28px] font-heading leading-9 tracking-normal text-diplomatic-ink">
             {title}
           </Text>
-          <Text className="mt-3 text-base font-semibold leading-7 tracking-normal text-diplomatic-secondaryText">
+          <Text className="mt-3 text-base font-inter-medium leading-7 tracking-normal text-diplomatic-secondaryText">
             {message}
           </Text>
 
@@ -51,7 +51,7 @@ export function UnAuthenticated({
               accessibilityRole="button"
             >
               <Ionicons name="log-in-outline" size={20} color="#FFFFFF" />
-              <Text className="ml-2 text-base font-extrabold tracking-normal text-white">
+              <Text className="ml-2 text-base font-inter-bold tracking-normal text-white">
                 Login
               </Text>
             </Pressable>
@@ -62,7 +62,7 @@ export function UnAuthenticated({
               accessibilityRole="button"
             >
               <Ionicons name="mail-unread-outline" size={20} color="#1E7AF2" />
-              <Text className="ml-2 text-base font-extrabold tracking-normal text-diplomatic-primary">
+              <Text className="ml-2 text-base font-inter-bold tracking-normal text-diplomatic-primary">
                 Request Access
               </Text>
             </Pressable>

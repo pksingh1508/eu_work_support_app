@@ -82,7 +82,7 @@ function Header({ title, onBack }: { title: string; onBack: () => void }) {
       >
         <Ionicons name="chevron-back" size={21} color="#202124" />
       </Pressable>
-      <Text className="text-[28px] font-extrabold tracking-normal text-[#202124]">
+      <Text className="text-[28px] font-inter-bold tracking-normal text-[#202124]">
         {title}
       </Text>
       <View className="h-11 w-11" />
@@ -111,7 +111,7 @@ function AccountRow({ icon, title, onPress, tone = "default" }: AccountRowProps)
         />
       </View>
       <Text
-        className={`ml-5 min-w-0 flex-1 text-xl font-extrabold tracking-normal ${
+        className={`ml-5 min-w-0 flex-1 text-xl font-inter-bold tracking-normal ${
           isDanger ? "text-[#D83B3B]" : "text-[#202124]"
         }`}
       >

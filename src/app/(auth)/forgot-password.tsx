@@ -101,7 +101,7 @@ export default function ForgotPasswordScreen() {
     >
       {notice ? (
         <View className="rounded-[18px] bg-[#EEF7FF] px-4 py-3">
-          <Text className="text-sm font-semibold tracking-normal text-[#202124]">
+          <Text className="text-sm font-inter-medium tracking-normal text-[#202124]">
             {notice}
           </Text>
         </View>
@@ -167,7 +167,7 @@ export default function ForgotPasswordScreen() {
             className="items-center"
             hitSlop={10}
           >
-            <Text className="text-sm font-bold tracking-normal text-diplomatic-primary">
+            <Text className="text-sm font-inter-semibold tracking-normal text-diplomatic-primary">
               Use a different email
             </Text>
           </Pressable>
@@ -182,7 +182,7 @@ export default function ForgotPasswordScreen() {
       )}
 
       <Pressable className="items-center" hitSlop={10} onPress={goBack}>
-        <Text className="text-sm font-bold tracking-normal text-diplomatic-primary">
+        <Text className="text-sm font-inter-semibold tracking-normal text-diplomatic-primary">
           Back to login
         </Text>
       </Pressable>

@@ -265,7 +265,7 @@ export default function SignInScreen() {
 
       {unverifiedEmail ? (
         <View className="rounded-[18px] bg-[#EEF7FF] px-4 py-4">
-          <Text className="text-sm font-semibold leading-5 tracking-normal text-[#202124]">
+          <Text className="text-sm font-inter-medium leading-5 tracking-normal text-[#202124]">
             You don't have Access, Please Request Access and wait for access
             granted.
           </Text>
@@ -300,7 +300,7 @@ export default function SignInScreen() {
 
       {secondFactorMethod ? (
         <View className="rounded-[18px] bg-[#EEF7FF] px-4 py-4">
-          <Text className="text-sm font-semibold leading-5 tracking-normal text-[#202124]">
+          <Text className="text-sm font-inter-medium leading-5 tracking-normal text-[#202124]">
             Enter the code Clerk sent to your{" "}
             {secondFactorMethod === "email_code" ? "email" : "phone"} to finish
             login.
@@ -339,14 +339,14 @@ export default function SignInScreen() {
               <Ionicons name="checkmark" size={15} color="#FFFFFF" />
             ) : null}
           </View>
-          <Text className="text-sm font-bold tracking-normal text-[#707684]">
+          <Text className="text-sm font-inter-semibold tracking-normal text-[#707684]">
             Remember me
           </Text>
         </Pressable>
 
         <Link href="/forgot-password" asChild>
           <Pressable hitSlop={10}>
-            <Text className="text-sm font-extrabold tracking-normal text-diplomatic-primary">
+            <Text className="text-sm font-inter-bold tracking-normal text-diplomatic-primary">
               Forgot password?
             </Text>
           </Pressable>
@@ -371,7 +371,7 @@ export default function SignInScreen() {
           className="items-center"
           hitSlop={10}
         >
-          <Text className="text-sm font-bold tracking-normal text-diplomatic-primary">
+          <Text className="text-sm font-inter-semibold tracking-normal text-diplomatic-primary">
             Send a new code
           </Text>
         </Pressable>
@@ -383,7 +383,7 @@ export default function SignInScreen() {
           className="h-14 items-center justify-center rounded-[22px] border border-[#CFE0F7] bg-[#EEF7FF] active:opacity-80"
           accessibilityRole="button"
         >
-          <Text className="text-base font-extrabold tracking-normal text-diplomatic-primary">
+          <Text className="text-base font-inter-bold tracking-normal text-diplomatic-primary">
             Go to Verify Page
           </Text>
         </Pressable>
@@ -395,7 +395,7 @@ export default function SignInScreen() {
 function AuthFormError({ message }: { message: string }) {
   return (
     <View className="rounded-[18px] bg-[#FFF1F1] px-4 py-3">
-      <Text className="text-sm font-semibold tracking-normal text-[#D83B3B]">
+      <Text className="text-sm font-inter-medium tracking-normal text-[#D83B3B]">
         {message}
       </Text>
     </View>

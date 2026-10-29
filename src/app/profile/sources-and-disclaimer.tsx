@@ -37,10 +37,10 @@ export default function SourcesAndDisclaimerScreen() {
           <View className="h-[54px] w-[54px] items-center justify-center rounded-[20px] bg-[#F0F4FF]">
             <Ionicons name="shield-checkmark-outline" size={27} color="#315EA8" />
           </View>
-          <Text className="mt-5 text-[26px] font-extrabold leading-8 tracking-normal text-[#202124]">
+          <Text className="mt-5 text-[26px] font-inter-bold leading-8 tracking-normal text-[#202124]">
             Independent information, clearly sourced
           </Text>
-          <Text className="mt-4 text-base font-semibold leading-7 tracking-normal text-[#5F6673]">
+          <Text className="mt-4 text-base font-inter-medium leading-7 tracking-normal text-[#5F6673]">
             EU Work Support is an independent educational and informational application. We are not affiliated with, endorsed by, or officially connected to any government, embassy, consulate, immigration authority, visa office, university, college, or employment authority.
           </Text>
         </View>
@@ -67,7 +67,7 @@ export default function SourcesAndDisclaimerScreen() {
 
         <View className="mt-4 rounded-[30px] border border-[#EDEDF0] bg-white px-5 py-6">
           <SectionHeading icon="chatbox-ellipses-outline" title="Reporting outdated information" />
-          <Text className="mt-4 text-base font-semibold leading-7 tracking-normal text-[#5F6673]">
+          <Text className="mt-4 text-base font-inter-medium leading-7 tracking-normal text-[#5F6673]">
             Users can report inaccurate or outdated information through the Contact Support option available within the app or by emailing
           </Text>
           <Pressable
@@ -76,7 +76,7 @@ export default function SourcesAndDisclaimerScreen() {
             accessibilityRole="link"
             accessibilityLabel={`Email ${SUPPORT_EMAIL}`}
           >
-            <Text className="text-base font-extrabold tracking-normal text-[#315EA8]">
+            <Text className="text-base font-inter-bold tracking-normal text-[#315EA8]">
               {SUPPORT_EMAIL}
             </Text>
           </Pressable>
@@ -97,7 +97,7 @@ function Header({ onBack }: { onBack: () => void }) {
       >
         <Ionicons name="chevron-back" size={21} color="#202124" />
       </Pressable>
-      <Text className="ml-4 min-w-0 flex-1 text-[25px] font-extrabold leading-8 tracking-normal text-[#202124]">
+      <Text className="ml-4 min-w-0 flex-1 text-[25px] font-inter-bold leading-8 tracking-normal text-[#202124]">
         Sources and Disclaimer
       </Text>
     </View>
@@ -120,7 +120,7 @@ function ContentSection({
         {paragraphs.map((paragraph) => (
           <Text
             key={paragraph}
-            className="text-base font-semibold leading-7 tracking-normal text-[#5F6673]"
+            className="text-base font-inter-medium leading-7 tracking-normal text-[#5F6673]"
           >
             {paragraph}
           </Text>
@@ -142,7 +142,7 @@ function SectionHeading({
       <View className="h-10 w-10 items-center justify-center rounded-[15px] bg-[#F4F4F5]">
         <Ionicons name={icon} size={21} color="#202124" />
       </View>
-      <Text className="ml-3 min-w-0 flex-1 text-xl font-extrabold leading-7 tracking-normal text-[#202124]">
+      <Text className="ml-3 min-w-0 flex-1 text-xl font-inter-bold leading-7 tracking-normal text-[#202124]">
         {title}
       </Text>
     </View>

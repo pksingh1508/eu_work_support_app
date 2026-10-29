@@ -102,16 +102,16 @@ function ChangePasswordContent() {
           <Header title="Change Password" onBack={() => router.back()} />
 
           <View className="mt-8 rounded-[30px] border border-[#EDEDF0] bg-white px-5 py-6">
-            <Text className="text-xl font-extrabold tracking-normal text-[#202124]">
+            <Text className="text-xl font-inter-bold tracking-normal text-[#202124]">
               Update your password
             </Text>
-            <Text className="mt-2 text-sm font-semibold leading-5 tracking-normal text-[#707684]">
+            <Text className="mt-2 text-sm font-inter-medium leading-5 tracking-normal text-[#707684]">
               Enter your current password and choose a new secure password.
             </Text>
 
             {error ? (
               <View className="mt-5 rounded-[18px] bg-[#FFF1F1] px-4 py-3">
-                <Text className="text-sm font-semibold tracking-normal text-[#D83B3B]">
+                <Text className="text-sm font-inter-medium tracking-normal text-[#D83B3B]">
                   {error}
                 </Text>
               </View>
@@ -146,7 +146,7 @@ function ChangePasswordContent() {
                 {isSubmitting ? (
                   <CustomLoading size={28} />
                 ) : (
-                  <Text className="text-base font-extrabold tracking-normal text-white">
+                  <Text className="text-base font-inter-bold tracking-normal text-white">
                     Change Password
                   </Text>
                 )}
@@ -169,7 +169,7 @@ function Header({ title, onBack }: { title: string; onBack: () => void }) {
       >
         <Ionicons name="chevron-back" size={21} color="#202124" />
       </Pressable>
-      <Text className="text-[25px] font-extrabold tracking-normal text-[#202124]">
+      <Text className="text-[25px] font-inter-bold tracking-normal text-[#202124]">
         {title}
       </Text>
       <View className="h-11 w-11" />
@@ -190,7 +190,7 @@ function PasswordField({
 }) {
   return (
     <View>
-      <Text className="mb-2 text-sm font-extrabold tracking-normal text-[#202124]">
+      <Text className="mb-2 text-sm font-inter-bold tracking-normal text-[#202124]">
         {label}
       </Text>
       <View className="h-14 flex-row items-center rounded-[20px] border border-[#E2E2E6] bg-[#FAFAFB] px-4">
@@ -205,7 +205,7 @@ function PasswordField({
           textContentType={textContentType}
           placeholder={label}
           placeholderTextColor="#A1A6B1"
-          className="min-w-0 flex-1 text-base font-semibold tracking-normal text-[#202124]"
+          className="min-w-0 flex-1 text-base font-inter-medium tracking-normal text-[#202124]"
         />
       </View>
     </View>

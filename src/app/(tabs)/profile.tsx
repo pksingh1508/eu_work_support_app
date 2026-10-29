@@ -3,12 +3,23 @@ import { useUser } from "@clerk/expo";
 import { useFocusEffect } from "@react-navigation/native";
 import { type Href, useRouter } from "expo-router";
 import { useCallback } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { BottomTabInset } from "@/constants/theme";
+import { FadeInView } from "@/components/ui/fade-in-view";
+import { FocusStatusBar } from "@/components/ui/focus-status-bar";
+import { GradientFill } from "@/components/ui/gradient-fill";
+import { PressableScale } from "@/components/ui/pressable-scale";
+import { ScreenHeader } from "@/components/ui/screen-header";
+import {
+  BottomTabInset,
+  Elevation,
+  HeroGradient,
+  Palette,
+} from "@/constants/theme";
 import { useAuthAccess } from "@/features/auth/access";
 import { PremiumGuard } from "@/features/auth/components/premium-guard";
+import { FontFamily } from "@/lib/fonts";
 
 type MenuRowProps = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -28,7 +39,7 @@ export default function ProfileScreen() {
 function ProfileContent() {
   const router = useRouter();
   const { user } = useUser();
-  const { profile, refreshProfile } = useAuthAccess();
+  const { profile, refreshProfile, hasPremiumAccess } = useAuthAccess();
   const email = profile?.email ?? user?.primaryEmailAddress?.emailAddress ?? "";
   const databaseName = [profile?.firstName, profile?.lastName]
     .filter(Boolean)
@@ -45,47 +56,56 @@ function ProfileContent() {
   );
 
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-[#FAFAFB]">
+    <SafeAreaView edges={["top"]} style={styles.screen}>
+      <FocusStatusBar style="dark" />
       <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingBottom: BottomTabInset + 26 }}
+        style={styles.screen}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: BottomTabInset + 26 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
-        <View className="px-5 pt-7">
-          <Text className="text-center text-[30px] font-serif font-extrabold tracking-normal text-[#202124]">
-            Profile
-          </Text>
+        <ScreenHeader eyebrow="Account" title="Profile" />
 
-          <View className="mt-6 rounded-[34px] border border-[#E8E8EC] bg-white px-5 py-6">
-            <View className="flex-row items-center">
+        <FadeInView index={1}>
+          <View style={[styles.identity, Elevation.floating]}>
+            <GradientFill colors={HeroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+            <View style={styles.identityOrb} />
+            <View style={styles.identityRow}>
               <ProfileAvatar initials={initials} />
-
-              <View className="ml-5 min-w-0 flex-1">
-                <Text className="text-[24px] font-extrabold leading-8 tracking-normal text-[#202124]">
+              <View style={styles.identityText}>
+                <Text style={styles.name} numberOfLines={1}>
                   {fullName}
                 </Text>
-                {email ? (
-                  <Text
-                    className="mt-2 text-sm font-semibold leading-5 tracking-normal text-[#707684]"
-                    numberOfLines={2}
-                  >
-                    {email}
-                  </Text>
-                ) : (
-                  <Text className="mt-2 text-sm font-semibold tracking-normal text-[#707684]">
-                    Email
-                  </Text>
-                )}
+                <Text style={styles.email} numberOfLines={1}>
+                  {email || "Email"}
+                </Text>
               </View>
             </View>
+            {hasPremiumAccess ? (
+              <View style={styles.badge}>
+                <Ionicons name="sparkles" size={13} color="#0B1F4B" />
+                <Text style={styles.badgeText}>Premium access</Text>
+              </View>
+            ) : null}
           </View>
+        </FadeInView>
 
-          <View className="mt-10 gap-3">
+        <FadeInView index={2} style={styles.group}>
+          <Text style={styles.groupLabel}>ACCOUNT</Text>
+          <View style={[styles.groupCard, Elevation.card]}>
             <ProfileMenuRow
               icon="person-circle-outline"
               label="Account"
               onPress={() => router.push("/profile/account")}
             />
+          </View>
+        </FadeInView>
+
+        <FadeInView index={3} style={styles.group}>
+          <Text style={styles.groupLabel}>INFORMATION</Text>
+          <View style={[styles.groupCard, Elevation.card]}>
             <ProfileMenuRow
               icon="document-text-outline"
               label="Legal"
@@ -104,18 +124,23 @@ function ProfileContent() {
               onPress={() => router.push("/profile/support")}
             />
             <ProfileMenuRow
-              icon="trash-outline"
-              label="Danger Zone"
-              tone="danger"
-              onPress={() => router.push("/profile/danger-zone")}
-            />
-            <ProfileMenuRow
               icon="information-circle-outline"
               label="App Info"
               onPress={() => router.push("/profile/app-info")}
             />
           </View>
-        </View>
+        </FadeInView>
+
+        <FadeInView index={4} style={styles.group}>
+          <View style={[styles.groupCard, Elevation.card]}>
+            <ProfileMenuRow
+              icon="trash-outline"
+              label="Danger Zone"
+              tone="danger"
+              onPress={() => router.push("/profile/danger-zone")}
+            />
+          </View>
+        </FadeInView>
       </ScrollView>
     </SafeAreaView>
   );
@@ -132,20 +157,13 @@ function getInitials(name: string) {
 }
 
 function ProfileAvatar({ initials }: { initials: string }) {
-  if (initials) {
-    return (
-      <View className="h-[86px] w-[86px] items-center justify-center rounded-full bg-[#C9C9CC]">
-        <Text className="text-[28px] font-extrabold tracking-normal text-white">
-          {initials}
-        </Text>
-      </View>
-    );
-  }
-
   return (
-    <View className="h-[86px] w-[86px] items-center justify-center rounded-full bg-[#C9C9CC]">
-      <View className="h-8 w-8 rounded-full bg-white" />
-      <View className="mt-2 h-5 w-12 rounded-t-full bg-white" />
+    <View style={styles.avatar}>
+      {initials ? (
+        <Text style={styles.avatarText}>{initials}</Text>
+      ) : (
+        <Ionicons name="person" size={30} color="#FFFFFF" />
+      )}
     </View>
   );
 }
@@ -154,30 +172,149 @@ function ProfileMenuRow({ icon, label, onPress, tone = "default" }: MenuRowProps
   const isDanger = tone === "danger";
 
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
-      className="min-h-[82px] flex-row items-center rounded-[28px] border border-[#EDEDF0] bg-white px-5 active:opacity-80"
+      scaleTo={0.98}
+      style={styles.row}
       accessibilityRole="button"
+      accessibilityLabel={label}
     >
-      <View
-        className={`h-[52px] w-[52px] items-center justify-center rounded-[20px] ${
-          isDanger ? "bg-[#FFF1F1]" : "bg-[#F4F4F5]"
-        }`}
-      >
+      <View style={[styles.rowIcon, isDanger && styles.rowIconDanger]}>
         <Ionicons
           name={icon}
-          size={25}
-          color={isDanger ? "#D83B3B" : "#202124"}
+          size={20}
+          color={isDanger ? Palette.danger : Palette.primary}
         />
       </View>
-      <Text
-        className={`ml-5 min-w-0 flex-1 text-xl font-extrabold tracking-normal ${
-          isDanger ? "text-[#D83B3B]" : "text-[#202124]"
-        }`}
-      >
+      <Text style={[styles.rowLabel, isDanger && styles.rowLabelDanger]}>
         {label}
       </Text>
-      <Ionicons name="chevron-forward" size={20} color="#202124" />
-    </Pressable>
+      <Ionicons
+        name="chevron-forward"
+        size={18}
+        color={isDanger ? Palette.danger : Palette.subtle}
+      />
+    </PressableScale>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: Palette.canvas,
+  },
+  content: {
+    paddingHorizontal: 20,
+  },
+  identity: {
+    overflow: "hidden",
+    padding: 20,
+    borderRadius: 28,
+    backgroundColor: HeroGradient[1],
+  },
+  identityOrb: {
+    position: "absolute",
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    right: -60,
+    top: -80,
+    backgroundColor: "rgba(140, 190, 255, 0.25)",
+  },
+  identityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  avatar: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
+    borderWidth: 2,
+    borderColor: "rgba(255, 255, 255, 0.5)",
+  },
+  avatarText: {
+    fontFamily: FontFamily.headingBold,
+    fontSize: 24,
+    color: "#FFFFFF",
+  },
+  identityText: {
+    flex: 1,
+    minWidth: 0,
+    marginLeft: 16,
+  },
+  name: {
+    fontFamily: FontFamily.headingBold,
+    fontSize: 22,
+    lineHeight: 28,
+    color: "#FFFFFF",
+  },
+  email: {
+    marginTop: 2,
+    fontFamily: FontFamily.body,
+    fontSize: 14,
+    color: "rgba(255, 255, 255, 0.78)",
+  },
+  badge: {
+    marginTop: 18,
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "rgba(255, 255, 255, 0.92)",
+  },
+  badgeText: {
+    fontFamily: FontFamily.bodyBold,
+    fontSize: 12,
+    color: "#0B1F4B",
+  },
+  group: {
+    marginTop: 24,
+  },
+  groupLabel: {
+    marginBottom: 10,
+    marginLeft: 4,
+    fontFamily: FontFamily.bodyBold,
+    fontSize: 11,
+    letterSpacing: 1.4,
+    color: Palette.subtle,
+  },
+  groupCard: {
+    padding: 6,
+    borderRadius: 24,
+    backgroundColor: Palette.card,
+  },
+  row: {
+    minHeight: 58,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    borderRadius: 18,
+  },
+  rowIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Palette.tint,
+  },
+  rowIconDanger: {
+    backgroundColor: Palette.dangerTint,
+  },
+  rowLabel: {
+    flex: 1,
+    marginLeft: 14,
+    fontFamily: FontFamily.bodySemiBold,
+    fontSize: 16,
+    color: Palette.ink,
+  },
+  rowLabelDanger: {
+    color: Palette.danger,
+  },
+});

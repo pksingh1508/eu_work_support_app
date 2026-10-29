@@ -390,7 +390,7 @@ function VisaDocumentContent() {
         {isLoading ? (
           <View className="mt-16 items-center justify-center rounded-[30px] border border-[#EDEDF0] bg-white px-6 py-14">
             <CustomLoading />
-            <Text className="mt-4 text-base font-bold tracking-normal text-[#707684]">
+            <Text className="mt-4 text-base font-inter-semibold tracking-normal text-[#707684]">
               Loading guide...
             </Text>
           </View>
@@ -399,10 +399,10 @@ function VisaDocumentContent() {
         {!isLoading && error ? (
           <View className="mt-8 rounded-[30px] border border-[#EDEDF0] bg-white px-6 py-8">
             <Ionicons name="alert-circle-outline" size={32} color="#BA1A1A" />
-            <Text className="mt-4 text-xl font-extrabold tracking-normal text-[#202124]">
+            <Text className="mt-4 text-xl font-inter-bold tracking-normal text-[#202124]">
               {error}
             </Text>
-            <Text className="mt-2 text-base font-semibold leading-6 tracking-normal text-[#707684]">
+            <Text className="mt-2 text-base font-inter-medium leading-6 tracking-normal text-[#707684]">
               Please go back and open the guide again.
             </Text>
             <Pressable
@@ -410,7 +410,7 @@ function VisaDocumentContent() {
               className="mt-6 h-12 items-center justify-center rounded-[22px] bg-diplomatic-primary"
               accessibilityRole="button"
             >
-              <Text className="text-base font-extrabold tracking-normal text-white">
+              <Text className="text-base font-inter-bold tracking-normal text-white">
                 Go back
               </Text>
             </Pressable>
@@ -431,19 +431,19 @@ function VisaDocumentContent() {
                       <Ionicons name="flag-outline" size={34} color="#FFFFFF" />
                     )}
                     <View className="ml-3 min-w-0 flex-1">
-                      <Text className="text-sm font-extrabold uppercase tracking-normal text-[#9FC6FF]">
+                      <Text className="text-sm font-inter-bold uppercase tracking-normal text-[#9FC6FF]">
                         {document.categoryName}
                       </Text>
-                      <Text className="mt-1 text-sm font-semibold tracking-normal text-white opacity-70">
+                      <Text className="mt-1 text-sm font-inter-medium tracking-normal text-white opacity-70">
                         {document.countryName}
                       </Text>
                     </View>
                   </View>
 
-                  <Text className="mt-5 text-[32px] font-extrabold leading-10 tracking-normal text-white">
+                  <Text className="mt-5 text-[32px] font-inter-bold leading-10 tracking-normal text-white">
                     {document.title}
                   </Text>
-                  <Text className="mt-2 text-base font-semibold leading-6 tracking-normal text-white opacity-80">
+                  <Text className="mt-2 text-base font-inter-medium leading-6 tracking-normal text-white opacity-80">
                     {overviewText}
                   </Text>
                 </View>
@@ -455,7 +455,7 @@ function VisaDocumentContent() {
                       size={14}
                       color="#FFFFFF"
                     />
-                    <Text className="ml-2 text-xs font-extrabold tracking-normal text-white">
+                    <Text className="ml-2 text-xs font-inter-bold tracking-normal text-white">
                       Pro
                     </Text>
                   </View>
@@ -476,7 +476,7 @@ function VisaDocumentContent() {
 
             {document.intro ? (
               <View className="mt-5 rounded-[30px] border border-[#EDEDF0] bg-white px-5 py-5">
-                <Text className="text-lg font-semibold leading-7 tracking-normal text-[#707684]">
+                <Text className="text-lg font-inter-medium leading-7 tracking-normal text-[#707684]">
                   {document.intro}
                 </Text>
               </View>
@@ -497,7 +497,7 @@ function VisaDocumentContent() {
               accessibilityRole="button"
             >
               <Ionicons name="flag-outline" size={18} color="#1E7AF2" />
-              <Text className="ml-2 text-base font-extrabold tracking-normal text-diplomatic-primary">
+              <Text className="ml-2 text-base font-inter-bold tracking-normal text-diplomatic-primary">
                 View all {document.countryName} guides
               </Text>
             </Pressable>
@@ -527,7 +527,7 @@ function Header({
         <Ionicons name="chevron-back" size={21} color="#202124" />
       </Pressable>
       <Text
-        className="mx-3 min-w-0 flex-1 text-center text-[28px] font-extrabold tracking-normal text-[#202124]"
+        className="mx-3 min-w-0 flex-1 text-center text-[28px] font-inter-bold tracking-normal text-[#202124]"
         numberOfLines={1}
       >
         {title}
@@ -549,7 +549,7 @@ function InfoChip({
       <Ionicons name={icon} size={17} color="#FFFFFF" />
       <Text
         numberOfLines={1}
-        className="ml-2 min-w-0 flex-1 text-sm font-extrabold tracking-normal text-white"
+        className="ml-2 min-w-0 flex-1 text-sm font-inter-bold tracking-normal text-white"
       >
         {label}
       </Text>
@@ -595,14 +595,14 @@ function ContentSectionView({ section }: { section: ContentSection }) {
     <View className={`rounded-interactive border px-4 py-4 ${sectionTone}`}>
       {title ? (
         <Text
-          className={`text-xl font-extrabold tracking-normal ${titleColor}`}
+          className={`text-xl font-inter-bold tracking-normal ${titleColor}`}
         >
           {title}
         </Text>
       ) : null}
       {content ? (
         <Text
-          className={`mt-2 text-base font-semibold leading-7 tracking-normal ${bodyColor}`}
+          className={`mt-2 text-base font-inter-medium leading-7 tracking-normal ${bodyColor}`}
         >
           {content}
         </Text>
@@ -618,12 +618,12 @@ function ContentSectionView({ section }: { section: ContentSection }) {
               {isChecklist ? (
                 <Ionicons name="checkmark-circle" size={18} color="#1E7AF2" />
               ) : (
-                <Text className="w-7 text-base font-extrabold tracking-normal text-diplomatic-primary">
+                <Text className="w-7 text-base font-inter-bold tracking-normal text-diplomatic-primary">
                   {isNumbered ? `${index + 1}.` : "•"}
                 </Text>
               )}
               <Text
-                className={`ml-2 min-w-0 flex-1 text-base font-semibold leading-7 tracking-normal ${bodyColor}`}
+                className={`ml-2 min-w-0 flex-1 text-base font-inter-medium leading-7 tracking-normal ${bodyColor}`}
               >
                 {stringifyValue(item)}
               </Text>
@@ -649,7 +649,7 @@ function TableSection({ section }: { section: ContentSection }) {
   return (
     <View className="rounded-interactive border border-[#E0E5EF] bg-white px-4 py-4">
       {section.title ? (
-        <Text className="text-xl font-serif font-extrabold tracking-normal text-diplomatic-ink">
+        <Text className="text-xl font-heading tracking-normal text-diplomatic-ink">
           {section.title}
         </Text>
       ) : null}
@@ -668,7 +668,7 @@ function TableSection({ section }: { section: ContentSection }) {
               {columns.map((column) => (
                 <Text
                   key={column}
-                  className="px-3 py-3 text-left text-sm font-extrabold uppercase tracking-normal text-diplomatic-ink"
+                  className="px-3 py-3 text-left text-sm font-inter-bold uppercase tracking-normal text-diplomatic-ink"
                   style={{ width: columnWidth, textAlign: "left" }}
                 >
                   {column}
@@ -685,7 +685,7 @@ function TableSection({ section }: { section: ContentSection }) {
               {(Array.isArray(row) ? row : []).map((cell, cellIndex) => (
                 <Text
                   key={`${rowIndex}-${cellIndex}`}
-                  className="px-3 py-4 text-left text-base font-semibold leading-7 tracking-normal text-diplomatic-secondaryText"
+                  className="px-3 py-4 text-left text-base font-inter-medium leading-7 tracking-normal text-diplomatic-secondaryText"
                   style={{ width: columnWidth, textAlign: "left" }}
                 >
                   {stringifyValue(cell)}
@@ -705,7 +705,7 @@ function FaqSection({ section }: { section: ContentSection }) {
   return (
     <View className="rounded-interactive border border-[#E0E5EF] bg-white px-4 py-4">
       {section.title ? (
-        <Text className="text-xl font-serif font-extrabold tracking-normal text-diplomatic-ink">
+        <Text className="text-xl font-heading tracking-normal text-diplomatic-ink">
           {section.title}
         </Text>
       ) : null}
@@ -716,10 +716,10 @@ function FaqSection({ section }: { section: ContentSection }) {
 
           return (
             <View key={`${stringifyValue(faq.question)}-${index}`}>
-              <Text className="text-base font-extrabold leading-6 tracking-normal text-diplomatic-ink">
+              <Text className="text-base font-inter-bold leading-6 tracking-normal text-diplomatic-ink">
                 {stringifyValue(faq.question)}
               </Text>
-              <Text className="mt-1 text-base font-semibold leading-7 tracking-normal text-diplomatic-secondaryText">
+              <Text className="mt-1 text-base font-inter-medium leading-7 tracking-normal text-diplomatic-secondaryText">
                 {stringifyValue(faq.answer)}
               </Text>
             </View>
@@ -736,7 +736,7 @@ function SourceLinksSection({ section }: { section: ContentSection }) {
   return (
     <View className="rounded-interactive border border-[#E0E5EF] bg-white px-4 py-4">
       {section.title ? (
-        <Text className="text-xl font-serif font-extrabold tracking-normal text-diplomatic-ink">
+        <Text className="text-xl font-heading tracking-normal text-diplomatic-ink">
           {section.title}
         </Text>
       ) : null}
@@ -758,7 +758,7 @@ function SourceLinksSection({ section }: { section: ContentSection }) {
               accessibilityRole="link"
             >
               <Ionicons name="link-outline" size={18} color="#1E7AF2" />
-              <Text className="ml-2 min-w-0 flex-1 text-base font-extrabold leading-6 tracking-normal text-diplomatic-primary">
+              <Text className="ml-2 min-w-0 flex-1 text-base font-inter-bold leading-6 tracking-normal text-diplomatic-primary">
                 {stringifyValue(source.label) || url}
               </Text>
             </Pressable>

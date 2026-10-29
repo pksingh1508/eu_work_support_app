@@ -47,7 +47,7 @@ function Header({ title, onBack }: { title: string; onBack: () => void }) {
       >
         <Ionicons name="chevron-back" size={21} color="#202124" />
       </Pressable>
-      <Text className="text-[28px] font-extrabold tracking-normal text-[#202124]">
+      <Text className="text-[28px] font-inter-bold tracking-normal text-[#202124]">
         {title}
       </Text>
       <View className="h-11 w-11" />
@@ -72,7 +72,7 @@ function InfoRow({
       }`}
       accessibilityRole="button"
     >
-      <Text className="min-w-0 flex-1 text-lg font-extrabold tracking-normal text-[#202124]">
+      <Text className="min-w-0 flex-1 text-lg font-inter-bold tracking-normal text-[#202124]">
         {title}
       </Text>
       <Ionicons name="chevron-forward" size={19} color="#202124" />

@@ -27,10 +27,10 @@ export default function FAQScreen() {
         <Header title="FAQ" onBack={() => router.back()} />
 
         <View className="mt-8">
-          <Text className="text-[28px] font-serif font-extrabold tracking-normal text-[#202124]">
+          <Text className="text-[28px] font-heading tracking-normal text-[#202124]">
             Common questions
           </Text>
-          <Text className="mt-3 text-base font-semibold leading-6 tracking-normal text-[#707684]">
+          <Text className="mt-3 text-base font-inter-medium leading-6 tracking-normal text-[#707684]">
             Quick answers for using EU Work Support and managing your guides.
           </Text>
         </View>
@@ -64,7 +64,7 @@ function Header({ title, onBack }: { title: string; onBack: () => void }) {
       >
         <Ionicons name="chevron-back" size={21} color="#202124" />
       </Pressable>
-      <Text className="text-[28px] font-extrabold tracking-normal text-[#202124]">
+      <Text className="text-[28px] font-inter-bold tracking-normal text-[#202124]">
         {title}
       </Text>
       <View className="h-11 w-11" />
@@ -103,7 +103,7 @@ function FAQAccordionItem({
         <View className="mr-4 h-10 w-10 items-center justify-center rounded-[16px] bg-[#F4F4F5]">
           <Ionicons name="help-circle-outline" size={21} color="#202124" />
         </View>
-        <Text className="min-w-0 flex-1 text-base font-extrabold leading-6 tracking-normal text-[#202124]">
+        <Text className="min-w-0 flex-1 text-base font-inter-bold leading-6 tracking-normal text-[#202124]">
           {item.question}
         </Text>
         <Animated.View
@@ -121,7 +121,7 @@ function FAQAccordionItem({
           className="px-5 pb-5"
         >
           <View className="border-t border-[#EFEFF2] pt-4">
-            <Text className="text-[15px] font-semibold leading-6 tracking-normal text-[#707684]">
+            <Text className="text-[15px] font-inter-medium leading-6 tracking-normal text-[#707684]">
               {item.answer}
             </Text>
           </View>

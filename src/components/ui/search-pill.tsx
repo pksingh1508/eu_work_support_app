@@ -62,7 +62,7 @@ export function SearchPill({
         {leadingIcon}
         <Text
           numberOfLines={1}
-          className="ml-3 min-w-0 flex-1 text-[15px] font-semibold tracking-normal text-[#7A8495]"
+          className="ml-3 min-w-0 flex-1 text-[15px] font-inter-medium tracking-normal text-[#7A8495]"
         >
           {placeholder}
         </Text>
@@ -86,7 +86,7 @@ export function SearchPill({
         autoCorrect={false}
         placeholder={placeholder}
         placeholderTextColor="#7A8495"
-        className="ml-3 min-w-0 flex-1 p-0 text-[15px] font-semibold tracking-normal text-diplomatic-ink"
+        className="ml-3 min-w-0 flex-1 p-0 text-[15px] font-inter-medium tracking-normal text-diplomatic-ink"
         accessibilityLabel={accessibilityLabel}
       />
       <Pressable

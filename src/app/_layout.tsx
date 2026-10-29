@@ -6,14 +6,22 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Toaster } from "sonner-native";
 
 import { AppProviders } from "@/components/app-providers";
+import { Palette } from "@/constants/theme";
 
 export default function RootLayout() {
   return (
     <GestureHandlerRootView className="flex-1">
       <AppProviders>
-        <Stack screenOptions={{ headerShown: false }}>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            animation: "ios_from_right",
+            gestureEnabled: true,
+            contentStyle: { backgroundColor: Palette.canvas },
+          }}
+        >
           <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(auth)" options={{ animation: "fade_from_bottom" }} />
           <Stack.Screen name="country/[slug]" />
           <Stack.Screen name="visa/[id]" />
           <Stack.Screen name="profile/account" />

@@ -78,10 +78,10 @@ function DangerZoneContent() {
         <Header title="Danger Zone" onBack={() => router.back()} />
 
         <View className="mt-8 rounded-[30px] border border-[#F4C8C8] bg-white px-5 py-6">
-          <Text className="text-xl font-extrabold tracking-normal text-[#D83B3B]">
+          <Text className="text-xl font-inter-bold tracking-normal text-[#D83B3B]">
             Delete Account
           </Text>
-          <Text className="mt-2 text-sm font-semibold leading-5 tracking-normal text-[#707684]">
+          <Text className="mt-2 text-sm font-inter-medium leading-5 tracking-normal text-[#707684]">
             Permanently remove your account and sign out of EU Work Support.
           </Text>
 
@@ -96,7 +96,7 @@ function DangerZoneContent() {
             ) : (
               <>
                 <Ionicons name="trash-outline" size={19} color="#FFFFFF" />
-                <Text className="ml-2 text-base font-extrabold tracking-normal text-white">
+                <Text className="ml-2 text-base font-inter-bold tracking-normal text-white">
                   Delete Account
                 </Text>
               </>
@@ -118,7 +118,7 @@ function Header({ title, onBack }: { title: string; onBack: () => void }) {
       >
         <Ionicons name="chevron-back" size={21} color="#202124" />
       </Pressable>
-      <Text className="text-[25px] font-extrabold tracking-normal text-[#202124]">
+      <Text className="text-[25px] font-inter-bold tracking-normal text-[#202124]">
         {title}
       </Text>
       <View className="h-11 w-11" />

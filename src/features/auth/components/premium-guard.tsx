@@ -16,7 +16,7 @@ export function PremiumGuard({ children, returnTo }: PremiumGuardProps) {
     return (
       <View className="flex-1 items-center justify-center bg-diplomatic-surface px-5">
         <CustomLoading />
-        <Text className="mt-4 text-base font-bold tracking-normal text-diplomatic-secondaryText">
+        <Text className="mt-4 text-base font-inter-semibold tracking-normal text-diplomatic-secondaryText">
           Loading account...
         </Text>
       </View>

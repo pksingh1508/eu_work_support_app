@@ -18,7 +18,7 @@ export function PrimaryButton({ label, isLoading, disabled, onPress }: PrimaryBu
       {isLoading ? (
         <CustomLoading size={28} />
       ) : (
-        <Text className="text-base font-bold tracking-normal text-white">{label}</Text>
+        <Text className="text-base font-inter-semibold tracking-normal text-white">{label}</Text>
       )}
     </Pressable>
   );

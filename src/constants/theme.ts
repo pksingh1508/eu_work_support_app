@@ -99,5 +99,51 @@ export const Spacing = {
   six: 64,
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 120, android: 96 }) ?? 0;
+export const BottomTabInset = Platform.select({ ios: 124, android: 116 }) ?? 0;
 export const MaxContentWidth = 800;
+
+export const Palette = {
+  ink: "#131B2E",
+  inkSoft: "#2A3550",
+  muted: "#5F6678",
+  subtle: "#8C93A6",
+  canvas: "#F6F7FB",
+  card: "#FFFFFF",
+  tint: "#EAF1FF",
+  tintStrong: "#D6E4FF",
+  primary: "#0058BC",
+  primaryBright: "#2F7BF5",
+  success: "#1F8A5B",
+  successTint: "#E3F5EC",
+  danger: "#D83B3B",
+  dangerTint: "#FFF0F0",
+  hairline: "rgba(19, 27, 46, 0.06)",
+  scrim: "rgba(8, 14, 28, 0.85)",
+} as const;
+
+export const HeroGradient = ["#0B1F4B", "#0058BC", "#3A8DFF"] as const;
+
+export const Elevation = {
+  card: {
+    shadowColor: "#16234A",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.07,
+    shadowRadius: 24,
+    elevation: 3,
+  },
+  floating: {
+    shadowColor: "#0B1A3A",
+    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.18,
+    shadowRadius: 30,
+    elevation: 12,
+  },
+} as const;
+
+export const Motion = {
+  pressScale: 0.97,
+  spring: { damping: 18, stiffness: 220, mass: 0.9 },
+  softSpring: { damping: 22, stiffness: 140, mass: 1 },
+  stagger: 60,
+  maxStaggerDelay: 360,
+} as const;

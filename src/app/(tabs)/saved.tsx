@@ -2,22 +2,31 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@clerk/expo";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo } from "react";
 import {
   Alert,
-  Animated,
-  Easing,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   View,
 } from "react-native";
+import Animated, {
+  FadeInDown,
+  FadeOutRight,
+  LinearTransition,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CustomLoading } from "@/components/custom-loading";
-import { BottomTabInset } from "@/constants/theme";
+import { FadeInView } from "@/components/ui/fade-in-view";
+import { FocusStatusBar } from "@/components/ui/focus-status-bar";
+import { PressableScale } from "@/components/ui/pressable-scale";
+import { ScreenHeader } from "@/components/ui/screen-header";
+import { BottomTabInset, Elevation, Motion, Palette } from "@/constants/theme";
 import { PremiumGuard } from "@/features/auth/components/premium-guard";
 import { useSavedStore } from "@/features/saved/saved-store";
+import { FontFamily } from "@/lib/fonts";
 import { SavedCountry, SavedDocument } from "@/lib/saved-items";
 import { showErrorToast, showUnsavedToast } from "@/lib/toast";
 
@@ -144,55 +153,76 @@ function SavedContent() {
   };
 
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-diplomatic-surface">
+    <SafeAreaView edges={["top"]} style={styles.screen}>
+      <FocusStatusBar style="dark" />
       <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingBottom: BottomTabInset + 24 }}
+        style={styles.screen}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: BottomTabInset + 24 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
-        <View className="px-5 pt-8">
-          <Text className="text-[30px] font-serif font-extrabold tracking-normal text-diplomatic-ink">
-            Saved Guides
-          </Text>
-          <Text className="mt-3 max-w-[310px] text-base font-semibold leading-6 tracking-normal text-diplomatic-secondaryText">
-            Your curated collection of European working pathways.
-          </Text>
+        <ScreenHeader
+          eyebrow="Your library"
+          title="Saved guides"
+          subtitle="Your curated collection of European working pathways."
+        />
 
-          {isLoading ? (
-            <View className="mt-10 items-center rounded-atelier bg-white px-6 py-10">
-              <CustomLoading />
-              <Text className="mt-4 text-base font-bold tracking-normal text-diplomatic-secondaryText">
-                Loading saved guides...
-              </Text>
+        {!isLoading && !error && savedItems.length > 0 ? (
+          <FadeInView index={1} style={styles.summary}>
+            <SummaryStat value={countries.length} label="Countries" icon="flag" />
+            <SummaryStat value={documents.length} label="Documents" icon="document-text" />
+          </FadeInView>
+        ) : null}
+
+        {isLoading ? (
+          <View style={[styles.stateCard, Elevation.card]}>
+            <CustomLoading />
+            <Text style={styles.stateText}>Loading saved guides…</Text>
+          </View>
+        ) : null}
+
+        {!isLoading && error ? (
+          <FadeInView style={[styles.stateCard, Elevation.card]}>
+            <View style={[styles.stateIcon, styles.stateIconDanger]}>
+              <Ionicons name="alert-circle" size={26} color={Palette.danger} />
             </View>
-          ) : null}
+            <Text style={styles.stateTitle}>{error}</Text>
+          </FadeInView>
+        ) : null}
 
-          {!isLoading && error ? (
-            <View className="mt-7 rounded-atelier bg-white px-5 py-6">
-              <Ionicons name="alert-circle-outline" size={30} color="#BA1A1A" />
-              <Text className="mt-4 text-lg font-extrabold tracking-normal text-diplomatic-ink">
-                {error}
-              </Text>
+        {!isLoading && !error && savedItems.length === 0 ? (
+          <FadeInView index={1} style={[styles.stateCard, Elevation.card]}>
+            <View style={styles.stateIcon}>
+              <Ionicons name="bookmark" size={26} color={Palette.primary} />
             </View>
-          ) : null}
+            <Text style={styles.stateTitle}>No saved guides yet</Text>
+            <Text style={styles.stateText}>
+              Tap the bookmark on any country or document and it will show up here.
+            </Text>
+            <PressableScale
+              onPress={() => router.push("/")}
+              style={styles.stateButton}
+              accessibilityRole="button"
+              accessibilityLabel="Explore countries"
+            >
+              <Text style={styles.stateButtonText}>Explore countries</Text>
+              <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
+            </PressableScale>
+          </FadeInView>
+        ) : null}
 
-          {!isLoading && !error && savedItems.length === 0 ? (
-            <View className="mt-7 rounded-atelier bg-white px-5 py-7">
-              <Ionicons name="bookmark-outline" size={32} color="#1E7AF2" />
-              <Text className="mt-4 text-xl font-serif font-extrabold tracking-normal text-diplomatic-ink">
-                No saved guides yet
-              </Text>
-              <Text className="mt-2 text-sm font-semibold leading-5 tracking-normal text-diplomatic-secondaryText">
-                Save countries or documents and they will show up here.
-              </Text>
-            </View>
-          ) : null}
-
-          {!isLoading && !error && savedItems.length > 0 ? (
-            <View className="mt-7 gap-5">
-              {savedItems.map((item) => (
+        {!isLoading && !error && savedItems.length > 0 ? (
+          <View style={styles.list}>
+            {savedItems.map((item, index) => (
+              <Animated.View
+                key={`${item.type}-${item.id}`}
+                entering={FadeInDown.delay(Math.min(index * Motion.stagger, Motion.maxStaggerDelay)).springify()}
+                exiting={FadeOutRight.duration(260)}
+                layout={LinearTransition.springify().damping(Motion.softSpring.damping)}
+              >
                 <SavedGuideCard
-                  key={`${item.type}-${item.id}`}
                   item={item}
                   isUpdating={
                     item.type === "country"
@@ -204,12 +234,34 @@ function SavedContent() {
                   onPress={() => openSavedItem(item)}
                   onUnsave={() => unsaveItem(item)}
                 />
-              ))}
-            </View>
-          ) : null}
-        </View>
+              </Animated.View>
+            ))}
+          </View>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function SummaryStat({
+  value,
+  label,
+  icon,
+}: {
+  value: number;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}) {
+  return (
+    <View style={[styles.stat, Elevation.card]}>
+      <View style={styles.statIcon}>
+        <Ionicons name={icon} size={16} color={Palette.primary} />
+      </View>
+      <View>
+        <Text style={styles.statValue}>{value}</Text>
+        <Text style={styles.statLabel}>{label}</Text>
+      </View>
+    </View>
   );
 }
 
@@ -232,118 +284,253 @@ function SavedGuideCard({
     ? item.shortDescription
     : item.shortDescription ?? item.intro;
   const status = isCountry ? "Saved country" : item.categoryName;
-  const exitProgress = useRef(new Animated.Value(0)).current;
-  const [isLeaving, setIsLeaving] = useState(false);
-
-  const handleUnsave = () => {
-    if (isLeaving || isUpdating) {
-      return;
-    }
-
-    setIsLeaving(true);
-    Animated.timing(exitProgress, {
-      toValue: 1,
-      duration: 280,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (finished) {
-        onUnsave();
-        return;
-      }
-
-      setIsLeaving(false);
-    });
-  };
-
-  const animatedStyle = {
-    opacity: exitProgress.interpolate({
-      inputRange: [0, 1],
-      outputRange: [1, 0.15],
-    }),
-    transform: [
-      {
-        translateX: exitProgress.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0, 420],
-        }),
-      },
-      {
-        scale: exitProgress.interpolate({
-          inputRange: [0, 1],
-          outputRange: [1, 0.98],
-        }),
-      },
-    ],
-  };
 
   return (
-    <Animated.View style={animatedStyle}>
-      <View className="rounded-atelier bg-white px-5 py-5">
-      <View className="flex-row items-start justify-between">
-        <View className="min-w-0 flex-1 flex-row items-center">
+    <PressableScale
+      onPress={onPress}
+      style={[styles.card, Elevation.card]}
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${title}`}
+    >
+      <View style={styles.cardTop}>
+        <View style={styles.cardIcon}>
           {flagEmoji ? (
-            <Text className="text-[30px] tracking-normal">{flagEmoji}</Text>
+            <Text style={styles.cardEmoji}>{flagEmoji}</Text>
           ) : (
-            <View className="h-9 w-9 items-center justify-center rounded-full bg-diplomatic-surfaceHigh">
-              <Ionicons
-                name={isCountry ? "flag-outline" : "document-text-outline"}
-                size={20}
-                color="#1E7AF2"
-              />
-            </View>
+            <Ionicons
+              name={isCountry ? "flag-outline" : "document-text-outline"}
+              size={22}
+              color={Palette.primary}
+            />
           )}
-          <View className="ml-3 min-w-0 flex-1">
-            <Text className="text-xs font-extrabold uppercase tracking-normal text-diplomatic-primary">
-              {label}
-            </Text>
-            <Text className="mt-1 text-2xl font-serif font-extrabold tracking-normal text-diplomatic-ink">
-              {title}
-            </Text>
-          </View>
+        </View>
+        <View style={styles.cardHeading}>
+          <Text style={styles.cardLabel} numberOfLines={1}>
+            {label}
+          </Text>
+          <Text style={styles.cardTitle} numberOfLines={2}>
+            {title}
+          </Text>
         </View>
         <Pressable
-          onPress={handleUnsave}
-          disabled={isUpdating || isLeaving}
-          hitSlop={12}
+          onPress={(event) => {
+            event.stopPropagation();
+            onUnsave();
+          }}
+          disabled={isUpdating}
+          hitSlop={10}
           accessibilityRole="button"
           accessibilityLabel={`Unsave ${title}`}
-          className="h-9 w-9 items-center justify-center rounded-full bg-[#DFF3E6] active:opacity-70 disabled:opacity-60"
+          style={[styles.unsave, isUpdating && styles.unsavePressed]}
         >
-          <Ionicons name="bookmark" size={21} color="#183B2B" />
+          <Ionicons name="bookmark" size={18} color="#FFFFFF" />
         </Pressable>
       </View>
 
       {description ? (
-        <Text
-          numberOfLines={2}
-          className="mt-5 text-sm font-semibold leading-5 tracking-normal text-diplomatic-secondaryText"
-        >
+        <Text numberOfLines={2} style={styles.cardDescription}>
           {description}
         </Text>
       ) : null}
 
-      <View className="mt-7 flex-row items-center justify-between">
-        <View className="min-w-0 flex-1 flex-row items-center">
-          <Ionicons name="time-outline" size={16} color="#7C8497" />
-          <Text className="ml-2 min-w-0 flex-1 text-sm font-extrabold tracking-normal text-diplomatic-secondaryText">
-            {status} - {formatSavedDate(item.createdAt)}
+      <View style={styles.cardFooter}>
+        <View style={styles.cardMeta}>
+          <Ionicons name="time-outline" size={14} color={Palette.subtle} />
+          <Text style={styles.cardMetaText} numberOfLines={1}>
+            {status} · {formatSavedDate(item.createdAt)}
           </Text>
         </View>
-
-        <Pressable
-          onPress={onPress}
-          className="ml-3 flex-row items-center"
-          hitSlop={10}
-          accessibilityRole="button"
-        >
-          <Text className="text-sm font-extrabold tracking-normal text-diplomatic-primary">
-            Open
-          </Text>
-          <Ionicons name="arrow-forward" size={15} color="#0058BC" />
-        </Pressable>
+        <View style={styles.openPill}>
+          <Text style={styles.openText}>Open</Text>
+          <Ionicons name="arrow-forward" size={14} color={Palette.primary} />
+        </View>
       </View>
-      </View>
-    </Animated.View>
+    </PressableScale>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: Palette.canvas,
+  },
+  content: {
+    paddingHorizontal: 20,
+  },
+  summary: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 20,
+  },
+  stat: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    borderRadius: 20,
+    backgroundColor: Palette.card,
+  },
+  statIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Palette.tint,
+  },
+  statValue: {
+    fontFamily: FontFamily.headingBold,
+    fontSize: 20,
+    lineHeight: 24,
+    color: Palette.ink,
+  },
+  statLabel: {
+    fontFamily: FontFamily.bodyMedium,
+    fontSize: 12,
+    color: Palette.muted,
+  },
+  stateCard: {
+    alignItems: "center",
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    borderRadius: 26,
+    backgroundColor: Palette.card,
+  },
+  stateIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Palette.tint,
+  },
+  stateIconDanger: {
+    backgroundColor: Palette.dangerTint,
+  },
+  stateTitle: {
+    marginTop: 16,
+    textAlign: "center",
+    fontFamily: FontFamily.headingSemiBold,
+    fontSize: 19,
+    color: Palette.ink,
+  },
+  stateText: {
+    marginTop: 8,
+    textAlign: "center",
+    fontFamily: FontFamily.body,
+    fontSize: 14,
+    lineHeight: 21,
+    color: Palette.muted,
+  },
+  stateButton: {
+    marginTop: 20,
+    height: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    backgroundColor: Palette.primary,
+  },
+  stateButtonText: {
+    fontFamily: FontFamily.bodyBold,
+    fontSize: 15,
+    color: "#FFFFFF",
+  },
+  list: {
+    gap: 14,
+  },
+  card: {
+    padding: 18,
+    borderRadius: 24,
+    backgroundColor: Palette.card,
+  },
+  cardTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  cardIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Palette.canvas,
+  },
+  cardEmoji: {
+    fontSize: 26,
+  },
+  cardHeading: {
+    flex: 1,
+    minWidth: 0,
+  },
+  cardLabel: {
+    fontFamily: FontFamily.bodyBold,
+    fontSize: 11,
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    color: Palette.primary,
+  },
+  cardTitle: {
+    marginTop: 2,
+    fontFamily: FontFamily.headingSemiBold,
+    fontSize: 18,
+    lineHeight: 24,
+    color: Palette.ink,
+  },
+  unsave: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Palette.primary,
+  },
+  unsavePressed: {
+    opacity: 0.6,
+  },
+  cardDescription: {
+    marginTop: 14,
+    fontFamily: FontFamily.body,
+    fontSize: 14,
+    lineHeight: 21,
+    color: Palette.muted,
+  },
+  cardFooter: {
+    marginTop: 16,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: Palette.hairline,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  cardMeta: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  cardMetaText: {
+    flex: 1,
+    fontFamily: FontFamily.bodyMedium,
+    fontSize: 12,
+    color: Palette.muted,
+  },
+  openPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: Palette.tint,
+  },
+  openText: {
+    fontFamily: FontFamily.bodyBold,
+    fontSize: 13,
+    color: Palette.primary,
+  },
+});
