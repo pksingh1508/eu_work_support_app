@@ -1,318 +1,46 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import Animated, { FadeIn, FadeOut, LinearTransition } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { CustomLoading } from "@/components/custom-loading";
+import { getCountrySlug } from "@/components/home/country-data";
+import { SearchResultsSkeleton } from "@/components/skeletons";
+import { ProBadge } from "@/components/ui/badge";
 import { FadeInView } from "@/components/ui/fade-in-view";
+import { FlagImage } from "@/components/ui/flag-image";
 import { FocusStatusBar } from "@/components/ui/focus-status-bar";
 import { PressableScale } from "@/components/ui/pressable-scale";
-import { ScreenHeader, SectionLabel } from "@/components/ui/screen-header";
-import { SearchPill } from "@/components/ui/search-pill";
-import { BottomTabInset, Elevation, Palette } from "@/constants/theme";
+import { ScreenHeader, SectionHeader } from "@/components/ui/screen-header";
+import { SearchField } from "@/components/ui/search-pill";
+import { StateView } from "@/components/ui/state-view";
+import { europeanCountryNames } from "@/constants/country";
+import { BottomTabInset, Elevation, Palette, Radii, Type } from "@/constants/theme";
 import { PremiumGuard } from "@/features/auth/components/premium-guard";
-import { appStorage } from "@/lib/local-storage";
-import { FontFamily } from "@/lib/fonts";
-import { supabase } from "@/lib/supabase";
+import {
+  addRecentSearch,
+  clearRecentSearches,
+  getStoredRecentSearches,
+  MIN_SEARCH_LENGTH,
+  normalizeQuery,
+  SEARCH_DEBOUNCE_MS,
+  searchPublishedDocuments,
+  trendingQueries,
+  type SearchResult,
+} from "@/features/search/search-api";
+import { haptics } from "@/lib/haptics";
 
-const RECENT_SEARCHES_KEY = "search.recentQueries";
-const MAX_RECENT_SEARCHES = 5;
-const SEARCH_LIMIT = 25;
-const MIN_SEARCH_LENGTH = 2;
-const SEARCH_DEBOUNCE_MS = 350;
-
-const fallbackRecentSearches = [
-  "Digital Nomad Visa Spain",
-  "Berlin Tech Salaries",
-  "Blue Card Requirements",
-];
-
-const trendingQueries = [
-  "Germany Tech Visa",
-  "Poland Work Permit",
-  "Netherlands 30% Ruling",
-  "Portugal D7",
-];
-
-const documentSelect = `
-  id,
-  title,
-  slug,
-  short_description,
-  is_premium,
-  language,
-  sort_order,
-  countries!inner (
-    id,
-    name,
-    slug,
-    flag_emoji,
-    popularity_rank,
-    is_active
-  ),
-  document_categories!inner (
-    id,
-    name,
-    slug,
-    sort_order
-  )
-`;
-
-type RelatedCountry = {
-  id: string;
-  name: string;
-  slug: string;
-  flag_emoji: string | null;
-  popularity_rank: number | null;
-};
-
-type RelatedCategory = {
-  id: string;
-  name: string;
-  slug: string;
-  sort_order: number | null;
-};
-
-type RawSearchDocument = {
-  id: string;
-  title: string;
-  slug: string;
-  short_description: string | null;
-  is_premium: boolean;
-  language: string;
-  sort_order: number | null;
-  countries: RelatedCountry | RelatedCountry[];
-  document_categories: RelatedCategory | RelatedCategory[];
-};
-
-type SearchResult = {
-  id: string;
-  title: string;
-  slug: string;
-  shortDescription: string | null;
-  isPremium: boolean;
-  sortOrder: number;
-  countryName: string;
-  countrySlug: string;
-  flagEmoji: string | null;
-  popularityRank: number;
-  categoryName: string;
-  categorySlug: string;
-  categorySortOrder: number;
-};
-
-type MatchLookup = {
-  countryIds: string[];
-  categoryIds: string[];
-};
-
-function normalizeQuery(value: string) {
-  return value.replace(/\s+/g, " ").trim().slice(0, 80);
-}
-
-function toIlikePattern(value: string) {
-  return `%${normalizeQuery(value).replace(/[%_]/g, "")}%`;
-}
-
-function firstRelation<T>(value: T | T[]) {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-function getStoredRecentSearches() {
-  const stored = appStorage.getString(RECENT_SEARCHES_KEY);
-
-  if (!stored) {
-    return fallbackRecentSearches;
-  }
-
-  try {
-    const parsed = JSON.parse(stored);
-
-    if (!Array.isArray(parsed)) {
-      return fallbackRecentSearches;
-    }
-
-    const searches = parsed.filter(
-      (item): item is string => typeof item === "string",
-    );
-    return searches.length > 0
-      ? searches.slice(0, MAX_RECENT_SEARCHES)
-      : fallbackRecentSearches;
-  } catch {
-    return fallbackRecentSearches;
-  }
-}
-
-function saveRecentSearches(searches: string[]) {
-  appStorage.set(
-    RECENT_SEARCHES_KEY,
-    JSON.stringify(searches.slice(0, MAX_RECENT_SEARCHES)),
-  );
-}
-
-function addRecentSearch(searches: string[], query: string) {
-  const normalized = normalizeQuery(query);
-
-  if (!normalized) {
-    return searches;
-  }
-
-  const nextSearches = [
-    normalized,
-    ...searches.filter(
-      (item) => item.toLowerCase() !== normalized.toLowerCase(),
-    ),
-  ].slice(0, MAX_RECENT_SEARCHES);
-
-  saveRecentSearches(nextSearches);
-  return nextSearches;
-}
-
-function mapSearchResult(row: RawSearchDocument): SearchResult | null {
-  const country = firstRelation(row.countries);
-  const category = firstRelation(row.document_categories);
-
-  if (!country || !category) {
-    return null;
-  }
-
-  return {
-    id: row.id,
-    title: row.title,
-    slug: row.slug,
-    shortDescription: row.short_description,
-    isPremium: row.is_premium,
-    sortOrder: row.sort_order ?? 100,
-    countryName: country.name,
-    countrySlug: country.slug,
-    flagEmoji: country.flag_emoji,
-    popularityRank: country.popularity_rank ?? 999,
-    categoryName: category.name,
-    categorySlug: category.slug,
-    categorySortOrder: category.sort_order ?? 100,
-  };
-}
-
-function mergeSearchRows(rows: RawSearchDocument[]) {
-  const uniqueRows = new Map<string, RawSearchDocument>();
-
-  rows.forEach((row) => {
-    uniqueRows.set(row.id, row);
-  });
-
-  return Array.from(uniqueRows.values())
-    .map(mapSearchResult)
-    .filter((result): result is SearchResult => Boolean(result))
-    .sort((left, right) => {
-      const popularity = left.popularityRank - right.popularityRank;
-
-      if (popularity !== 0) {
-        return popularity;
-      }
-
-      const categorySort = left.categorySortOrder - right.categorySortOrder;
-
-      if (categorySort !== 0) {
-        return categorySort;
-      }
-
-      const documentSort = left.sortOrder - right.sortOrder;
-
-      if (documentSort !== 0) {
-        return documentSort;
-      }
-
-      return left.title.localeCompare(right.title);
-    })
-    .slice(0, SEARCH_LIMIT);
-}
-
-async function getMatchedCountryAndCategoryIds(
-  pattern: string,
-): Promise<MatchLookup> {
-  const [countriesResponse, categoriesResponse] = await Promise.all([
-    supabase
-      .from("countries")
-      .select("id")
-      .eq("is_active", true)
-      .ilike("name", pattern)
-      .limit(10),
-    supabase
-      .from("document_categories")
-      .select("id")
-      .ilike("name", pattern)
-      .limit(10),
-  ]);
-
-  if (countriesResponse.error) {
-    throw countriesResponse.error;
-  }
-
-  if (categoriesResponse.error) {
-    throw categoriesResponse.error;
-  }
-
-  return {
-    countryIds: countriesResponse.data?.map((country) => country.id) ?? [],
-    categoryIds: categoriesResponse.data?.map((category) => category.id) ?? [],
-  };
-}
-
-function publishedDocumentsQuery() {
-  return supabase
-    .from("country_documents")
-    .select(documentSelect)
-    .eq("status", "published")
-    .eq("language", "en")
-    .eq("countries.is_active", true);
-}
-
-async function searchPublishedDocuments(query: string) {
-  const pattern = toIlikePattern(query);
-  const [documentResponse, matches] = await Promise.all([
-    publishedDocumentsQuery().ilike("search_text", pattern).limit(SEARCH_LIMIT),
-    getMatchedCountryAndCategoryIds(pattern),
-  ]);
-
-  if (documentResponse.error) {
-    throw documentResponse.error;
-  }
-
-  const extraQueries = [];
-
-  if (matches.countryIds.length > 0) {
-    extraQueries.push(
-      publishedDocumentsQuery()
-        .in("country_id", matches.countryIds)
-        .limit(SEARCH_LIMIT),
-    );
-  }
-
-  if (matches.categoryIds.length > 0) {
-    extraQueries.push(
-      publishedDocumentsQuery()
-        .in("category_id", matches.categoryIds)
-        .limit(SEARCH_LIMIT),
-    );
-  }
-
-  const extraResponses = await Promise.all(extraQueries);
-  const extraRows: RawSearchDocument[] = [];
-
-  extraResponses.forEach((response) => {
-    if (response.error) {
-      throw response.error;
-    }
-
-    extraRows.push(...((response.data as RawSearchDocument[] | null) ?? []));
-  });
-
-  return mergeSearchRows([
-    ...(documentResponse.data ?? []),
-    ...extraRows,
-  ] as RawSearchDocument[]);
-}
+const browseCountries = [
+  "Germany",
+  "Netherlands",
+  "Portugal",
+  "Poland",
+  "Spain",
+  "France",
+  "Austria",
+  "Denmark",
+] as const satisfies readonly (typeof europeanCountryNames)[number][];
 
 export default function SearchScreen() {
   return (
@@ -331,6 +59,7 @@ function SearchContent() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryToken, setRetryToken] = useState(0);
 
   const shouldSearch = debouncedQuery.length >= MIN_SEARCH_LENGTH;
 
@@ -358,11 +87,9 @@ function SearchContent() {
 
     searchPublishedDocuments(debouncedQuery)
       .then((nextResults) => {
-        if (requestIdRef.current !== requestId) {
-          return;
+        if (requestIdRef.current === requestId) {
+          setResults(nextResults);
         }
-
-        setResults(nextResults);
       })
       .catch((searchError) => {
         if (requestIdRef.current !== requestId) {
@@ -378,7 +105,7 @@ function SearchContent() {
           setIsSearching(false);
         }
       });
-  }, [debouncedQuery, shouldSearch]);
+  }, [debouncedQuery, shouldSearch, retryToken]);
 
   const submitSearch = (nextQuery = query) => {
     const nextSearch = normalizeQuery(nextQuery);
@@ -397,55 +124,75 @@ function SearchContent() {
     router.push(`/visa/${result.id}`);
   };
 
+  const isTyping = normalizeQuery(query).length >= MIN_SEARCH_LENGTH && !shouldSearch;
+  const showSkeleton = (isSearching || isTyping) && results.length === 0;
+
   return (
     <SafeAreaView edges={["top"]} style={styles.screen}>
       <FocusStatusBar style="dark" />
       <ScrollView
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         style={styles.screen}
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: BottomTabInset + 24 },
-        ]}
+        contentContainerStyle={[styles.content, { paddingBottom: BottomTabInset + 24 }]}
         showsVerticalScrollIndicator={false}
       >
         <ScreenHeader
           eyebrow="Discover"
           title="Search"
-          subtitle="Visas, permits and documents across 27 European countries."
+          subtitle={`Visas, permits and documents across ${europeanCountryNames.length} European countries.`}
         />
 
         <FadeInView index={1}>
-          <SearchPill
+          <SearchField
             value={query}
             onChangeText={setQuery}
             onSubmit={() => submitSearch()}
+            isBusy={isSearching}
           />
         </FadeInView>
 
-        {!shouldSearch ? (
-          <>
-            <FadeInView index={2} style={styles.block}>
-              <SectionLabel title="Recent searches" />
-              <View style={[styles.listCard, Elevation.card]}>
-                {recentSearches.map((recentSearch, index) => (
-                  <QueryShortcut
-                    key={recentSearch}
-                    label={recentSearch}
-                    isLast={index === recentSearches.length - 1}
-                    onPress={() => submitSearch(recentSearch)}
-                  />
-                ))}
-              </View>
-            </FadeInView>
+        {!shouldSearch && !isTyping ? (
+          <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(120)}>
+            {recentSearches.length > 0 ? (
+              <FadeInView index={2} style={styles.block}>
+                <SectionHeader
+                  title="Recent"
+                  action={
+                    <Pressable
+                      onPress={() => {
+                        haptics.selection();
+                        setRecentSearches(clearRecentSearches());
+                      }}
+                      hitSlop={10}
+                      accessibilityRole="button"
+                      accessibilityLabel="Clear recent searches"
+                    >
+                      <Text style={styles.clearText}>Clear</Text>
+                    </Pressable>
+                  }
+                />
+                <View style={[styles.listCard, Elevation.card]}>
+                  {recentSearches.map((recentSearch, index) => (
+                    <QueryShortcut
+                      key={recentSearch}
+                      label={recentSearch}
+                      isLast={index === recentSearches.length - 1}
+                      onPress={() => submitSearch(recentSearch)}
+                    />
+                  ))}
+                </View>
+              </FadeInView>
+            ) : null}
 
             <FadeInView index={3} style={styles.block}>
-              <SectionLabel title="Trending now" />
+              <SectionHeader title="Trending now" />
               <View style={styles.chips}>
                 {trendingQueries.map((trendingQuery) => (
                   <PressableScale
                     key={trendingQuery}
                     onPress={() => submitSearch(trendingQuery)}
+                    haptic="selection"
                     style={styles.chip}
                     accessibilityRole="button"
                     accessibilityLabel={`Search ${trendingQuery}`}
@@ -456,44 +203,78 @@ function SearchContent() {
                 ))}
               </View>
             </FadeInView>
-          </>
-        ) : (
-          <View style={styles.block}>
-            <SectionLabel
-              title={isSearching ? "Searching…" : `${results.length} results`}
-              action={isSearching ? <CustomLoading size={28} /> : null}
-            />
 
-            {error ? (
-              <View style={styles.errorBox}>
-                <Ionicons name="alert-circle" size={18} color={Palette.danger} />
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
+            <FadeInView index={4} style={styles.block}>
+              <SectionHeader title="Browse by country" />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.countryRow}
+                style={styles.countryScroller}
+              >
+                {browseCountries.map((country) => (
+                  <PressableScale
+                    key={country}
+                    onPress={() => router.push(`/country/${getCountrySlug(country)}`)}
+                    haptic="selection"
+                    style={[styles.countryChip, Elevation.card]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Open ${country}`}
+                  >
+                    <FlagImage country={country} width={34} radius={5} />
+                    <Text style={styles.countryChipText}>{country}</Text>
+                  </PressableScale>
+                ))}
+              </ScrollView>
+            </FadeInView>
+          </Animated.View>
+        ) : (
+          <Animated.View
+            entering={FadeIn.duration(200)}
+            layout={LinearTransition.duration(220)}
+            style={styles.block}
+          >
+            <View style={styles.resultsHeader}>
+              <Text style={styles.resultsTitle}>
+                {showSkeleton ? "Searching" : "Results"}
+              </Text>
+              {!showSkeleton && !error ? (
+                <Text style={styles.resultsMeta}>
+                  {results.length} {results.length === 1 ? "guide" : "guides"} for “{debouncedQuery}”
+                </Text>
+              ) : null}
+            </View>
+
+            {showSkeleton ? <SearchResultsSkeleton /> : null}
+
+            {!showSkeleton && error ? (
+              <StateView
+                icon="cloud-offline-outline"
+                tone="danger"
+                title="Search unavailable"
+                message={error}
+                actionLabel="Try again"
+                actionIcon="refresh"
+                onAction={() => setRetryToken((current) => current + 1)}
+              />
             ) : null}
 
-            {!isSearching && !error && results.length === 0 ? (
-              <FadeInView style={[styles.empty, Elevation.card]}>
-                <View style={styles.emptyIcon}>
-                  <Ionicons name="search" size={26} color={Palette.primary} />
-                </View>
-                <Text style={styles.emptyTitle}>No guides found</Text>
-                <Text style={styles.emptyText}>
-                  Try a country name, visa type, document, or permit topic.
-                </Text>
-              </FadeInView>
+            {!showSkeleton && !error && results.length === 0 ? (
+              <StateView
+                icon="search"
+                title="No guides found"
+                message="Try a country name, visa type, document, or permit topic."
+              />
             ) : null}
 
             <View style={styles.results}>
               {results.map((result, index) => (
                 <FadeInView key={result.id} index={index}>
-                  <SearchResultCard
-                    result={result}
-                    onPress={() => openResult(result)}
-                  />
+                  <SearchResultCard result={result} onPress={() => openResult(result)} />
                 </FadeInView>
               ))}
             </View>
-          </View>
+          </Animated.View>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -512,51 +293,45 @@ function QueryShortcut({
   return (
     <PressableScale
       onPress={onPress}
-      scaleTo={0.98}
-      style={[styles.shortcut, !isLast && styles.shortcutGap]}
+      scaleTo={0.985}
+      dimOnPress
+      haptic="selection"
+      style={[styles.shortcut, !isLast && styles.shortcutDivider]}
       accessibilityRole="button"
       accessibilityLabel={`Search ${label}`}
     >
       <View style={styles.shortcutIcon}>
-        <Ionicons name="time-outline" size={17} color={Palette.muted} />
+        <Ionicons name="time-outline" size={16} color={Palette.muted} />
       </View>
       <Text style={styles.shortcutText} numberOfLines={1}>
         {label}
       </Text>
-      <Ionicons name="arrow-up-outline" size={16} color={Palette.subtle} style={styles.shortcutArrow} />
+      <Ionicons name="arrow-up-outline" size={16} color={Palette.faint} style={styles.shortcutArrow} />
     </PressableScale>
   );
 }
 
-function SearchResultCard({
-  result,
-  onPress,
-}: {
-  result: SearchResult;
-  onPress: () => void;
-}) {
+function SearchResultCard({ result, onPress }: { result: SearchResult; onPress: () => void }) {
   return (
     <PressableScale
       onPress={onPress}
+      scaleTo={0.975}
       style={[styles.resultCard, Elevation.card]}
       accessibilityRole="button"
       accessibilityLabel={`Open ${result.title}`}
     >
       <View style={styles.resultMeta}>
-        {result.flagEmoji ? (
-          <Text style={styles.flagEmoji}>{result.flagEmoji}</Text>
-        ) : (
-          <Ionicons name="flag-outline" size={16} color={Palette.subtle} />
-        )}
-        <Text style={styles.resultCountry}>{result.countryName}</Text>
+        <FlagImage country={result.countryName} emoji={result.flagEmoji} width={24} radius={4} />
+        <Text style={styles.resultCountry} numberOfLines={1}>
+          {result.countryName}
+        </Text>
         <View style={styles.metaDot} />
         <Text style={styles.resultCategory} numberOfLines={1}>
           {result.categoryName}
         </Text>
         {result.isPremium ? (
-          <View style={styles.premium}>
-            <Ionicons name="sparkles" size={10} color="#FFFFFF" />
-            <Text style={styles.premiumText}>Premium</Text>
+          <View style={styles.pro}>
+            <ProBadge />
           </View>
         ) : null}
       </View>
@@ -571,7 +346,7 @@ function SearchResultCard({
           ) : null}
         </View>
         <View style={styles.resultArrow}>
-          <Ionicons name="arrow-forward" size={17} color={Palette.primary} />
+          <Ionicons name="arrow-forward" size={16} color={Palette.primary} />
         </View>
       </View>
     </PressableScale>
@@ -587,37 +362,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   block: {
-    marginTop: 28,
+    marginTop: 30,
+  },
+  clearText: {
+    ...Type.label,
+    color: Palette.primary,
   },
   listCard: {
-    paddingVertical: 6,
-    paddingHorizontal: 6,
-    borderRadius: 22,
+    paddingVertical: 4,
+    borderRadius: Radii.xl,
     backgroundColor: Palette.card,
   },
   shortcut: {
-    minHeight: 50,
+    minHeight: 56,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 10,
-    borderRadius: 16,
+    paddingHorizontal: 14,
   },
-  shortcutGap: {
-    marginBottom: 2,
+  shortcutDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(10,16,36,0.08)",
   },
   shortcutIcon: {
     width: 34,
     height: 34,
-    borderRadius: 12,
+    borderRadius: 11,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Palette.canvas,
+    backgroundColor: Palette.cardMuted,
   },
   shortcutText: {
+    ...Type.bodyMedium,
     flex: 1,
     marginLeft: 12,
-    fontFamily: FontFamily.bodyMedium,
-    fontSize: 15,
     color: Palette.inkSoft,
   },
   shortcutArrow: {
@@ -626,65 +403,54 @@ const styles = StyleSheet.create({
   chips: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: 8,
   },
   chip: {
-    minHeight: 44,
+    minHeight: 42,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     borderRadius: 14,
     backgroundColor: Palette.card,
     borderWidth: 1,
     borderColor: Palette.tintStrong,
   },
   chipText: {
-    fontFamily: FontFamily.bodySemiBold,
-    fontSize: 14,
+    ...Type.label,
     color: Palette.primary,
   },
-  errorBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    padding: 14,
-    borderRadius: 16,
-    backgroundColor: Palette.dangerTint,
+  countryScroller: {
+    marginHorizontal: -20,
   },
-  errorText: {
-    flex: 1,
-    fontFamily: FontFamily.bodyMedium,
-    fontSize: 14,
-    color: Palette.danger,
+  countryRow: {
+    paddingHorizontal: 20,
+    paddingVertical: 4,
+    gap: 10,
   },
-  empty: {
+  countryChip: {
+    width: 104,
     alignItems: "center",
-    paddingVertical: 32,
-    paddingHorizontal: 24,
-    borderRadius: 24,
+    gap: 10,
+    paddingVertical: 16,
+    borderRadius: Radii.lg,
     backgroundColor: Palette.card,
   },
-  emptyIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Palette.tint,
-  },
-  emptyTitle: {
-    marginTop: 14,
-    fontFamily: FontFamily.headingSemiBold,
-    fontSize: 18,
+  countryChipText: {
+    ...Type.label,
+    fontSize: 13,
     color: Palette.ink,
   },
-  emptyText: {
-    marginTop: 6,
-    textAlign: "center",
-    fontFamily: FontFamily.body,
-    fontSize: 14,
-    lineHeight: 20,
+  resultsHeader: {
+    marginBottom: 14,
+  },
+  resultsTitle: {
+    ...Type.title2,
+    color: Palette.ink,
+  },
+  resultsMeta: {
+    ...Type.footnote,
+    marginTop: 2,
     color: Palette.muted,
   },
   results: {
@@ -692,78 +458,56 @@ const styles = StyleSheet.create({
   },
   resultCard: {
     padding: 18,
-    borderRadius: 22,
+    borderRadius: Radii.xl,
     backgroundColor: Palette.card,
   },
   resultMeta: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-  },
-  flagEmoji: {
-    fontSize: 16,
+    gap: 8,
   },
   resultCountry: {
-    fontFamily: FontFamily.bodyBold,
-    fontSize: 12,
-    letterSpacing: 0.6,
+    ...Type.overline,
+    flexShrink: 0,
     color: Palette.primary,
-    textTransform: "uppercase",
   },
   metaDot: {
     width: 3,
     height: 3,
     borderRadius: 2,
-    backgroundColor: Palette.subtle,
+    backgroundColor: Palette.faint,
   },
   resultCategory: {
+    ...Type.caption,
     flexShrink: 1,
-    fontFamily: FontFamily.bodyMedium,
-    fontSize: 12,
     color: Palette.muted,
   },
-  premium: {
+  pro: {
     marginLeft: "auto",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    backgroundColor: Palette.ink,
-  },
-  premiumText: {
-    fontFamily: FontFamily.bodyBold,
-    fontSize: 10,
-    letterSpacing: 0.4,
-    color: "#FFFFFF",
   },
   resultBody: {
-    marginTop: 10,
+    marginTop: 12,
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 14,
   },
   resultTextCol: {
     flex: 1,
   },
   resultTitle: {
-    fontFamily: FontFamily.headingSemiBold,
+    ...Type.title3,
     fontSize: 17,
-    lineHeight: 23,
     color: Palette.ink,
   },
   resultDescription: {
+    ...Type.footnote,
     marginTop: 4,
-    fontFamily: FontFamily.body,
-    fontSize: 13,
-    lineHeight: 19,
     color: Palette.muted,
   },
   resultArrow: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: Palette.tint,

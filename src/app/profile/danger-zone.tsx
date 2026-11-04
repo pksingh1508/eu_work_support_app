@@ -1,17 +1,26 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useClerk, useUser } from "@clerk/expo";
-import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { StyleSheet, Text, View } from "react-native";
 
-import { CustomLoading } from "@/components/custom-loading";
+import { Button } from "@/components/ui/button";
+import { ConfirmSheet } from "@/components/ui/confirm-sheet";
+import { FadeInView } from "@/components/ui/fade-in-view";
+import { StackScreen } from "@/components/ui/stack-screen";
+import { Palette, Radii, Type } from "@/constants/theme";
 import { PremiumGuard } from "@/features/auth/components/premium-guard";
 import { clearCachedAuthSnapshot } from "@/lib/local-storage";
+import { showErrorToast } from "@/lib/toast";
 
 type DeletableUser = {
   delete: () => Promise<unknown>;
 };
+
+const consequences = [
+  "Your profile and sign-in will be removed",
+  "Saved countries and guides will be deleted",
+  "This can’t be undone",
+];
 
 export default function DangerZoneScreen() {
   return (
@@ -22,106 +31,123 @@ export default function DangerZoneScreen() {
 }
 
 function DangerZoneContent() {
-  const router = useRouter();
   const { user } = useUser();
   const { signOut } = useClerk();
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const deleteAccount = () => {
-    Alert.alert(
-      "Delete Account",
-      "This action permanently deletes your account. Are you sure?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            const deletableUser = user as unknown as DeletableUser | null;
+  const deleteAccount = async () => {
+    const deletableUser = user as unknown as DeletableUser | null;
 
-            if (!deletableUser?.delete) {
-              Alert.alert(
-                "Unable to delete account",
-                "Please contact support to delete this account.",
-              );
-              return;
-            }
+    if (!deletableUser?.delete) {
+      setIsConfirmOpen(false);
+      showErrorToast("Unable to delete account", "Please contact support to delete this account.");
+      return;
+    }
 
-            setIsDeleting(true);
+    setIsDeleting(true);
 
-            try {
-              await deletableUser.delete();
-              clearCachedAuthSnapshot();
-              await signOut();
-            } catch (error) {
-              console.warn("Unable to delete account", error);
-              Alert.alert(
-                "Unable to delete account",
-                "Please try again or contact support.",
-              );
-            } finally {
-              setIsDeleting(false);
-            }
-          },
-        },
-      ],
-    );
+    try {
+      await deletableUser.delete();
+      clearCachedAuthSnapshot();
+      await signOut();
+      setIsConfirmOpen(false);
+    } catch (error) {
+      console.warn("Unable to delete account", error);
+      showErrorToast("Unable to delete account", "Please try again or contact support.");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-[#FAFAFB]">
-      <ScrollView
-        className="flex-1"
-        contentContainerClassName="px-5 pb-10 pt-7"
-        showsVerticalScrollIndicator={false}
-      >
-        <Header title="Danger Zone" onBack={() => router.back()} />
-
-        <View className="mt-8 rounded-[30px] border border-[#F4C8C8] bg-white px-5 py-6">
-          <Text className="text-xl font-inter-bold tracking-normal text-[#D83B3B]">
-            Delete Account
-          </Text>
-          <Text className="mt-2 text-sm font-inter-medium leading-5 tracking-normal text-[#707684]">
-            Permanently remove your account and sign out of EU Work Support.
-          </Text>
-
-          <Pressable
-            onPress={deleteAccount}
-            disabled={isDeleting}
-            className="mt-6 h-14 flex-row items-center justify-center rounded-[22px] bg-[#D83B3B] disabled:opacity-60"
-            accessibilityRole="button"
-          >
-            {isDeleting ? (
-              <CustomLoading size={28} />
-            ) : (
-              <>
-                <Ionicons name="trash-outline" size={19} color="#FFFFFF" />
-                <Text className="ml-2 text-base font-inter-bold tracking-normal text-white">
-                  Delete Account
-                </Text>
-              </>
-            )}
-          </Pressable>
+    <StackScreen title="Danger zone" subtitle="Irreversible actions for your account.">
+      <FadeInView index={0} style={styles.card}>
+        <View style={styles.iconHalo}>
+          <Ionicons name="trash-outline" size={24} color={Palette.danger} />
         </View>
-      </ScrollView>
-    </SafeAreaView>
+        <Text style={styles.title}>Delete account</Text>
+        <Text style={styles.body}>
+          Permanently remove your EU Work Support account and everything associated with it.
+        </Text>
+
+        <View style={styles.list}>
+          {consequences.map((item) => (
+            <View key={item} style={styles.listRow}>
+              <Ionicons name="close-circle" size={17} color={Palette.danger} />
+              <Text style={styles.listText}>{item}</Text>
+            </View>
+          ))}
+        </View>
+
+        <Button
+          label="Delete my account"
+          variant="danger"
+          icon="trash-outline"
+          onPress={() => setIsConfirmOpen(true)}
+          style={styles.button}
+        />
+      </FadeInView>
+
+      <ConfirmSheet
+        visible={isConfirmOpen}
+        onClose={() => setIsConfirmOpen(false)}
+        onConfirm={deleteAccount}
+        isLoading={isDeleting}
+        icon="trash-outline"
+        title="Delete your account?"
+        message="This permanently deletes your account and saved guides. This action can’t be undone."
+        confirmLabel="Delete permanently"
+        cancelLabel="Keep my account"
+      />
+    </StackScreen>
   );
 }
 
-function Header({ title, onBack }: { title: string; onBack: () => void }) {
-  return (
-    <View className="flex-row items-center justify-between">
-      <Pressable
-        onPress={onBack}
-        className="h-11 w-11 items-center justify-center rounded-full border border-[#E6E6EA] bg-white"
-        accessibilityRole="button"
-      >
-        <Ionicons name="chevron-back" size={21} color="#202124" />
-      </Pressable>
-      <Text className="text-[25px] font-inter-bold tracking-normal text-[#202124]">
-        {title}
-      </Text>
-      <View className="h-11 w-11" />
-    </View>
-  );
-}
+const styles = StyleSheet.create({
+  card: {
+    padding: 20,
+    borderRadius: Radii.xxl,
+    backgroundColor: Palette.card,
+    borderWidth: 1,
+    borderColor: "#FFD3D6",
+  },
+  iconHalo: {
+    width: 52,
+    height: 52,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Palette.dangerTint,
+  },
+  title: {
+    ...Type.title2,
+    marginTop: 16,
+    color: Palette.ink,
+  },
+  body: {
+    ...Type.body,
+    marginTop: 6,
+    color: Palette.muted,
+  },
+  list: {
+    marginTop: 18,
+    gap: 10,
+    padding: 14,
+    borderRadius: Radii.md,
+    backgroundColor: Palette.cardMuted,
+  },
+  listRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  listText: {
+    ...Type.callout,
+    flex: 1,
+    color: Palette.inkSoft,
+  },
+  button: {
+    marginTop: 22,
+  },
+});

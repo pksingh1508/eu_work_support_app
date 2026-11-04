@@ -1,22 +1,18 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useUser } from "@clerk/expo";
 import { useRouter } from "expo-router";
-import { useState } from "react";
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useRef, useState } from "react";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 
-import { CustomLoading } from "@/components/custom-loading";
+import { Button } from "@/components/ui/button";
+import { FadeInView } from "@/components/ui/fade-in-view";
+import { InlineNotice } from "@/components/ui/inline-notice";
+import { StackScreen } from "@/components/ui/stack-screen";
+import { TextField } from "@/components/ui/text-field";
+import { Elevation, Palette, Radii, Type } from "@/constants/theme";
 import { PremiumGuard } from "@/features/auth/components/premium-guard";
 import { getAuthErrorMessage } from "@/features/auth/errors";
+import { showSuccessToast } from "@/lib/toast";
 
 type PasswordUser = {
   updatePassword: (params: {
@@ -42,6 +38,8 @@ function ChangePasswordContent() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const newPasswordRef = useRef<TextInput>(null);
+  const confirmRef = useRef<TextInput>(null);
 
   const updatePassword = async () => {
     if (isSubmitting) {
@@ -75,9 +73,8 @@ function ChangePasswordContent() {
         signOutOfOtherSessions: true,
       });
 
-      Alert.alert("Password Updated", "Your password has been changed.", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      showSuccessToast("Password updated", "Your new password is active.");
+      router.back();
     } catch (authError) {
       setError(
         getAuthErrorMessage(authError, "Unable to change your password."),
@@ -88,126 +85,170 @@ function ChangePasswordContent() {
   };
 
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-[#FAFAFB]">
-      <KeyboardAvoidingView
-        behavior={Platform.select({ ios: "padding", default: undefined })}
-        className="flex-1"
-      >
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          className="flex-1"
-          contentContainerClassName="px-5 pb-10 pt-7"
-          showsVerticalScrollIndicator={false}
-        >
-          <Header title="Change Password" onBack={() => router.back()} />
-
-          <View className="mt-8 rounded-[30px] border border-[#EDEDF0] bg-white px-5 py-6">
-            <Text className="text-xl font-inter-bold tracking-normal text-[#202124]">
-              Update your password
-            </Text>
-            <Text className="mt-2 text-sm font-inter-medium leading-5 tracking-normal text-[#707684]">
-              Enter your current password and choose a new secure password.
-            </Text>
-
-            {error ? (
-              <View className="mt-5 rounded-[18px] bg-[#FFF1F1] px-4 py-3">
-                <Text className="text-sm font-inter-medium tracking-normal text-[#D83B3B]">
-                  {error}
-                </Text>
-              </View>
-            ) : null}
-
-            <View className="mt-6 gap-4">
-              <PasswordField
-                label="Current Password"
-                value={currentPassword}
-                onChangeText={setCurrentPassword}
-                textContentType="password"
-              />
-              <PasswordField
-                label="New Password"
-                value={newPassword}
-                onChangeText={setNewPassword}
-                textContentType="newPassword"
-              />
-              <PasswordField
-                label="Confirm New Password"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                textContentType="newPassword"
-              />
-
-              <Pressable
-                onPress={updatePassword}
-                disabled={isSubmitting}
-                className="mt-2 h-14 items-center justify-center rounded-[22px] bg-diplomatic-primary disabled:opacity-60"
-                accessibilityRole="button"
-              >
-                {isSubmitting ? (
-                  <CustomLoading size={28} />
-                ) : (
-                  <Text className="text-base font-inter-bold tracking-normal text-white">
-                    Change Password
-                  </Text>
-                )}
-              </Pressable>
-            </View>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-  );
-}
-
-function Header({ title, onBack }: { title: string; onBack: () => void }) {
-  return (
-    <View className="flex-row items-center justify-between">
-      <Pressable
-        onPress={onBack}
-        className="h-11 w-11 items-center justify-center rounded-full border border-[#E6E6EA] bg-white"
-        accessibilityRole="button"
-      >
-        <Ionicons name="chevron-back" size={21} color="#202124" />
-      </Pressable>
-      <Text className="text-[25px] font-inter-bold tracking-normal text-[#202124]">
-        {title}
-      </Text>
-      <View className="h-11 w-11" />
-    </View>
-  );
-}
-
-function PasswordField({
-  label,
-  value,
-  onChangeText,
-  textContentType,
-}: {
-  label: string;
-  value: string;
-  onChangeText: (value: string) => void;
-  textContentType: "password" | "newPassword";
-}) {
-  return (
-    <View>
-      <Text className="mb-2 text-sm font-inter-bold tracking-normal text-[#202124]">
-        {label}
-      </Text>
-      <View className="h-14 flex-row items-center rounded-[20px] border border-[#E2E2E6] bg-[#FAFAFB] px-4">
-        <TextInput
-          value={value}
-          onChangeText={onChangeText}
-          secureTextEntry
-          autoCapitalize="none"
-          autoComplete={
-            textContentType === "password" ? "current-password" : "new-password"
-          }
-          textContentType={textContentType}
-          placeholder={label}
-          placeholderTextColor="#A1A6B1"
-          className="min-w-0 flex-1 text-base font-inter-medium tracking-normal text-[#202124]"
+    <StackScreen
+      title="Change password"
+      subtitle="Choose a strong password you don’t use anywhere else."
+      keyboardAware
+      footer={
+        <Button
+          label="Update password"
+          icon="shield-checkmark-outline"
+          isLoading={isSubmitting}
+          disabled={!currentPassword || !newPassword || !confirmPassword}
+          onPress={updatePassword}
         />
+      }
+    >
+      {error ? <InlineNotice tone="error" message={error} style={styles.notice} /> : null}
+
+      <FadeInView style={styles.card}>
+        <TextField
+          label="Current password"
+          icon="lock-closed-outline"
+          isPassword
+          value={currentPassword}
+          onChangeText={setCurrentPassword}
+          autoCapitalize="none"
+          autoComplete="current-password"
+          textContentType="password"
+          placeholder="Enter current password"
+          returnKeyType="next"
+          onSubmitEditing={() => newPasswordRef.current?.focus()}
+          submitBehavior="submit"
+        />
+        <View style={styles.divider} />
+        <TextField
+          ref={newPasswordRef}
+          label="New password"
+          icon="key-outline"
+          isPassword
+          value={newPassword}
+          onChangeText={setNewPassword}
+          autoCapitalize="none"
+          autoComplete="new-password"
+          textContentType="newPassword"
+          placeholder="At least 8 characters"
+          returnKeyType="next"
+          onSubmitEditing={() => confirmRef.current?.focus()}
+          submitBehavior="submit"
+        />
+        <PasswordStrength password={newPassword} />
+        <TextField
+          ref={confirmRef}
+          label="Confirm new password"
+          icon="key-outline"
+          isPassword
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          autoCapitalize="none"
+          autoComplete="new-password"
+          textContentType="newPassword"
+          placeholder="Repeat new password"
+          returnKeyType="done"
+          onSubmitEditing={updatePassword}
+          error={
+            confirmPassword.length > 0 && newPassword !== confirmPassword
+              ? "Passwords don’t match yet"
+              : null
+          }
+        />
+      </FadeInView>
+
+      <View style={styles.tip}>
+        <Ionicons name="information-circle-outline" size={16} color={Palette.muted} />
+        <Text style={styles.tipText}>Changing your password signs you out on other devices.</Text>
       </View>
+    </StackScreen>
+  );
+}
+
+function getStrength(password: string) {
+  let score = 0;
+
+  if (password.length >= 8) score += 1;
+  if (password.length >= 12) score += 1;
+  if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score += 1;
+  if (/\d/.test(password)) score += 1;
+  if (/[^A-Za-z0-9]/.test(password)) score += 1;
+
+  return Math.min(4, score);
+}
+
+const strengthLabels = ["Too short", "Weak", "Fair", "Good", "Strong"];
+const strengthColors = [Palette.faint, Palette.danger, Palette.warning, Palette.primary, Palette.success];
+
+function PasswordStrength({ password }: { password: string }) {
+  if (!password) {
+    return null;
+  }
+
+  const score = getStrength(password);
+
+  return (
+    <View style={styles.strength} accessibilityLabel={`Password strength: ${strengthLabels[score]}`}>
+      <View style={styles.strengthBars}>
+        {[1, 2, 3, 4].map((bar) => (
+          <View
+            key={bar}
+            style={[
+              styles.strengthBar,
+              { backgroundColor: bar <= score ? strengthColors[score] : Palette.well },
+            ]}
+          />
+        ))}
+      </View>
+      <Text style={[styles.strengthLabel, { color: strengthColors[score] }]}>
+        {strengthLabels[score]}
+      </Text>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  notice: {
+    marginBottom: 16,
+  },
+  card: {
+    gap: 18,
+    padding: 20,
+    borderRadius: Radii.xxl,
+    backgroundColor: Palette.card,
+    ...Elevation.card,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: Palette.hairline,
+  },
+  strength: {
+    marginTop: -8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  strengthBars: {
+    flex: 1,
+    flexDirection: "row",
+    gap: 6,
+  },
+  strengthBar: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+  },
+  strengthLabel: {
+    ...Type.caption,
+    fontFamily: Type.label.fontFamily,
+  },
+  tip: {
+    marginTop: 16,
+    marginHorizontal: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  tipText: {
+    ...Type.footnote,
+    flex: 1,
+    color: Palette.muted,
+  },
+});

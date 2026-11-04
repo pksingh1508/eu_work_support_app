@@ -1,9 +1,9 @@
 import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 import { useMemo, useState } from "react";
-import { Pressable, Text, View } from "react-native";
-
+import { InlineNotice } from "@/components/ui/inline-notice";
 import {
   AuthCard,
+  AuthInlineLink,
   AuthPrimaryButton,
   AuthTextField,
 } from "@/features/auth/components/auth-card";
@@ -54,7 +54,7 @@ export default function VerifyScreen() {
       const alreadyVerified = await isEmailProUser(normalizedEmail);
 
       if (alreadyVerified) {
-        showInfoToast("You have access", "Please login to access.");
+        showInfoToast("You already have access", "Login to continue.");
         openLogin();
         return;
       }
@@ -82,22 +82,21 @@ export default function VerifyScreen() {
 
   return (
     <AuthCard
-      headerTitle="Request Access"
-      title={
-        hasSentLink ? "Check your email" : "Request access to EU Work Support"
-      }
+      headerTitle="Request access"
+      title={hasSentLink ? "Check your inbox" : "Request access"}
       subtitle={
-        hasSentLink ? "We sent an email." : "Enter email to Request Access."
+        hasSentLink
+          ? `We’ve sent an email to ${normalizedEmail}.`
+          : "Enter your email and we’ll send you a link to unlock EU Work Support."
       }
       error={error}
     >
       {hasSentLink ? (
-        <View className="rounded-[18px] bg-[#EEF7FF] px-4 py-4">
-          <Text className="text-base font-inter-medium leading-7 tracking-normal text-[#202124]">
-            We have successfully sent an email, click on email to Request
-            Access.
-          </Text>
-        </View>
+        <InlineNotice
+          tone="success"
+          title="Email sent"
+          message="Open the email and follow the link to request access. Once approved, come back and login."
+        />
       ) : (
         <AuthTextField
           label="Email"
@@ -110,14 +109,16 @@ export default function VerifyScreen() {
           keyboardType="email-address"
           placeholder="name@example.com"
           textContentType="emailAddress"
+          returnKeyType="send"
+          onSubmitEditing={sendVerificationLink}
         />
       )}
 
       {hasSentLink ? (
-        <AuthPrimaryButton label="Login" onPress={openLogin} />
+        <AuthPrimaryButton label="Go to login" onPress={openLogin} />
       ) : (
         <AuthPrimaryButton
-          label="Request Access"
+          label="Request access"
           isLoading={isSubmitting}
           disabled={!canSubmit}
           onPress={sendVerificationLink}
@@ -125,12 +126,14 @@ export default function VerifyScreen() {
       )}
 
       {!hasSentLink ? (
-        <Pressable className="items-center" hitSlop={10} onPress={openLogin}>
-          <Text className="text-sm font-inter-semibold tracking-normal text-diplomatic-primary">
-            You have access? Login
-          </Text>
-        </Pressable>
-      ) : null}
+        <AuthInlineLink text="Already have access?" action="Login" onPress={openLogin} />
+      ) : (
+        <AuthInlineLink
+          text="Wrong email?"
+          action="Try again"
+          onPress={() => setHasSentLink(false)}
+        />
+      )}
     </AuthCard>
   );
 }

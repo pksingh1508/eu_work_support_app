@@ -1,7 +1,8 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useUser } from "@clerk/expo";
 import { useFocusEffect } from "@react-navigation/native";
-import { type Href, useRouter } from "expo-router";
+import Constants from "expo-constants";
+import { useRouter } from "expo-router";
 import { useCallback } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -9,24 +10,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { FadeInView } from "@/components/ui/fade-in-view";
 import { FocusStatusBar } from "@/components/ui/focus-status-bar";
 import { GradientFill } from "@/components/ui/gradient-fill";
+import { ListGroup, ListRow } from "@/components/ui/list-group";
 import { PressableScale } from "@/components/ui/pressable-scale";
 import { ScreenHeader } from "@/components/ui/screen-header";
-import {
-  BottomTabInset,
-  Elevation,
-  HeroGradient,
-  Palette,
-} from "@/constants/theme";
+import { StarRing } from "@/components/ui/star-ring";
+import { BottomTabInset, Elevation, NavyGradient, Palette, Radii, Type } from "@/constants/theme";
 import { useAuthAccess } from "@/features/auth/access";
 import { PremiumGuard } from "@/features/auth/components/premium-guard";
 import { FontFamily } from "@/lib/fonts";
-
-type MenuRowProps = {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  onPress: () => void;
-  tone?: "default" | "danger";
-};
 
 export default function ProfileScreen() {
   return (
@@ -36,18 +27,21 @@ export default function ProfileScreen() {
   );
 }
 
+function getInitials(name: string) {
+  const [firstName = "", lastName = ""] = name.trim().split(/\s+/).filter(Boolean);
+  return `${firstName.charAt(0)}${lastName.charAt(0) || firstName.charAt(1)}`.toUpperCase();
+}
+
 function ProfileContent() {
   const router = useRouter();
   const { user } = useUser();
   const { profile, refreshProfile, hasPremiumAccess } = useAuthAccess();
   const email = profile?.email ?? user?.primaryEmailAddress?.emailAddress ?? "";
-  const databaseName = [profile?.firstName, profile?.lastName]
-    .filter(Boolean)
-    .join(" ")
-    .trim();
-  const fullName =
-    databaseName || user?.fullName || user?.firstName || "Welcome";
-  const initials = getInitials(fullName);
+  const databaseName = [profile?.firstName, profile?.lastName].filter(Boolean).join(" ").trim();
+  const fullName = databaseName || user?.fullName || user?.firstName || "";
+  const displayName = fullName || "Welcome";
+  const initials = getInitials(fullName || email);
+  const version = Constants.expoConfig?.version ?? "1.0.0";
 
   useFocusEffect(
     useCallback(() => {
@@ -60,141 +54,125 @@ function ProfileContent() {
       <FocusStatusBar style="dark" />
       <ScrollView
         style={styles.screen}
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: BottomTabInset + 26 },
-        ]}
+        contentContainerStyle={[styles.content, { paddingBottom: BottomTabInset + 28 }]}
         showsVerticalScrollIndicator={false}
       >
         <ScreenHeader eyebrow="Account" title="Profile" />
 
         <FadeInView index={1}>
-          <View style={[styles.identity, Elevation.floating]}>
-            <GradientFill colors={HeroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-            <View style={styles.identityOrb} />
+          <PressableScale
+            onPress={() => router.push("/profile/edit")}
+            scaleTo={0.985}
+            style={[styles.identity, Elevation.floating]}
+            accessibilityRole="button"
+            accessibilityLabel="Edit profile"
+          >
+            <GradientFill colors={NavyGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+            <View style={styles.identityDecor} pointerEvents="none">
+              <View style={styles.identityGlow} />
+              <StarRing size={190} starSize={12} opacity={0.38} period={150} />
+            </View>
+
             <View style={styles.identityRow}>
-              <ProfileAvatar initials={initials} />
+              <View style={styles.avatarRing}>
+                <View style={styles.avatar}>
+                  {initials ? (
+                    <Text style={styles.avatarText}>{initials}</Text>
+                  ) : (
+                    <Ionicons name="person" size={28} color={Palette.white} />
+                  )}
+                </View>
+              </View>
               <View style={styles.identityText}>
                 <Text style={styles.name} numberOfLines={1}>
-                  {fullName}
+                  {displayName}
                 </Text>
                 <Text style={styles.email} numberOfLines={1}>
-                  {email || "Email"}
+                  {email || "Add your email"}
                 </Text>
               </View>
             </View>
-            {hasPremiumAccess ? (
-              <View style={styles.badge}>
-                <Ionicons name="sparkles" size={13} color="#0B1F4B" />
-                <Text style={styles.badgeText}>Premium access</Text>
+
+            <View style={styles.identityFooter}>
+              {hasPremiumAccess ? (
+                <View style={styles.premium}>
+                  <Ionicons name="sparkles" size={12} color={Palette.navy} />
+                  <Text style={styles.premiumText}>Premium access</Text>
+                </View>
+              ) : (
+                <View style={styles.freePlan}>
+                  <Text style={styles.freePlanText}>Free plan</Text>
+                </View>
+              )}
+              <View style={styles.editHint}>
+                <Text style={styles.editHintText}>Edit</Text>
+                <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.7)" />
               </View>
-            ) : null}
-          </View>
+            </View>
+          </PressableScale>
         </FadeInView>
 
         <FadeInView index={2} style={styles.group}>
-          <Text style={styles.groupLabel}>ACCOUNT</Text>
-          <View style={[styles.groupCard, Elevation.card]}>
-            <ProfileMenuRow
+          <ListGroup title="Account">
+            <ListRow
               icon="person-circle-outline"
-              label="Account"
+              title="Account"
+              subtitle="Profile, password and sign out"
               onPress={() => router.push("/profile/account")}
             />
-          </View>
+          </ListGroup>
         </FadeInView>
 
         <FadeInView index={3} style={styles.group}>
-          <Text style={styles.groupLabel}>INFORMATION</Text>
-          <View style={[styles.groupCard, Elevation.card]}>
-            <ProfileMenuRow
+          <ListGroup title="Information">
+            <ListRow
               icon="document-text-outline"
-              label="Legal"
+              title="Legal"
+              subtitle="Privacy, terms and licences"
               onPress={() => router.push("/profile/legal")}
             />
-            <ProfileMenuRow
+            <ListRow
               icon="library-outline"
-              label="Sources and Disclaimer"
-              onPress={() =>
-                router.push("/profile/sources-and-disclaimer" as Href)
-              }
+              title="Sources and disclaimer"
+              subtitle="Where our information comes from"
+              tone="gold"
+              onPress={() => router.push("/profile/sources-and-disclaimer")}
             />
-            <ProfileMenuRow
-              icon="help-circle-outline"
-              label="Support"
+            <ListRow
+              icon="chatbubbles-outline"
+              title="Support"
+              subtitle="Contact us, report a problem, FAQ"
+              tone="success"
               onPress={() => router.push("/profile/support")}
             />
-            <ProfileMenuRow
+            <ListRow
               icon="information-circle-outline"
-              label="App Info"
+              title="App info"
+              tone="neutral"
+              value={`v${version}`}
               onPress={() => router.push("/profile/app-info")}
             />
-          </View>
+          </ListGroup>
         </FadeInView>
 
         <FadeInView index={4} style={styles.group}>
-          <View style={[styles.groupCard, Elevation.card]}>
-            <ProfileMenuRow
+          <ListGroup>
+            <ListRow
               icon="trash-outline"
-              label="Danger Zone"
-              tone="danger"
+              title="Danger zone"
+              subtitle="Permanently delete your account"
+              destructive
               onPress={() => router.push("/profile/danger-zone")}
             />
-          </View>
+          </ListGroup>
+        </FadeInView>
+
+        <FadeInView index={5} style={styles.footer}>
+          <StarRing size={34} starSize={5} color={Palette.faint} period={0} />
+          <Text style={styles.footerText}>EU Work Support · Version {version}</Text>
         </FadeInView>
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-function getInitials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const [firstName = "", lastName = ""] = parts;
-  const fallbackSecondLetter = firstName.charAt(1);
-
-  return `${firstName.charAt(0)}${
-    lastName.charAt(0) || fallbackSecondLetter
-  }`.toUpperCase();
-}
-
-function ProfileAvatar({ initials }: { initials: string }) {
-  return (
-    <View style={styles.avatar}>
-      {initials ? (
-        <Text style={styles.avatarText}>{initials}</Text>
-      ) : (
-        <Ionicons name="person" size={30} color="#FFFFFF" />
-      )}
-    </View>
-  );
-}
-
-function ProfileMenuRow({ icon, label, onPress, tone = "default" }: MenuRowProps) {
-  const isDanger = tone === "danger";
-
-  return (
-    <PressableScale
-      onPress={onPress}
-      scaleTo={0.98}
-      style={styles.row}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-    >
-      <View style={[styles.rowIcon, isDanger && styles.rowIconDanger]}>
-        <Ionicons
-          name={icon}
-          size={20}
-          color={isDanger ? Palette.danger : Palette.primary}
-        />
-      </View>
-      <Text style={[styles.rowLabel, isDanger && styles.rowLabelDanger]}>
-        {label}
-      </Text>
-      <Ionicons
-        name="chevron-forward"
-        size={18}
-        color={isDanger ? Palette.danger : Palette.subtle}
-      />
-    </PressableScale>
   );
 }
 
@@ -209,36 +187,46 @@ const styles = StyleSheet.create({
   identity: {
     overflow: "hidden",
     padding: 20,
-    borderRadius: 28,
-    backgroundColor: HeroGradient[1],
+    borderRadius: Radii.xxl,
+    backgroundColor: Palette.navy,
   },
-  identityOrb: {
+  identityDecor: {
     position: "absolute",
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    right: -60,
-    top: -80,
-    backgroundColor: "rgba(140, 190, 255, 0.25)",
+    right: -56,
+    top: -60,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  identityGlow: {
+    position: "absolute",
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: "rgba(70, 120, 255, 0.16)",
   },
   identityRow: {
     flexDirection: "row",
     alignItems: "center",
   },
+  avatarRing: {
+    padding: 3,
+    borderRadius: 40,
+    borderWidth: 1.5,
+    borderColor: "rgba(242, 179, 61, 0.7)",
+  },
   avatar: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.18)",
-    borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.5)",
+    backgroundColor: "rgba(255, 255, 255, 0.14)",
   },
   avatarText: {
-    fontFamily: FontFamily.headingBold,
-    fontSize: 24,
-    color: "#FFFFFF",
+    fontFamily: FontFamily.displayBold,
+    fontSize: 22,
+    letterSpacing: 0.5,
+    color: Palette.white,
   },
   identityText: {
     flex: 1,
@@ -246,75 +234,64 @@ const styles = StyleSheet.create({
     marginLeft: 16,
   },
   name: {
-    fontFamily: FontFamily.headingBold,
-    fontSize: 22,
-    lineHeight: 28,
-    color: "#FFFFFF",
+    ...Type.title2,
+    color: Palette.white,
   },
   email: {
+    ...Type.callout,
     marginTop: 2,
-    fontFamily: FontFamily.body,
-    fontSize: 14,
-    color: "rgba(255, 255, 255, 0.78)",
+    color: "rgba(255, 255, 255, 0.68)",
   },
-  badge: {
-    marginTop: 18,
-    alignSelf: "flex-start",
+  identityFooter: {
+    marginTop: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  premium: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: 999,
-    backgroundColor: "rgba(255, 255, 255, 0.92)",
+    backgroundColor: Palette.gold,
   },
-  badgeText: {
-    fontFamily: FontFamily.bodyBold,
+  premiumText: {
+    fontFamily: FontFamily.displayBold,
     fontSize: 12,
-    color: "#0B1F4B",
+    color: Palette.navy,
   },
-  group: {
-    marginTop: 24,
+  freePlan: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.14)",
   },
-  groupLabel: {
-    marginBottom: 10,
-    marginLeft: 4,
-    fontFamily: FontFamily.bodyBold,
-    fontSize: 11,
-    letterSpacing: 1.4,
-    color: Palette.subtle,
+  freePlanText: {
+    fontFamily: FontFamily.displayBold,
+    fontSize: 12,
+    color: Palette.white,
   },
-  groupCard: {
-    padding: 6,
-    borderRadius: 24,
-    backgroundColor: Palette.card,
-  },
-  row: {
-    minHeight: 58,
+  editHint: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
-    borderRadius: 18,
+    gap: 2,
   },
-  rowIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 13,
+  editHintText: {
+    ...Type.caption,
+    color: "rgba(255,255,255,0.7)",
+  },
+  group: {
+    marginTop: 26,
+  },
+  footer: {
+    marginTop: 32,
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Palette.tint,
+    gap: 10,
   },
-  rowIconDanger: {
-    backgroundColor: Palette.dangerTint,
-  },
-  rowLabel: {
-    flex: 1,
-    marginLeft: 14,
-    fontFamily: FontFamily.bodySemiBold,
-    fontSize: 16,
-    color: Palette.ink,
-  },
-  rowLabelDanger: {
-    color: Palette.danger,
+  footerText: {
+    ...Type.caption,
+    color: Palette.subtle,
   },
 });

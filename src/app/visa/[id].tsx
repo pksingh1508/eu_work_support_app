@@ -1,213 +1,27 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@clerk/expo";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import {
-  Alert,
-  Linking,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useEffect, useMemo, useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
 
-import { CustomLoading } from "@/components/custom-loading";
+import { DocumentSections } from "@/components/document/document-sections";
+import { GuideDetailSkeleton } from "@/components/skeletons";
+import { Badge, ProBadge } from "@/components/ui/badge";
+import { FadeInView } from "@/components/ui/fade-in-view";
+import { FlagImage } from "@/components/ui/flag-image";
+import { GradientFill } from "@/components/ui/gradient-fill";
+import { PressableScale } from "@/components/ui/pressable-scale";
+import { StackScreen } from "@/components/ui/stack-screen";
+import { StarRing } from "@/components/ui/star-ring";
+import { StateView } from "@/components/ui/state-view";
+import { Elevation, NavyGradient, Palette, Radii, Type } from "@/constants/theme";
 import { PremiumGuard } from "@/features/auth/components/premium-guard";
-import {
-  useIsDocumentSaved,
-  useSavedStore,
-} from "@/features/saved/saved-store";
-import { supabase } from "@/lib/supabase";
+import { estimateReadingMinutes, getCategoryIcon } from "@/features/documents/content";
+import { fetchVisaDocument, type VisaDocument } from "@/features/documents/guide-api";
+import { useIsDocumentSaved, useSavedStore } from "@/features/saved/saved-store";
+import { FontFamily } from "@/lib/fonts";
+import { haptics } from "@/lib/haptics";
 import { showErrorToast, showSavedToast, showUnsavedToast } from "@/lib/toast";
-
-const documentSelect = `
-  id,
-  title,
-  slug,
-  short_description,
-  intro,
-  content_json,
-  is_premium,
-  tags,
-  sort_order,
-  language,
-  status,
-  countries!inner (
-    id,
-    name,
-    slug,
-    flag_emoji,
-    short_description,
-    is_active
-  ),
-  document_categories!inner (
-    id,
-    name,
-    slug,
-    icon,
-    sort_order
-  )
-`;
-
-type RelatedCountry = {
-  id: string;
-  name: string;
-  slug: string;
-  flag_emoji: string | null;
-  short_description: string | null;
-  is_active: boolean;
-};
-
-type RelatedCategory = {
-  id: string;
-  name: string;
-  slug: string;
-  icon: string | null;
-  sort_order: number | null;
-};
-
-type RawDocument = {
-  id: string;
-  title: string;
-  slug: string;
-  short_description: string | null;
-  intro: string | null;
-  content_json: unknown;
-  is_premium: boolean;
-  tags: string[] | null;
-  sort_order: number | null;
-  language: string;
-  status: string;
-  countries: RelatedCountry | RelatedCountry[] | null;
-  document_categories: RelatedCategory | RelatedCategory[] | null;
-};
-
-type ContentJson = {
-  sections?: ContentSection[];
-};
-
-type ContentSection = {
-  type?: string;
-  title?: string;
-  content?: string;
-  items?: unknown[];
-  columns?: string[];
-  rows?: unknown[][];
-};
-
-type VisaDocument = {
-  id: string;
-  title: string;
-  slug: string;
-  shortDescription: string | null;
-  intro: string | null;
-  contentJson: ContentJson;
-  isPremium: boolean;
-  tags: string[];
-  countryName: string;
-  countrySlug: string;
-  countryFlagEmoji: string | null;
-  countryDescription: string | null;
-  categoryName: string;
-  categorySlug: string;
-  categoryIcon: string | null;
-};
-
-function firstRelation<T>(value: T | T[] | null) {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-function normalizeContentJson(value: unknown): ContentJson {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return { sections: [] };
-  }
-
-  const maybeContent = value as ContentJson;
-  return Array.isArray(maybeContent.sections) ? maybeContent : { sections: [] };
-}
-
-function stringifyValue(value: unknown) {
-  if (
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean"
-  ) {
-    return String(value);
-  }
-
-  return "";
-}
-
-function getCategoryIcon(icon: string | null): keyof typeof Ionicons.glyphMap {
-  switch (icon) {
-    case "briefcase":
-    case "building-2":
-      return "briefcase-outline";
-    case "graduation-cap":
-      return "school-outline";
-    case "passport":
-    case "id-card":
-    case "file-text":
-      return "document-text-outline";
-    case "shield-check":
-      return "shield-checkmark-outline";
-    case "car":
-      return "car-outline";
-    case "heart-pulse":
-      return "heart-outline";
-    case "book-open":
-      return "book-outline";
-    case "languages":
-      return "language-outline";
-    default:
-      return "document-text-outline";
-  }
-}
-
-function mapDocument(row: RawDocument): VisaDocument | null {
-  const country = firstRelation(row.countries);
-  const category = firstRelation(row.document_categories);
-
-  if (!country || !category) {
-    return null;
-  }
-
-  return {
-    id: row.id,
-    title: row.title,
-    slug: row.slug,
-    shortDescription: row.short_description,
-    intro: row.intro,
-    contentJson: normalizeContentJson(row.content_json),
-    isPremium: row.is_premium,
-    tags: row.tags ?? [],
-    countryName: country.name,
-    countrySlug: country.slug,
-    countryFlagEmoji: country.flag_emoji,
-    countryDescription: country.short_description,
-    categoryName: category.name,
-    categorySlug: category.slug,
-    categoryIcon: category.icon,
-  };
-}
-
-async function fetchVisaDocument(id: string) {
-  const { data, error } = await supabase
-    .from("country_documents")
-    .select(documentSelect)
-    .eq("id", id)
-    .eq("status", "published")
-    .eq("language", "en")
-    .eq("countries.is_active", true)
-    .maybeSingle();
-
-  if (error) {
-    throw error;
-  }
-
-  return data ? mapDocument(data as RawDocument) : null;
-}
 
 export default function VisaDocumentScreen() {
   return (
@@ -225,27 +39,21 @@ function VisaDocumentContent() {
   const [document, setDocument] = useState<VisaDocument | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const isDocumentSavedState = useIsDocumentSaved(document?.id);
-  const pendingDocumentMutation = useSavedStore((state) =>
-    document?.id
-      ? state.pendingMutations[`document:${document.id}`]
-      : undefined,
+  const [reloadToken, setReloadToken] = useState(0);
+  const isSaved = useIsDocumentSaved(document?.id);
+  const pendingMutation = useSavedStore((state) =>
+    document?.id ? state.pendingMutations[`document:${document.id}`] : undefined,
   );
   const hydrateSavedForUser = useSavedStore((state) => state.hydrateForUser);
-  const saveDocumentOptimistic = useSavedStore(
-    (state) => state.saveDocumentOptimistic,
-  );
-  const unsaveDocumentOptimistic = useSavedStore(
-    (state) => state.unsaveDocumentOptimistic,
-  );
-  const isSavingDocument = Boolean(pendingDocumentMutation);
+  const saveDocumentOptimistic = useSavedStore((state) => state.saveDocumentOptimistic);
+  const unsaveDocumentOptimistic = useSavedStore((state) => state.unsaveDocumentOptimistic);
 
   useEffect(() => {
     let isMounted = true;
 
     if (!documentId) {
       setIsLoading(false);
-      setError("Document not found.");
+      setError("Guide not found.");
       return;
     }
 
@@ -259,7 +67,7 @@ function VisaDocumentContent() {
         }
 
         setDocument(nextDocument);
-        setError(nextDocument ? null : "Document not found.");
+        setError(nextDocument ? null : "Guide not found.");
       })
       .catch((fetchError) => {
         if (!isMounted) {
@@ -279,7 +87,7 @@ function VisaDocumentContent() {
     return () => {
       isMounted = false;
     };
-  }, [documentId]);
+  }, [documentId, reloadToken]);
 
   useEffect(() => {
     if (userId) {
@@ -294,24 +102,25 @@ function VisaDocumentContent() {
 
     return (
       document.shortDescription ??
-      document.intro ??
       `${document.countryName} ${document.categoryName.toLowerCase()} guide.`
     );
   }, [document]);
 
-  const toggleSavedDocument = async () => {
+  const readingMinutes = document ? estimateReadingMinutes(document.intro, document.contentJson) : 0;
+
+  const toggleSaved = () => {
     if (!document) {
       return;
     }
 
     if (!userId) {
-      Alert.alert("Login required", "Please login to save documents.");
+      showErrorToast("Login required", "Please login to save guides.");
       return;
     }
 
-    const nextIsSaved = !isDocumentSavedState;
+    haptics.selection();
 
-    if (nextIsSaved) {
+    if (!isSaved) {
       void saveDocumentOptimistic({
         clerkUserId: userId,
         documentId: document.id,
@@ -330,441 +139,272 @@ function VisaDocumentContent() {
           categoryIcon: document.categoryIcon,
           createdAt: new Date().toISOString(),
         },
-      }).catch((error) => {
-        console.warn("Unable to update saved document", error);
-        showErrorToast(
-          "Could not save document",
-          "Please try again in a moment.",
-        );
+      }).catch((saveError) => {
+        console.warn("Unable to update saved document", saveError);
+        showErrorToast("Could not save guide", "Please try again in a moment.");
       });
       showSavedToast(document.title, "document");
       return;
     }
 
-    void unsaveDocumentOptimistic({
-      clerkUserId: userId,
-      documentId: document.id,
-    }).catch((error) => {
-      console.warn("Unable to update saved document", error);
-      showErrorToast(
-        "Could not remove document",
-        "Please try again in a moment.",
-      );
-    });
+    void unsaveDocumentOptimistic({ clerkUserId: userId, documentId: document.id }).catch(
+      (saveError) => {
+        console.warn("Unable to update saved document", saveError);
+        showErrorToast("Could not remove guide", "Please try again in a moment.");
+      },
+    );
     showUnsavedToast(document.title, "document");
   };
 
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-[#FAFAFB]">
-      <ScrollView
-        className="flex-1"
-        contentContainerClassName="px-5 pb-8 pt-7"
-        showsVerticalScrollIndicator={false}
-      >
-        <Header
-          title={document?.countryName ?? "Document"}
-          onBack={() => router.back()}
-          rightAction={
-            <Pressable
-              onPress={toggleSavedDocument}
-              disabled={!document || isSavingDocument}
-              className={`h-11 w-11 items-center justify-center rounded-full border border-[#E6E6EA] active:opacity-70 disabled:opacity-60 ${
-                isDocumentSavedState ? "bg-[#DFF3E6]" : "bg-white"
-              }`}
-              accessibilityRole="button"
-              accessibilityLabel={
-                isDocumentSavedState
-                  ? `Unsave ${document?.title ?? "document"}`
-                  : `Save ${document?.title ?? "document"}`
-              }
-            >
-              <Ionicons
-                name={isDocumentSavedState ? "bookmark" : "bookmark-outline"}
-                size={21}
-                color={isDocumentSavedState ? "#183B2B" : "#202124"}
-              />
-            </Pressable>
-          }
+    <StackScreen
+      title={document?.title ?? "Guide"}
+      eyebrow={document ? document.categoryName : undefined}
+      hideLargeTitle={!document}
+      rightAction={
+        document ? (
+          <PressableScale
+            onPress={toggleSaved}
+            disabled={Boolean(pendingMutation)}
+            scaleTo={0.88}
+            style={[styles.saveButton, isSaved && styles.saveButtonActive]}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isSaved }}
+            accessibilityLabel={isSaved ? `Remove ${document.title} from saved` : `Save ${document.title}`}
+          >
+            <Ionicons
+              name={isSaved ? "bookmark" : "bookmark-outline"}
+              size={19}
+              color={isSaved ? Palette.white : Palette.ink}
+            />
+          </PressableScale>
+        ) : null
+      }
+    >
+      {isLoading ? <GuideDetailSkeleton /> : null}
+
+      {!isLoading && error ? (
+        <StateView
+          icon={error === "Guide not found." ? "document-outline" : "cloud-offline-outline"}
+          tone="danger"
+          title={error}
+          message="Check your connection, then try again."
+          actionLabel="Try again"
+          actionIcon="refresh"
+          onAction={() => setReloadToken((current) => current + 1)}
+          secondaryLabel="Go back"
+          onSecondary={() => router.back()}
+          style={styles.state}
         />
+      ) : null}
 
-        {isLoading ? (
-          <View className="mt-16 items-center justify-center rounded-[30px] border border-[#EDEDF0] bg-white px-6 py-14">
-            <CustomLoading />
-            <Text className="mt-4 text-base font-inter-semibold tracking-normal text-[#707684]">
-              Loading guide...
-            </Text>
-          </View>
-        ) : null}
-
-        {!isLoading && error ? (
-          <View className="mt-8 rounded-[30px] border border-[#EDEDF0] bg-white px-6 py-8">
-            <Ionicons name="alert-circle-outline" size={32} color="#BA1A1A" />
-            <Text className="mt-4 text-xl font-inter-bold tracking-normal text-[#202124]">
-              {error}
-            </Text>
-            <Text className="mt-2 text-base font-inter-medium leading-6 tracking-normal text-[#707684]">
-              Please go back and open the guide again.
-            </Text>
-            <Pressable
-              onPress={() => router.back()}
-              className="mt-6 h-12 items-center justify-center rounded-[22px] bg-diplomatic-primary"
-              accessibilityRole="button"
-            >
-              <Text className="text-base font-inter-bold tracking-normal text-white">
-                Go back
-              </Text>
-            </Pressable>
-          </View>
-        ) : null}
-
-        {!isLoading && document ? (
-          <>
-            <View className="mt-8 rounded-[30px] bg-[#111827] p-5">
-              <View className="flex-row items-start justify-between">
-                <View className="min-w-0 flex-1">
-                  <View className="flex-row items-center">
-                    {document.countryFlagEmoji ? (
-                      <Text className="text-[38px] tracking-normal">
-                        {document.countryFlagEmoji}
-                      </Text>
-                    ) : (
-                      <Ionicons name="flag-outline" size={34} color="#FFFFFF" />
-                    )}
-                    <View className="ml-3 min-w-0 flex-1">
-                      <Text className="text-sm font-inter-bold uppercase tracking-normal text-[#9FC6FF]">
-                        {document.categoryName}
-                      </Text>
-                      <Text className="mt-1 text-sm font-inter-medium tracking-normal text-white opacity-70">
-                        {document.countryName}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <Text className="mt-5 text-[32px] font-inter-bold leading-10 tracking-normal text-white">
-                    {document.title}
-                  </Text>
-                  <Text className="mt-2 text-base font-inter-medium leading-6 tracking-normal text-white opacity-80">
-                    {overviewText}
-                  </Text>
+      {!isLoading && document ? (
+        <>
+          <FadeInView index={0}>
+            <View style={[styles.cover, Elevation.floating]}>
+              <GradientFill colors={NavyGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+              <View style={styles.coverRing} pointerEvents="none">
+                <StarRing size={160} starSize={10} opacity={0.4} period={160} />
+              </View>
+              <View style={styles.coverTop}>
+                <View style={styles.coverFlag}>
+                  <FlagImage
+                    country={document.countryName}
+                    emoji={document.countryFlagEmoji}
+                    width={36}
+                    radius={5}
+                  />
                 </View>
-
-                {document.isPremium ? (
-                  <View className="ml-3 flex-row items-center rounded-[16px] bg-diplomatic-primary px-3 py-2">
+                <View style={styles.coverMeta}>
+                  <Text style={styles.coverCountry}>{document.countryName}</Text>
+                  <View style={styles.coverCategory}>
                     <Ionicons
-                      name="sparkles-outline"
-                      size={14}
-                      color="#FFFFFF"
+                      name={getCategoryIcon(document.categoryIcon)}
+                      size={13}
+                      color="rgba(255,255,255,0.7)"
                     />
-                    <Text className="ml-2 text-xs font-inter-bold tracking-normal text-white">
-                      Pro
+                    <Text style={styles.coverCategoryText} numberOfLines={1}>
+                      {document.categoryName}
                     </Text>
                   </View>
-                ) : null}
+                </View>
               </View>
-
-              <View className="mt-5 flex-row gap-3">
-                <InfoChip
-                  icon={getCategoryIcon(document.categoryIcon)}
-                  label={document.categoryName}
-                />
-                <InfoChip
-                  icon="document-text-outline"
+              <Text style={styles.coverOverview}>{overviewText}</Text>
+              <View style={styles.coverStats}>
+                <CoverStat icon="time-outline" label={`${readingMinutes} min read`} />
+                <CoverStat
+                  icon="list-outline"
                   label={`${document.contentJson.sections?.length ?? 0} sections`}
                 />
+                {document.isPremium ? <ProBadge /> : null}
               </View>
             </View>
+          </FadeInView>
 
-            {document.intro ? (
-              <View className="mt-5 rounded-[30px] border border-[#EDEDF0] bg-white px-5 py-5">
-                <Text className="text-lg font-inter-medium leading-7 tracking-normal text-[#707684]">
-                  {document.intro}
-                </Text>
-              </View>
-            ) : null}
-
-            <View className="mt-5 gap-4">
-              {(document.contentJson.sections ?? []).map((section, index) => (
-                <ContentSectionView
-                  key={`${section.type ?? "section"}-${index}`}
-                  section={section}
-                />
+          {document.tags.length > 0 ? (
+            <FadeInView index={1} style={styles.tags}>
+              {document.tags.slice(0, 6).map((tag) => (
+                <Badge key={tag} label={tag} tone="neutral" />
               ))}
-            </View>
-
-            <Pressable
-              onPress={() => router.push(`/country/${document.countrySlug}`)}
-              className="mt-6 flex-row items-center justify-center rounded-[24px] border border-[#CFE0F7] bg-[#EEF7FF] px-4 py-4"
-              accessibilityRole="button"
-            >
-              <Ionicons name="flag-outline" size={18} color="#1E7AF2" />
-              <Text className="ml-2 text-base font-inter-bold tracking-normal text-diplomatic-primary">
-                View all {document.countryName} guides
-              </Text>
-            </Pressable>
-          </>
-        ) : null}
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
-
-function Header({
-  title,
-  onBack,
-  rightAction,
-}: {
-  title: string;
-  onBack: () => void;
-  rightAction?: ReactNode;
-}) {
-  return (
-    <View className="flex-row items-center justify-between">
-      <Pressable
-        onPress={onBack}
-        className="h-11 w-11 items-center justify-center rounded-full border border-[#E6E6EA] bg-white"
-        accessibilityRole="button"
-      >
-        <Ionicons name="chevron-back" size={21} color="#202124" />
-      </Pressable>
-      <Text
-        className="mx-3 min-w-0 flex-1 text-center text-[28px] font-inter-bold tracking-normal text-[#202124]"
-        numberOfLines={1}
-      >
-        {title}
-      </Text>
-      {rightAction ?? <View className="h-11 w-11" />}
-    </View>
-  );
-}
-
-function InfoChip({
-  icon,
-  label,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-}) {
-  return (
-    <View className="min-w-0 flex-1 flex-row items-center rounded-interactive bg-white/10 px-3 py-3">
-      <Ionicons name={icon} size={17} color="#FFFFFF" />
-      <Text
-        numberOfLines={1}
-        className="ml-2 min-w-0 flex-1 text-sm font-inter-bold tracking-normal text-white"
-      >
-        {label}
-      </Text>
-    </View>
-  );
-}
-
-function ContentSectionView({ section }: { section: ContentSection }) {
-  const title = section.title;
-  const content = section.content;
-
-  if (section.type === "table") {
-    return <TableSection section={section} />;
-  }
-
-  if (section.type === "faq") {
-    return <FaqSection section={section} />;
-  }
-
-  if (section.type === "source_links") {
-    return <SourceLinksSection section={section} />;
-  }
-
-  const sectionTone =
-    section.type === "warning"
-      ? "bg-[#FFEDEA] border-[#FFD4CE]"
-      : section.type === "hero"
-        ? "bg-[#111827] border-[#111827]"
-        : section.type === "callout" || section.type === "quick_answer"
-          ? "bg-diplomatic-surfaceHigh border-[#D5DDF0]"
-          : "bg-white border-[#E0E5EF]";
-  const titleColor =
-    section.type === "hero" ? "text-white" : "text-diplomatic-ink";
-  const bodyColor =
-    section.type === "hero"
-      ? "text-[#E8F1FF]"
-      : "text-diplomatic-secondaryText";
-  const items = Array.isArray(section.items) ? section.items : [];
-  const isNumbered = section.type === "numbered_steps";
-  const isChecklist = section.type === "checklist";
-
-  return (
-    <View className={`rounded-interactive border px-4 py-4 ${sectionTone}`}>
-      {title ? (
-        <Text
-          className={`text-xl font-inter-bold tracking-normal ${titleColor}`}
-        >
-          {title}
-        </Text>
-      ) : null}
-      {content ? (
-        <Text
-          className={`mt-2 text-base font-inter-medium leading-7 tracking-normal ${bodyColor}`}
-        >
-          {content}
-        </Text>
-      ) : null}
-
-      {items.length > 0 ? (
-        <View className="mt-3 gap-3">
-          {items.map((item, index) => (
-            <View
-              key={`${stringifyValue(item)}-${index}`}
-              className="flex-row items-start"
-            >
-              {isChecklist ? (
-                <Ionicons name="checkmark-circle" size={18} color="#1E7AF2" />
-              ) : (
-                <Text className="w-7 text-base font-inter-bold tracking-normal text-diplomatic-primary">
-                  {isNumbered ? `${index + 1}.` : "•"}
-                </Text>
-              )}
-              <Text
-                className={`ml-2 min-w-0 flex-1 text-base font-inter-medium leading-7 tracking-normal ${bodyColor}`}
-              >
-                {stringifyValue(item)}
-              </Text>
-            </View>
-          ))}
-        </View>
-      ) : null}
-    </View>
-  );
-}
-
-function TableSection({ section }: { section: ContentSection }) {
-  const columns = Array.isArray(section.columns) ? section.columns : [];
-  const rows = Array.isArray(section.rows) ? section.rows : [];
-  const columnCount = Math.max(
-    columns.length,
-    ...rows.map((row) => row?.length ?? 0),
-    1,
-  );
-  const columnWidth = columnCount <= 2 ? 220 : 170;
-  const tableWidth = columnWidth * columnCount;
-
-  return (
-    <View className="rounded-interactive border border-[#E0E5EF] bg-white px-4 py-4">
-      {section.title ? (
-        <Text className="text-xl font-heading tracking-normal text-diplomatic-ink">
-          {section.title}
-        </Text>
-      ) : null}
-
-      <ScrollView
-        horizontal
-        className="mt-3"
-        showsHorizontalScrollIndicator={false}
-      >
-        <View
-          className="overflow-hidden rounded-interactive border border-[#E0E5EF]"
-          style={{ minWidth: tableWidth }}
-        >
-          {columns.length > 0 ? (
-            <View className="flex-row bg-diplomatic-surfaceHigh">
-              {columns.map((column) => (
-                <Text
-                  key={column}
-                  className="px-3 py-3 text-left text-sm font-inter-bold uppercase tracking-normal text-diplomatic-ink"
-                  style={{ width: columnWidth, textAlign: "left" }}
-                >
-                  {column}
-                </Text>
-              ))}
-            </View>
+            </FadeInView>
           ) : null}
 
-          {rows.map((row, rowIndex) => (
-            <View
-              key={`${section.title ?? "table"}-${rowIndex}`}
-              className={`flex-row ${rowIndex % 2 === 0 ? "bg-white" : "bg-[#F8FAFD]"}`}
-            >
-              {(Array.isArray(row) ? row : []).map((cell, cellIndex) => (
-                <Text
-                  key={`${rowIndex}-${cellIndex}`}
-                  className="px-3 py-4 text-left text-base font-inter-medium leading-7 tracking-normal text-diplomatic-secondaryText"
-                  style={{ width: columnWidth, textAlign: "left" }}
-                >
-                  {stringifyValue(cell)}
-                </Text>
-              ))}
+          <FadeInView index={2} style={styles.content}>
+            <DocumentSections intro={document.intro} content={document.contentJson} />
+          </FadeInView>
+
+          <PressableScale
+            onPress={() => router.push(`/country/${document.countrySlug}`)}
+            haptic="light"
+            scaleTo={0.98}
+            style={[styles.moreCard, Elevation.card]}
+            accessibilityRole="button"
+            accessibilityLabel={`View all ${document.countryName} guides`}
+          >
+            <FlagImage country={document.countryName} emoji={document.countryFlagEmoji} width={40} radius={6} />
+            <View style={styles.moreText}>
+              <Text style={styles.moreEyebrow}>Keep exploring</Text>
+              <Text style={styles.moreTitle}>All {document.countryName} guides</Text>
             </View>
-          ))}
-        </View>
-      </ScrollView>
-    </View>
-  );
-}
-
-function FaqSection({ section }: { section: ContentSection }) {
-  const items = Array.isArray(section.items) ? section.items : [];
-
-  return (
-    <View className="rounded-interactive border border-[#E0E5EF] bg-white px-4 py-4">
-      {section.title ? (
-        <Text className="text-xl font-heading tracking-normal text-diplomatic-ink">
-          {section.title}
-        </Text>
-      ) : null}
-
-      <View className="mt-3 gap-4">
-        {items.map((item, index) => {
-          const faq = item as { question?: unknown; answer?: unknown };
-
-          return (
-            <View key={`${stringifyValue(faq.question)}-${index}`}>
-              <Text className="text-base font-inter-bold leading-6 tracking-normal text-diplomatic-ink">
-                {stringifyValue(faq.question)}
-              </Text>
-              <Text className="mt-1 text-base font-inter-medium leading-7 tracking-normal text-diplomatic-secondaryText">
-                {stringifyValue(faq.answer)}
-              </Text>
+            <View style={styles.moreArrow}>
+              <Ionicons name="arrow-forward" size={17} color={Palette.white} />
             </View>
-          );
-        })}
-      </View>
-    </View>
-  );
-}
-
-function SourceLinksSection({ section }: { section: ContentSection }) {
-  const items = Array.isArray(section.items) ? section.items : [];
-
-  return (
-    <View className="rounded-interactive border border-[#E0E5EF] bg-white px-4 py-4">
-      {section.title ? (
-        <Text className="text-xl font-heading tracking-normal text-diplomatic-ink">
-          {section.title}
-        </Text>
+          </PressableScale>
+        </>
       ) : null}
+    </StackScreen>
+  );
+}
 
-      <View className="mt-3 gap-3">
-        {items.map((item, index) => {
-          const source = item as { label?: unknown; url?: unknown };
-          const url = stringifyValue(source.url);
-
-          return (
-            <Pressable
-              key={`${url}-${index}`}
-              onPress={() => {
-                if (url) {
-                  void Linking.openURL(url);
-                }
-              }}
-              className="flex-row items-center"
-              accessibilityRole="link"
-            >
-              <Ionicons name="link-outline" size={18} color="#1E7AF2" />
-              <Text className="ml-2 min-w-0 flex-1 text-base font-inter-bold leading-6 tracking-normal text-diplomatic-primary">
-                {stringifyValue(source.label) || url}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+function CoverStat({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label: string }) {
+  return (
+    <View style={styles.coverStat}>
+      <Ionicons name={icon} size={13} color={Palette.gold} />
+      <Text style={styles.coverStatText}>{label}</Text>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  saveButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Palette.card,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Palette.hairline,
+  },
+  saveButtonActive: {
+    backgroundColor: Palette.primary,
+    borderColor: Palette.primary,
+  },
+  state: {
+    marginTop: 24,
+  },
+  cover: {
+    overflow: "hidden",
+    padding: 20,
+    borderRadius: Radii.xxl,
+    backgroundColor: Palette.navy,
+  },
+  coverRing: {
+    position: "absolute",
+    right: -50,
+    top: -50,
+  },
+  coverTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  coverFlag: {
+    padding: 5,
+    borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.12)",
+  },
+  coverMeta: {
+    flex: 1,
+    minWidth: 0,
+  },
+  coverCountry: {
+    ...Type.headline,
+    color: Palette.white,
+  },
+  coverCategory: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 2,
+  },
+  coverCategoryText: {
+    ...Type.caption,
+    flexShrink: 1,
+    color: "rgba(255,255,255,0.7)",
+  },
+  coverOverview: {
+    ...Type.body,
+    marginTop: 16,
+    color: "rgba(255,255,255,0.86)",
+  },
+  coverStats: {
+    marginTop: 18,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 8,
+  },
+  coverStat: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.1)",
+  },
+  coverStatText: {
+    fontFamily: FontFamily.bodySemiBold,
+    fontSize: 12,
+    color: Palette.white,
+  },
+  tags: {
+    marginTop: 16,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  content: {
+    marginTop: 24,
+  },
+  moreCard: {
+    marginTop: 26,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    padding: 16,
+    borderRadius: Radii.xl,
+    backgroundColor: Palette.card,
+  },
+  moreText: {
+    flex: 1,
+  },
+  moreEyebrow: {
+    ...Type.overline,
+    color: Palette.primary,
+  },
+  moreTitle: {
+    ...Type.headline,
+    marginTop: 3,
+    color: Palette.ink,
+  },
+  moreArrow: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Palette.primary,
+  },
+});

@@ -1,15 +1,14 @@
 import { useSignIn } from "@clerk/expo/legacy";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, Text, View } from "react-native";
-
+import { InlineNotice } from "@/components/ui/inline-notice";
 import {
   AuthCard,
+  AuthInlineLink,
   AuthPrimaryButton,
   AuthTextField,
 } from "@/features/auth/components/auth-card";
 import { getAuthErrorMessage } from "@/features/auth/errors";
-import { goBack } from "expo-router/build/global-state/routing";
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -91,24 +90,19 @@ export default function ForgotPasswordScreen() {
 
   return (
     <AuthCard
-      title={hasSentCode ? "Check your email" : "Reset password"}
+      headerTitle="Reset password"
+      title={hasSentCode ? "Check your email" : "Forgot password?"}
       subtitle={
         hasSentCode
           ? "Enter the code from your email and choose a new password."
-          : "Enter your email and we will send a secure reset code."
+          : "Enter your email and we’ll send you a secure reset code."
       }
       error={error}
     >
-      {notice ? (
-        <View className="rounded-[18px] bg-[#EEF7FF] px-4 py-3">
-          <Text className="text-sm font-inter-medium tracking-normal text-[#202124]">
-            {notice}
-          </Text>
-        </View>
-      ) : null}
+      {notice ? <InlineNotice tone="success" message={notice} /> : null}
 
       <AuthTextField
-        label="Email Address"
+        label="Email"
         icon="mail"
         value={emailAddress}
         onChangeText={setEmailAddress}
@@ -123,7 +117,7 @@ export default function ForgotPasswordScreen() {
       {hasSentCode ? (
         <>
           <AuthTextField
-            label="Reset Code"
+            label="Reset code"
             icon="code"
             value={resetCode}
             onChangeText={setResetCode}
@@ -135,7 +129,7 @@ export default function ForgotPasswordScreen() {
           />
 
           <AuthTextField
-            label="New Password"
+            label="New password"
             icon="lock"
             actionLabel={isPasswordVisible ? "Hide" : "Show"}
             onActionPress={() => setIsPasswordVisible((current) => !current)}
@@ -143,49 +137,47 @@ export default function ForgotPasswordScreen() {
             onChangeText={setNewPassword}
             autoCapitalize="none"
             autoComplete="new-password"
-            placeholder="New password"
+            placeholder="At least 8 characters"
             secureTextEntry={!isPasswordVisible}
             textContentType="newPassword"
           />
 
           <AuthPrimaryButton
-            label="Reset Password"
+            label="Reset password"
             isLoading={isSubmitting}
             disabled={!resetCode.trim() || !newPassword}
             onPress={resetPassword}
           />
 
-          <Pressable
+          <AuthInlineLink
+            text=""
+            action="Use a different email"
             onPress={() => {
+              if (isSubmitting) {
+                return;
+              }
               setHasSentCode(false);
               setResetCode("");
               setNewPassword("");
               setNotice(null);
               setError(null);
             }}
-            disabled={isSubmitting}
-            className="items-center"
-            hitSlop={10}
-          >
-            <Text className="text-sm font-inter-semibold tracking-normal text-diplomatic-primary">
-              Use a different email
-            </Text>
-          </Pressable>
+          />
         </>
       ) : (
         <AuthPrimaryButton
-          label="Send Reset Code"
+          label="Send reset code"
           isLoading={isSubmitting}
           disabled={!emailAddress.trim()}
           onPress={sendResetCode}
         />
       )}
 
-      <Pressable className="items-center" hitSlop={10} onPress={goBack}>
-        <Text className="text-sm font-inter-semibold tracking-normal text-diplomatic-primary">
-          Back to login
-        </Text>
-      </Pressable>
+      <AuthInlineLink
+        text="Remembered it?"
+        action="Back to login"
+        onPress={() => (router.canGoBack() ? router.back() : router.replace("/sign-in"))}
+      />
     </AuthCard>
   );
 }

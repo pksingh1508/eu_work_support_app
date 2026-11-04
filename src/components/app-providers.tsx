@@ -1,30 +1,40 @@
 import { ClerkProvider, useAuth } from "@clerk/expo";
 import { useFonts } from "expo-font";
 import * as ExpoSplashScreen from "expo-splash-screen";
-import {
-  DarkTheme,
-  DefaultTheme,
-  ThemeProvider,
-} from "@react-navigation/native";
+import { DefaultTheme, ThemeProvider, type Theme } from "@react-navigation/native";
 import { useRouter, useSegments } from "expo-router";
-import { PropsWithChildren, useEffect, useState } from "react";
-import {
-  Text,
-  TextInput,
-  useColorScheme,
-  type TextInputProps,
-  type TextProps,
-} from "react-native";
+import { PropsWithChildren, useEffect } from "react";
+import { Text, TextInput, type TextInputProps, type TextProps } from "react-native";
 
 import { AuthAccessProvider, useAuthAccess } from "@/features/auth/access";
 import { useSavedStore } from "@/features/saved/saved-store";
 import { clerkPublishableKey, clerkTokenCache } from "@/lib/clerk";
 import { optionalEnv } from "@/lib/env";
+import { Palette } from "@/constants/theme";
 import { appFonts, FontFamily } from "@/lib/fonts";
-import { getThemePreference } from "@/lib/local-storage";
 import { setSupabaseAccessTokenGetter } from "@/lib/supabase";
 
 void ExpoSplashScreen.preventAutoHideAsync();
+
+/** The design is light-first; pin navigation chrome to it to avoid dark flashes. */
+const navigationTheme: Theme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: Palette.primary,
+    background: Palette.canvas,
+    card: Palette.card,
+    text: Palette.ink,
+    border: Palette.hairline,
+  },
+};
+
+const baseTextStyle = {
+  fontFamily: FontFamily.body,
+  color: Palette.ink,
+  // Android pads custom fonts vertically; disabling it gives precise, iOS-like metrics.
+  includeFontPadding: false,
+} as const;
 
 let defaultTextFontsConfigured = false;
 
@@ -42,14 +52,11 @@ function configureDefaultTextFonts() {
 
   textDefaults.defaultProps = {
     ...textDefaults.defaultProps,
-    style: [{ fontFamily: FontFamily.body }, textDefaults.defaultProps?.style],
+    style: [baseTextStyle, textDefaults.defaultProps?.style],
   };
   textInputDefaults.defaultProps = {
     ...textInputDefaults.defaultProps,
-    style: [
-      { fontFamily: FontFamily.body },
-      textInputDefaults.defaultProps?.style,
-    ],
+    style: [baseTextStyle, textInputDefaults.defaultProps?.style],
   };
   defaultTextFontsConfigured = true;
 }
@@ -129,10 +136,6 @@ function SavedItemsHydrator() {
 
 export function AppProviders({ children }: PropsWithChildren) {
   const [fontsLoaded, fontError] = useFonts(appFonts);
-  const colorScheme = useColorScheme();
-  const [themePreference] = useState(() => getThemePreference());
-  const resolvedColorScheme =
-    themePreference === "system" ? colorScheme : themePreference;
 
   useEffect(() => {
     if (!fontsLoaded && !fontError) {
@@ -160,9 +163,7 @@ export function AppProviders({ children }: PropsWithChildren) {
       tokenCache={clerkTokenCache}
     >
       <SupabaseAuthBridge>
-        <ThemeProvider
-          value={resolvedColorScheme === "dark" ? DarkTheme : DefaultTheme}
-        >
+        <ThemeProvider value={navigationTheme}>
           <AuthAccessProvider>
             <SavedItemsHydrator />
             <AuthGate>{children}</AuthGate>

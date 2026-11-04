@@ -1,61 +1,79 @@
-import Ionicons from "@expo/vector-icons/Ionicons";
-import { useRouter } from "expo-router";
-import { Pressable, ScrollView, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import Constants from "expo-constants";
+import { Image } from "expo-image";
+import { StyleSheet, Text, View } from "react-native";
 
-const appInfo = [
-  ["Version", "1.0.4"],
-  ["Developer Name", "EU Work Support"],
-];
+import { FadeInView } from "@/components/ui/fade-in-view";
+import { ListGroup, ListRow } from "@/components/ui/list-group";
+import { StackScreen } from "@/components/ui/stack-screen";
+import { Elevation, Palette, Radii, Type } from "@/constants/theme";
 
 export default function AppInfoScreen() {
-  const router = useRouter();
+  const version = Constants.expoConfig?.version ?? "1.0.0";
 
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-[#FAFAFB]">
-      <ScrollView
-        className="flex-1"
-        contentContainerClassName="px-5 pb-10 pt-7"
-        showsVerticalScrollIndicator={false}
-      >
-        <Header title="App Info" onBack={() => router.back()} />
-
-        <View className="mt-8 rounded-[30px] border border-[#EDEDF0] bg-white px-5 py-2">
-          {appInfo.map(([label, value], index) => (
-            <View
-              key={label}
-              className={`min-h-[70px] flex-row items-center ${
-                index === appInfo.length - 1 ? "" : "border-b border-[#EAEAED]"
-              }`}
-            >
-              <Text className="min-w-0 flex-1 text-lg font-inter-bold tracking-normal text-[#202124]">
-                {label}
-              </Text>
-              <Text className="text-base font-inter-semibold tracking-normal text-[#707684]">
-                {value}
-              </Text>
-            </View>
-          ))}
+    <StackScreen title="App info">
+      <FadeInView style={[styles.card, Elevation.card]}>
+        <View style={styles.logoWrap}>
+          <View style={styles.logoGlow} />
+          <Image
+            source={require("@/assets/images/adaptive-icon.png")}
+            style={styles.logo}
+            contentFit="cover"
+            accessibilityLabel="EU Work Support logo"
+          />
         </View>
-      </ScrollView>
-    </SafeAreaView>
+        <Text style={styles.name}>EU Work Support</Text>
+        <Text style={styles.tagline}>Your path to working in Europe.</Text>
+      </FadeInView>
+
+      <FadeInView index={1} style={styles.group}>
+        <ListGroup>
+          <ListRow icon="pricetag-outline" tone="neutral" title="Version" value={version} />
+          <ListRow icon="code-working-outline" tone="neutral" title="Developer" value="EU Work Support" />
+          <ListRow icon="phone-portrait-outline" tone="neutral" title="Platform" value="Android" />
+        </ListGroup>
+      </FadeInView>
+    </StackScreen>
   );
 }
 
-function Header({ title, onBack }: { title: string; onBack: () => void }) {
-  return (
-    <View className="flex-row items-center justify-between">
-      <Pressable
-        onPress={onBack}
-        className="h-11 w-11 items-center justify-center rounded-full border border-[#E6E6EA] bg-white"
-        accessibilityRole="button"
-      >
-        <Ionicons name="chevron-back" size={21} color="#202124" />
-      </Pressable>
-      <Text className="text-[28px] font-inter-bold tracking-normal text-[#202124]">
-        {title}
-      </Text>
-      <View className="h-11 w-11" />
-    </View>
-  );
-}
+const styles = StyleSheet.create({
+  card: {
+    alignItems: "center",
+    paddingVertical: 30,
+    paddingHorizontal: 20,
+    borderRadius: Radii.xxl,
+    backgroundColor: Palette.card,
+  },
+  logoWrap: {
+    width: 176,
+    height: 176,
+    marginVertical: -26,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  logoGlow: {
+    position: "absolute",
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    backgroundColor: Palette.tint,
+  },
+  logo: {
+    width: 176,
+    height: 176,
+  },
+  name: {
+    ...Type.title2,
+    marginTop: 16,
+    color: Palette.ink,
+  },
+  tagline: {
+    ...Type.callout,
+    marginTop: 4,
+    color: Palette.muted,
+  },
+  group: {
+    marginTop: 26,
+  },
+});

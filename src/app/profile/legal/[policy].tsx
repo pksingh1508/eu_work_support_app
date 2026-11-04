@@ -1,12 +1,15 @@
-import Ionicons from "@expo/vector-icons/Ionicons";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { Pressable, ScrollView, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useLocalSearchParams } from "expo-router";
+import { StyleSheet, Text, View } from "react-native";
 
+import { Badge } from "@/components/ui/badge";
+import { FadeInView } from "@/components/ui/fade-in-view";
+import { StackScreen } from "@/components/ui/stack-screen";
 import { dataDeletion } from "@/constants/dataDeletion";
 import { openSource } from "@/constants/openSource";
 import { privacyPolicy } from "@/constants/privacyPolicy";
 import { termsAndCondition } from "@/constants/terms&condition";
+import { Elevation, Palette, Radii, Type } from "@/constants/theme";
+import { FontFamily } from "@/lib/fonts";
 
 const policies = {
   "privacy-policy": privacyPolicy,
@@ -23,106 +26,58 @@ function isPolicyKey(value: string): value is PolicyKey {
 }
 
 export default function PolicyDetailScreen() {
-  const router = useRouter();
   const params = useLocalSearchParams<{ policy?: string }>();
-  const policyKey = params.policy && isPolicyKey(params.policy)
-    ? params.policy
-    : "privacy-policy";
+  const policyKey = params.policy && isPolicyKey(params.policy) ? params.policy : "privacy-policy";
   const policy = policies[policyKey];
+  const shortTitle = policy.title.replace(/^EU Work Support\s+/, "");
 
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-[#FAFAFB]">
-      <ScrollView
-        className="flex-1"
-        contentContainerClassName="px-5 pb-10 pt-7"
-        showsVerticalScrollIndicator={false}
-      >
-        <Header title="Legal" onBack={() => router.back()} />
+    <StackScreen title={shortTitle} eyebrow="Legal">
+      <FadeInView style={styles.meta}>
+        <Badge label={`Last updated ${policy.lastUpdated}`} tone="neutral" icon="calendar-outline" size="md" />
+      </FadeInView>
 
-        <View className="mt-8 rounded-[30px] border border-[#EDEDF0] bg-white px-5 py-6">
-          <Text className="text-[26px] font-inter-bold leading-8 tracking-normal text-[#202124]">
-            {policy.title}
-          </Text>
-          <Text className="mt-2 text-sm font-inter-semibold tracking-normal text-[#707684]">
-            Last updated: {policy.lastUpdated}
-          </Text>
-
-          <View className="mt-6">
-            {policy.blocks.map((block, index) => (
-              <PolicyBlockRenderer
-                key={`${block.type}-${index}`}
-                block={block}
-              />
-            ))}
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+      <FadeInView index={1} style={[styles.card, Elevation.card]}>
+        {policy.blocks.map((block, index) => (
+          <PolicyBlockRenderer key={`${block.type}-${index}`} block={block} isFirst={index === 0} />
+        ))}
+      </FadeInView>
+    </StackScreen>
   );
 }
 
-function Header({ title, onBack }: { title: string; onBack: () => void }) {
-  return (
-    <View className="flex-row items-center justify-between">
-      <Pressable
-        onPress={onBack}
-        className="h-11 w-11 items-center justify-center rounded-full border border-[#E6E6EA] bg-white"
-        accessibilityRole="button"
-      >
-        <Ionicons name="chevron-back" size={21} color="#202124" />
-      </Pressable>
-      <Text className="text-[28px] font-inter-bold tracking-normal text-[#202124]">
-        {title}
-      </Text>
-      <View className="h-11 w-11" />
-    </View>
-  );
-}
-
-function PolicyBlockRenderer({ block }: { block: PolicyBlock }) {
+function PolicyBlockRenderer({ block, isFirst }: { block: PolicyBlock; isFirst: boolean }) {
   switch (block.type) {
     case "heading":
       return (
-        <Text className="mb-3 mt-6 text-xl font-inter-bold tracking-normal text-[#202124]">
-          {block.text}
-        </Text>
+        <View style={[styles.headingRow, isFirst && styles.noTopMargin]}>
+          <View style={styles.headingBar} />
+          <Text style={styles.heading} accessibilityRole="header">
+            {block.text}
+          </Text>
+        </View>
       );
     case "subheading":
-      return (
-        <Text className="mb-2 mt-4 text-base font-inter-bold tracking-normal text-[#202124]">
-          {block.text}
-        </Text>
-      );
+      return <Text style={styles.subheading}>{block.text}</Text>;
     case "paragraph":
-      return (
-        <Text className="mb-4 text-base font-inter-medium leading-7 tracking-normal text-[#5F6673]">
-          {block.text}
-        </Text>
-      );
+      return <Text style={styles.paragraph}>{block.text}</Text>;
     case "bullets":
       return (
-        <View className="mb-4 gap-2">
+        <View style={styles.bullets}>
           {block.items.map((item) => (
-            <View key={item} className="flex-row items-start">
-              <Text className="mr-2 mt-[2px] text-base font-inter-bold text-[#202124]">
-                •
-              </Text>
-              <Text className="min-w-0 flex-1 text-base font-inter-medium leading-7 tracking-normal text-[#5F6673]">
-                {item}
-              </Text>
+            <View key={item} style={styles.bulletRow}>
+              <View style={styles.bulletDot} />
+              <Text style={styles.bulletText}>{item}</Text>
             </View>
           ))}
         </View>
       );
     case "table":
       return (
-        <View className="mb-4 mt-2 overflow-hidden rounded-[18px] border border-[#EAEAED]">
-          <View className="flex-row bg-[#F4F4F5] px-3 py-3">
+        <View style={styles.table}>
+          <View style={[styles.tableRow, styles.tableHeader]}>
             {block.headers.map((header) => (
-              <Text
-                key={header}
-                className="flex-1 text-xs font-inter-bold tracking-normal text-[#202124]"
-              >
+              <Text key={header} style={styles.tableHeaderText}>
                 {header}
               </Text>
             ))}
@@ -130,16 +85,12 @@ function PolicyBlockRenderer({ block }: { block: PolicyBlock }) {
           {block.rows.map((row, rowIndex) => (
             <View
               key={`${row[0]}-${rowIndex}`}
-              className={`flex-row px-3 py-3 ${
-                rowIndex === block.rows.length - 1
-                  ? ""
-                  : "border-b border-[#EAEAED]"
-              }`}
+              style={[styles.tableRow, rowIndex < block.rows.length - 1 && styles.tableDivider]}
             >
               {row.map((cell, cellIndex) => (
                 <Text
                   key={`${row[0]}-${cellIndex}`}
-                  className="flex-1 pr-2 text-[11px] font-inter-medium leading-4 tracking-normal text-[#5F6673]"
+                  style={[styles.tableCell, cellIndex === 0 && styles.tableCellFirst]}
                 >
                   {cell}
                 </Text>
@@ -152,3 +103,105 @@ function PolicyBlockRenderer({ block }: { block: PolicyBlock }) {
       return null;
   }
 }
+
+const styles = StyleSheet.create({
+  meta: {
+    marginBottom: 16,
+  },
+  card: {
+    padding: 20,
+    borderRadius: Radii.xxl,
+    backgroundColor: Palette.card,
+  },
+  headingRow: {
+    marginTop: 24,
+    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  noTopMargin: {
+    marginTop: 0,
+  },
+  headingBar: {
+    width: 4,
+    height: 18,
+    borderRadius: 2,
+    backgroundColor: Palette.primary,
+  },
+  heading: {
+    ...Type.title3,
+    flex: 1,
+    color: Palette.ink,
+  },
+  subheading: {
+    ...Type.headline,
+    marginTop: 12,
+    marginBottom: 6,
+    color: Palette.ink,
+  },
+  paragraph: {
+    ...Type.body,
+    marginBottom: 12,
+    color: "#3B4459",
+  },
+  bullets: {
+    marginBottom: 12,
+    gap: 8,
+  },
+  bulletRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  bulletDot: {
+    width: 6,
+    height: 6,
+    marginTop: 9,
+    marginLeft: 4,
+    borderRadius: 3,
+    backgroundColor: Palette.primary,
+  },
+  bulletText: {
+    ...Type.body,
+    flex: 1,
+    color: "#3B4459",
+  },
+  table: {
+    marginTop: 4,
+    marginBottom: 14,
+    overflow: "hidden",
+    borderRadius: Radii.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(10,16,36,0.12)",
+  },
+  tableRow: {
+    flexDirection: "row",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  tableHeader: {
+    backgroundColor: Palette.cardMuted,
+  },
+  tableDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Palette.divider,
+  },
+  tableHeaderText: {
+    ...Type.overline,
+    flex: 1,
+    color: Palette.muted,
+  },
+  tableCell: {
+    flex: 1,
+    fontFamily: FontFamily.body,
+    fontSize: 12,
+    lineHeight: 17,
+    color: "#3B4459",
+  },
+  tableCellFirst: {
+    fontFamily: FontFamily.bodySemiBold,
+    color: Palette.ink,
+  },
+});

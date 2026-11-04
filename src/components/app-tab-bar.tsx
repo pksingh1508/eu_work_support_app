@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Elevation, Motion, Palette } from "@/constants/theme";
 import { FontFamily } from "@/lib/fonts";
+import { haptics } from "@/lib/haptics";
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -71,6 +72,7 @@ export function AppTabBar({ state, navigation }: BottomTabBarProps) {
             });
 
             if (!isFocused && !event.defaultPrevented) {
+              haptics.selection();
               navigation.navigate(route.name, route.params);
             }
           };

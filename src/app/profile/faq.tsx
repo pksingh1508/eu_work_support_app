@@ -1,132 +1,78 @@
-import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
-import Animated, {
-  FadeInDown,
-  FadeOutUp,
-  LinearTransition,
-  useAnimatedStyle,
-  withTiming,
-} from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { StyleSheet, Text } from "react-native";
 
-import { FAQs, type FAQItem } from "@/constants/FAQ";
+import { FaqItem } from "@/components/document/document-faq";
+import { Button } from "@/components/ui/button";
+import { FadeInView } from "@/components/ui/fade-in-view";
+import { StackScreen } from "@/components/ui/stack-screen";
+import { FAQs } from "@/constants/FAQ";
+import { Elevation, Palette, Radii, Type } from "@/constants/theme";
 
 export default function FAQScreen() {
   const router = useRouter();
   const [openId, setOpenId] = useState<string | null>(FAQs[0]?.id ?? null);
 
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-[#FAFAFB]">
-      <ScrollView
-        className="flex-1"
-        contentContainerClassName="px-5 pb-10 pt-7"
-        showsVerticalScrollIndicator={false}
-      >
-        <Header title="FAQ" onBack={() => router.back()} />
-
-        <View className="mt-8">
-          <Text className="text-[28px] font-heading tracking-normal text-[#202124]">
-            Common questions
-          </Text>
-          <Text className="mt-3 text-base font-inter-medium leading-6 tracking-normal text-[#707684]">
-            Quick answers for using EU Work Support and managing your guides.
-          </Text>
-        </View>
-
-        <View className="mt-7 gap-3">
-          {FAQs.map((item) => (
-            <FAQAccordionItem
-              key={item.id}
-              item={item}
-              isOpen={openId === item.id}
-              onPress={() =>
-                setOpenId((currentId) =>
-                  currentId === item.id ? null : item.id,
-                )
-              }
-            />
-          ))}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
-
-function Header({ title, onBack }: { title: string; onBack: () => void }) {
-  return (
-    <View className="flex-row items-center justify-between">
-      <Pressable
-        onPress={onBack}
-        className="h-11 w-11 items-center justify-center rounded-full border border-[#E6E6EA] bg-white"
-        accessibilityRole="button"
-      >
-        <Ionicons name="chevron-back" size={21} color="#202124" />
-      </Pressable>
-      <Text className="text-[28px] font-inter-bold tracking-normal text-[#202124]">
-        {title}
-      </Text>
-      <View className="h-11 w-11" />
-    </View>
-  );
-}
-
-function FAQAccordionItem({
-  item,
-  isOpen,
-  onPress,
-}: {
-  item: FAQItem;
-  isOpen: boolean;
-  onPress: () => void;
-}) {
-  const chevronStyle = useAnimatedStyle(() => ({
-    transform: [
-      {
-        rotate: withTiming(isOpen ? "180deg" : "0deg", { duration: 180 }),
-      },
-    ],
-  }));
-
-  return (
-    <Animated.View
-      layout={LinearTransition.duration(180)}
-      className="overflow-hidden rounded-[24px] border border-[#EDEDF0] bg-white"
+    <StackScreen
+      title="FAQ"
+      eyebrow="Help centre"
+      subtitle="Quick answers for using EU Work Support and managing your guides."
     >
-      <Pressable
-        onPress={onPress}
-        className="min-h-[74px] flex-row items-center px-5 py-4 active:opacity-80"
-        accessibilityRole="button"
-        accessibilityState={{ expanded: isOpen }}
-      >
-        <View className="mr-4 h-10 w-10 items-center justify-center rounded-[16px] bg-[#F4F4F5]">
-          <Ionicons name="help-circle-outline" size={21} color="#202124" />
-        </View>
-        <Text className="min-w-0 flex-1 text-base font-inter-bold leading-6 tracking-normal text-[#202124]">
-          {item.question}
-        </Text>
-        <Animated.View
-          style={chevronStyle}
-          className="ml-3 h-8 w-8 items-center justify-center rounded-full bg-[#FAFAFB]"
-        >
-          <Ionicons name="chevron-down" size={18} color="#202124" />
-        </Animated.View>
-      </Pressable>
+      <FadeInView style={[styles.card, Elevation.card]}>
+        {FAQs.map((item, index) => (
+          <FaqItem
+            key={item.id}
+            question={item.question}
+            answer={item.answer}
+            isOpen={openId === item.id}
+            isLast={index === FAQs.length - 1}
+            onToggle={() => setOpenId((current) => (current === item.id ? null : item.id))}
+          />
+        ))}
+      </FadeInView>
 
-      {isOpen ? (
-        <Animated.View
-          entering={FadeInDown.duration(180)}
-          exiting={FadeOutUp.duration(140)}
-          className="px-5 pb-5"
-        >
-          <View className="border-t border-[#EFEFF2] pt-4">
-            <Text className="text-[15px] font-inter-medium leading-6 tracking-normal text-[#707684]">
-              {item.answer}
-            </Text>
-          </View>
-        </Animated.View>
-      ) : null}
-    </Animated.View>
+      <FadeInView index={1} style={styles.cta}>
+        <Text style={styles.ctaTitle}>Still need help?</Text>
+        <Text style={styles.ctaBody}>Our team is happy to answer anything not covered here.</Text>
+        <Button
+          label="Contact support"
+          variant="secondary"
+          size="md"
+          icon="chatbubbles-outline"
+          fullWidth={false}
+          onPress={() => router.push("/profile/support")}
+          style={styles.ctaButton}
+        />
+      </FadeInView>
+    </StackScreen>
   );
 }
+
+const styles = StyleSheet.create({
+  card: {
+    paddingHorizontal: 18,
+    paddingVertical: 4,
+    borderRadius: Radii.xxl,
+    backgroundColor: Palette.card,
+  },
+  cta: {
+    marginTop: 24,
+    alignItems: "center",
+    paddingHorizontal: 12,
+  },
+  ctaTitle: {
+    ...Type.title3,
+    color: Palette.ink,
+  },
+  ctaBody: {
+    ...Type.callout,
+    marginTop: 4,
+    textAlign: "center",
+    color: Palette.muted,
+  },
+  ctaButton: {
+    marginTop: 16,
+    alignSelf: "center",
+  },
+});

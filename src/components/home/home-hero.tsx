@@ -8,8 +8,9 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { GradientFill } from "@/components/ui/gradient-fill";
-import { SearchPill } from "@/components/ui/search-pill";
-import { HeroGradient } from "@/constants/theme";
+import { SearchButton } from "@/components/ui/search-pill";
+import { StarRing } from "@/components/ui/star-ring";
+import { HeroGradient, Palette, Type } from "@/constants/theme";
 import { FontFamily } from "@/lib/fonts";
 
 type HomeHeroProps = {
@@ -19,6 +20,7 @@ type HomeHeroProps = {
 };
 
 const HERO_PARALLAX_RANGE = 260;
+const SEARCH_OVERLAP = 31;
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -34,168 +36,167 @@ function getGreeting() {
   return "Good evening";
 }
 
-/** Deep-blue editorial hero. Content drifts and fades at half scroll speed. */
+/** Midnight editorial hero with the EU star ring drifting behind the headline. */
 export function HomeHero({ scrollY, countryCount, onSearchPress }: HomeHeroProps) {
   const contentStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      scrollY.value,
-      [0, HERO_PARALLAX_RANGE * 0.7],
-      [1, 0],
-      Extrapolation.CLAMP,
-    ),
+    opacity: interpolate(scrollY.value, [0, HERO_PARALLAX_RANGE * 0.7], [1, 0], Extrapolation.CLAMP),
     transform: [
       {
         translateY: interpolate(
           scrollY.value,
           [-120, 0, HERO_PARALLAX_RANGE],
-          [-30, 0, HERO_PARALLAX_RANGE * 0.45],
+          [-24, 0, HERO_PARALLAX_RANGE * 0.42],
           Extrapolation.CLAMP,
         ),
       },
     ],
   }));
 
-  const orbStyle = useAnimatedStyle(() => ({
+  const decorStyle = useAnimatedStyle(() => ({
     transform: [
       {
         translateY: interpolate(
           scrollY.value,
           [0, HERO_PARALLAX_RANGE],
-          [0, HERO_PARALLAX_RANGE * 0.25],
+          [0, HERO_PARALLAX_RANGE * 0.3],
           Extrapolation.CLAMP,
         ),
       },
-      {
-        scale: interpolate(
-          scrollY.value,
-          [-160, 0],
-          [1.25, 1],
-          Extrapolation.CLAMP,
-        ),
-      },
+      { scale: interpolate(scrollY.value, [-160, 0], [1.2, 1], Extrapolation.CLAMP) },
     ],
   }));
 
   return (
     <View style={styles.wrapper}>
       <View style={styles.hero}>
-        <GradientFill colors={HeroGradient} start={{ x: 0.3, y: 0 }} end={{ x: 0.7, y: 1 }} />
-        <Animated.View style={[styles.orbLarge, orbStyle]} />
-        <Animated.View style={[styles.orbSmall, orbStyle]} />
+        <GradientFill colors={HeroGradient} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} />
+        <Animated.View style={[styles.decor, decorStyle]} pointerEvents="none">
+          <View style={styles.glow} />
+          <StarRing size={250} starSize={15} opacity={0.5} period={120} />
+        </Animated.View>
+        <View style={styles.glowLeft} pointerEvents="none" />
 
         <Animated.View style={contentStyle}>
-          <View style={styles.brandRow}>
-            <View style={styles.brandChip}>
-              <Ionicons name="globe-outline" size={14} color="#FFFFFF" />
-              <Text style={styles.brandText}>EU Work Support</Text>
+          <View style={styles.brandChip}>
+            <View style={styles.brandMark}>
+              <Ionicons name="star" size={10} color={Palette.navy} />
             </View>
+            <Text style={styles.brandText}>EU Work Support</Text>
           </View>
 
           <Text style={styles.greeting}>{getGreeting()}</Text>
-          <Text style={styles.title}>
-            Your path to{"\n"}working in Europe.
+          <Text style={styles.title} accessibilityRole="header">
+            Your path to{"\n"}
+            <Text style={styles.titleAccent}>working</Text> in Europe.
           </Text>
 
           <View style={styles.statsRow}>
-            <HeroStat icon="flag-outline" label={`${countryCount} countries`} />
-            <HeroStat icon="shield-checkmark-outline" label="Verified guides" />
+            <HeroStat icon="flag" label={`${countryCount} countries`} />
+            <HeroStat icon="shield-checkmark" label="Verified guides" />
           </View>
         </Animated.View>
       </View>
 
       <View style={styles.searchDock}>
-        <SearchPill onPress={onSearchPress} />
+        <SearchButton onPress={onSearchPress} />
       </View>
     </View>
   );
 }
 
-function HeroStat({
-  icon,
-  label,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-}) {
+function HeroStat({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label: string }) {
   return (
     <View style={styles.stat}>
-      <Ionicons name={icon} size={14} color="rgba(255,255,255,0.9)" />
+      <Ionicons name={icon} size={12} color={Palette.gold} />
       <Text style={styles.statText}>{label}</Text>
     </View>
   );
 }
 
-const SEARCH_OVERLAP = 34;
-
 const styles = StyleSheet.create({
   wrapper: {
-    paddingBottom: 8,
+    paddingBottom: 6,
   },
   hero: {
     overflow: "hidden",
     paddingHorizontal: 24,
-    paddingTop: 22,
-    paddingBottom: 34 + SEARCH_OVERLAP,
+    paddingTop: 18,
+    paddingBottom: 36 + SEARCH_OVERLAP,
     borderBottomLeftRadius: 36,
     borderBottomRightRadius: 36,
     backgroundColor: HeroGradient[1],
   },
-  orbLarge: {
+  decor: {
     position: "absolute",
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    right: -90,
-    top: -70,
-    backgroundColor: "rgba(120, 180, 255, 0.22)",
+    right: -78,
+    top: -46,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  orbSmall: {
+  glow: {
     position: "absolute",
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    left: -50,
-    bottom: -40,
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    width: 190,
+    height: 190,
+    borderRadius: 95,
+    backgroundColor: "rgba(80, 130, 255, 0.28)",
   },
-  brandRow: {
-    flexDirection: "row",
+  glowLeft: {
+    position: "absolute",
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    left: -110,
+    bottom: -90,
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
   },
   brandChip: {
+    alignSelf: "flex-start",
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    gap: 8,
+    paddingLeft: 5,
+    paddingRight: 12,
+    paddingVertical: 5,
     borderRadius: 999,
-    backgroundColor: "rgba(255, 255, 255, 0.14)",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255, 255, 255, 0.28)",
+    borderColor: "rgba(255, 255, 255, 0.22)",
+  },
+  brandMark: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Palette.gold,
   },
   brandText: {
-    color: "#FFFFFF",
-    fontFamily: FontFamily.bodySemiBold,
+    fontFamily: FontFamily.displaySemiBold,
     fontSize: 12,
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
+    color: Palette.white,
   },
   greeting: {
-    marginTop: 26,
-    color: "rgba(255, 255, 255, 0.72)",
-    fontFamily: FontFamily.bodySemiBold,
+    marginTop: 28,
+    fontFamily: FontFamily.bodyMedium,
     fontSize: 15,
+    color: "rgba(255, 255, 255, 0.66)",
   },
   title: {
+    ...Type.hero,
     marginTop: 6,
-    color: "#FFFFFF",
-    fontFamily: FontFamily.headingBold,
-    fontSize: 32,
-    lineHeight: 40,
-    letterSpacing: -0.8,
+    color: Palette.white,
+  },
+  titleAccent: {
+    ...Type.serifAccent,
+    fontSize: 44,
+    color: "#FFE3A3",
   },
   statsRow: {
-    marginTop: 18,
+    marginTop: 20,
     flexDirection: "row",
-    gap: 10,
+    flexWrap: "wrap",
+    gap: 8,
   },
   stat: {
     flexDirection: "row",
@@ -204,12 +205,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 10,
-    backgroundColor: "rgba(9, 24, 60, 0.28)",
+    backgroundColor: "rgba(4, 10, 32, 0.32)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.1)",
   },
   statText: {
-    color: "rgba(255, 255, 255, 0.92)",
-    fontFamily: FontFamily.bodyMedium,
+    fontFamily: FontFamily.bodySemiBold,
     fontSize: 12,
+    color: "rgba(255, 255, 255, 0.9)",
   },
   searchDock: {
     marginTop: -SEARCH_OVERLAP,
