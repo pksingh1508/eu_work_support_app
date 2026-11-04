@@ -1,5 +1,18 @@
 # Design System Document: The Sovereign Guide
 
+> **Implementation (current source of truth):** tokens live in `src/constants/theme.ts`
+> (`Palette`, `Type`, `Radii`, `Elevation`, `Motion`) and fonts in `src/lib/fonts.ts`.
+>
+> - **Palette — "Midnight Atelier":** navy ink `#0A1024`, cobalt primary `#1D4ED8`, canvas `#F3F5F9`,
+>   with EU gold `#F2B33D` reserved for premium moments (PRO badges, hero accents, the star ring).
+> - **Type:** Plus Jakarta Sans (display/headings/labels), Inter (body), Instrument Serif Italic
+>   (one-word editorial accents only). The Manrope guidance below is superseded.
+> - **Signature motif:** the twelve-star EU ring (`StarRing`, `CustomLoading`).
+> - **Building blocks** (`src/components/ui`): `Button`, `IconButton`, `TextField`, `ListGroup`/`ListRow`,
+>   `SegmentedControl`, `Badge`, `StateView`, `InlineNotice`, `Skeleton`, `StackScreen` (collapsing
+>   large title for pushed screens), `AppSheet`/`ConfirmSheet` (@gorhom/bottom-sheet — use these
+>   instead of `Modal`/`Alert`), and toasts via `src/lib/toast.ts` (sonner-native, custom capsule).
+
 ## 1. Overview & Creative North Star
 
 **Creative North Star: "The Diplomatic Atelier"**

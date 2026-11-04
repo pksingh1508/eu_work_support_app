@@ -2,37 +2,29 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@clerk/expo";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useCallback, useMemo } from "react";
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import Animated, {
-  FadeInDown,
-  FadeOutRight,
-  LinearTransition,
-} from "react-native-reanimated";
+import { useCallback, useMemo, useState } from "react";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import Animated, { FadeInDown, FadeOutLeft, LinearTransition } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { CustomLoading } from "@/components/custom-loading";
+import { getCategoryIcon } from "@/features/documents/content";
+import { SavedListSkeleton } from "@/components/skeletons";
 import { FadeInView } from "@/components/ui/fade-in-view";
+import { FlagImage } from "@/components/ui/flag-image";
 import { FocusStatusBar } from "@/components/ui/focus-status-bar";
 import { PressableScale } from "@/components/ui/pressable-scale";
 import { ScreenHeader } from "@/components/ui/screen-header";
-import { BottomTabInset, Elevation, Motion, Palette } from "@/constants/theme";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { StateView } from "@/components/ui/state-view";
+import { BottomTabInset, Elevation, Motion, Palette, Radii, Type } from "@/constants/theme";
 import { PremiumGuard } from "@/features/auth/components/premium-guard";
 import { useSavedStore } from "@/features/saved/saved-store";
-import { FontFamily } from "@/lib/fonts";
-import { SavedCountry, SavedDocument } from "@/lib/saved-items";
+import { haptics } from "@/lib/haptics";
+import { type SavedCountry, type SavedDocument } from "@/lib/saved-items";
 import { showErrorToast, showUnsavedToast } from "@/lib/toast";
 
-type SavedItem =
-  | ({ type: "country" } & SavedCountry)
-  | ({ type: "document" } & SavedDocument);
+type SavedItem = ({ type: "country" } & SavedCountry) | ({ type: "document" } & SavedDocument);
+type SavedFilter = "all" | "country" | "document";
 
 function formatSavedDate(value: string) {
   const savedAt = new Date(value);
@@ -41,10 +33,7 @@ function formatSavedDate(value: string) {
     return "Saved";
   }
 
-  return `Saved ${savedAt.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  })}`;
+  return `Saved ${savedAt.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
 }
 
 export default function SavedScreen() {
@@ -58,40 +47,32 @@ export default function SavedScreen() {
 function SavedContent() {
   const router = useRouter();
   const { userId } = useAuth();
+  const [filter, setFilter] = useState<SavedFilter>("all");
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const countries = useSavedStore((state) => state.countries);
   const documents = useSavedStore((state) => state.documents);
   const status = useSavedStore((state) => state.status);
   const pendingMutations = useSavedStore((state) => state.pendingMutations);
   const hydrateForUser = useSavedStore((state) => state.hydrateForUser);
+  const refresh = useSavedStore((state) => state.refresh);
   const resetSavedStore = useSavedStore((state) => state.reset);
-  const unsaveCountryOptimistic = useSavedStore(
-    (state) => state.unsaveCountryOptimistic,
-  );
-  const unsaveDocumentOptimistic = useSavedStore(
-    (state) => state.unsaveDocumentOptimistic,
-  );
+  const unsaveCountryOptimistic = useSavedStore((state) => state.unsaveCountryOptimistic);
+  const unsaveDocumentOptimistic = useSavedStore((state) => state.unsaveDocumentOptimistic);
 
-  const savedItems = useMemo(
+  const savedItems = useMemo<SavedItem[]>(
     () =>
       [
-        ...countries.map((country) => ({
-          ...country,
-          type: "country" as const,
-        })),
-        ...documents.map((document) => ({
-          ...document,
-          type: "document" as const,
-        })),
-      ].sort(
-        (left, right) =>
-          new Date(right.createdAt).getTime() -
-          new Date(left.createdAt).getTime(),
-      ),
+        ...countries.map((country) => ({ ...country, type: "country" as const })),
+        ...documents.map((document) => ({ ...document, type: "document" as const })),
+      ].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()),
     [countries, documents],
   );
+  const visibleItems = useMemo(
+    () => (filter === "all" ? savedItems : savedItems.filter((item) => item.type === filter)),
+    [filter, savedItems],
+  );
   const isLoading = status === "loading" && savedItems.length === 0;
-  const error =
-    status === "error" ? "Unable to load saved guides right now." : null;
+  const hasError = status === "error" && savedItems.length === 0;
 
   useFocusEffect(
     useCallback(() => {
@@ -104,52 +85,48 @@ function SavedContent() {
     }, [hydrateForUser, resetSavedStore, userId]),
   );
 
+  const onRefresh = async () => {
+    if (!userId) {
+      return;
+    }
+
+    setIsRefreshing(true);
+    try {
+      await refresh(userId);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const openSavedItem = (item: SavedItem) => {
     if (item.type === "country") {
-      router.push({
-        pathname: "/country/[slug]",
-        params: { slug: item.slug },
-      });
+      router.push({ pathname: "/country/[slug]", params: { slug: item.slug } });
       return;
     }
 
     router.push(`/visa/${item.documentId}`);
   };
 
-  const unsaveItem = async (item: SavedItem) => {
+  const unsaveItem = (item: SavedItem) => {
     if (!userId) {
-      Alert.alert("Login required", "Please login to update saved items.");
+      showErrorToast("Login required", "Please login to update saved items.");
       return;
     }
 
+    const onFailure = (error: unknown) => {
+      console.warn("Unable to remove saved item", error);
+      showErrorToast("Could not remove saved item", "Please try again in a moment.");
+    };
+
     if (item.type === "country") {
-      void unsaveCountryOptimistic({
-        clerkUserId: userId,
-        countryId: item.countryId,
-      }).catch((error) => {
-        console.warn("Unable to remove saved item", error);
-        showErrorToast(
-          "Could not remove saved item",
-          "Please try again in a moment.",
-        );
-      });
+      void unsaveCountryOptimistic({ clerkUserId: userId, countryId: item.countryId }).catch(onFailure);
     } else {
-      void unsaveDocumentOptimistic({
-        clerkUserId: userId,
-        documentId: item.documentId,
-      }).catch((error) => {
-        console.warn("Unable to remove saved item", error);
-        showErrorToast(
-          "Could not remove saved item",
-          "Please try again in a moment.",
-        );
-      });
+      void unsaveDocumentOptimistic({ clerkUserId: userId, documentId: item.documentId }).catch(
+        onFailure,
+      );
     }
 
-    showUnsavedToast(
-      item.type === "country" ? item.name : item.title,
-      item.type,
-    );
+    showUnsavedToast(item.type === "country" ? item.name : item.title, item.type);
   };
 
   return (
@@ -157,115 +134,131 @@ function SavedContent() {
       <FocusStatusBar style="dark" />
       <ScrollView
         style={styles.screen}
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: BottomTabInset + 24 },
-        ]}
+        contentContainerStyle={[styles.content, { paddingBottom: BottomTabInset + 24 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={[Palette.primary]}
+            progressBackgroundColor={Palette.card}
+            tintColor={Palette.primary}
+          />
+        }
       >
         <ScreenHeader
           eyebrow="Your library"
-          title="Saved guides"
-          subtitle="Your curated collection of European working pathways."
+          title="Saved"
+          subtitle="Countries and guides you’ve bookmarked, ready whenever you are."
         />
 
-        {!isLoading && !error && savedItems.length > 0 ? (
-          <FadeInView index={1} style={styles.summary}>
-            <SummaryStat value={countries.length} label="Countries" icon="flag" />
-            <SummaryStat value={documents.length} label="Documents" icon="document-text" />
-          </FadeInView>
+        {!isLoading && !hasError && savedItems.length > 0 ? (
+          <>
+            <FadeInView index={1} style={styles.summary}>
+              <SummaryTile value={countries.length} label="Countries" icon="earth" tone="primary" />
+              <SummaryTile value={documents.length} label="Guides" icon="reader" tone="gold" />
+            </FadeInView>
+            <FadeInView index={2} style={styles.filters}>
+              <SegmentedControl
+                value={filter}
+                onChange={setFilter}
+                options={[
+                  { key: "all", label: "All", count: savedItems.length },
+                  { key: "country", label: "Countries", count: countries.length },
+                  { key: "document", label: "Guides", count: documents.length },
+                ]}
+              />
+            </FadeInView>
+          </>
         ) : null}
 
-        {isLoading ? (
-          <View style={[styles.stateCard, Elevation.card]}>
-            <CustomLoading />
-            <Text style={styles.stateText}>Loading saved guides…</Text>
-          </View>
+        {isLoading ? <SavedListSkeleton /> : null}
+
+        {hasError ? (
+          <StateView
+            icon="cloud-offline-outline"
+            tone="danger"
+            title="Couldn’t load your library"
+            message="Check your connection and try again."
+            actionLabel="Try again"
+            actionIcon="refresh"
+            onAction={onRefresh}
+          />
         ) : null}
 
-        {!isLoading && error ? (
-          <FadeInView style={[styles.stateCard, Elevation.card]}>
-            <View style={[styles.stateIcon, styles.stateIconDanger]}>
-              <Ionicons name="alert-circle" size={26} color={Palette.danger} />
-            </View>
-            <Text style={styles.stateTitle}>{error}</Text>
-          </FadeInView>
+        {!isLoading && !hasError && savedItems.length === 0 ? (
+          <StateView
+            icon="bookmark"
+            title="Nothing saved yet"
+            message="Tap the bookmark on any country or guide and it will appear here."
+            actionLabel="Explore countries"
+            actionIcon="arrow-forward"
+            onAction={() => router.push("/")}
+          />
         ) : null}
 
-        {!isLoading && !error && savedItems.length === 0 ? (
-          <FadeInView index={1} style={[styles.stateCard, Elevation.card]}>
-            <View style={styles.stateIcon}>
-              <Ionicons name="bookmark" size={26} color={Palette.primary} />
-            </View>
-            <Text style={styles.stateTitle}>No saved guides yet</Text>
-            <Text style={styles.stateText}>
-              Tap the bookmark on any country or document and it will show up here.
-            </Text>
-            <PressableScale
-              onPress={() => router.push("/")}
-              style={styles.stateButton}
-              accessibilityRole="button"
-              accessibilityLabel="Explore countries"
+        {!isLoading && savedItems.length > 0 && visibleItems.length === 0 ? (
+          <StateView
+            bare
+            icon={filter === "country" ? "earth-outline" : "reader-outline"}
+            title={filter === "country" ? "No saved countries" : "No saved guides"}
+            message="Items you save in this category will show up here."
+          />
+        ) : null}
+
+        <View style={styles.list}>
+          {visibleItems.map((item, index) => (
+            <Animated.View
+              key={`${item.type}-${item.id}`}
+              entering={FadeInDown.delay(Math.min(index * Motion.stagger, Motion.maxStaggerDelay))
+                .springify()
+                .damping(Motion.softSpring.damping)}
+              exiting={FadeOutLeft.duration(240)}
+              layout={LinearTransition.springify().damping(Motion.softSpring.damping)}
             >
-              <Text style={styles.stateButtonText}>Explore countries</Text>
-              <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
-            </PressableScale>
-          </FadeInView>
-        ) : null}
-
-        {!isLoading && !error && savedItems.length > 0 ? (
-          <View style={styles.list}>
-            {savedItems.map((item, index) => (
-              <Animated.View
-                key={`${item.type}-${item.id}`}
-                entering={FadeInDown.delay(Math.min(index * Motion.stagger, Motion.maxStaggerDelay)).springify()}
-                exiting={FadeOutRight.duration(260)}
-                layout={LinearTransition.springify().damping(Motion.softSpring.damping)}
-              >
-                <SavedGuideCard
-                  item={item}
-                  isUpdating={
-                    item.type === "country"
-                      ? pendingMutations[`country:${item.countryId}`] ===
-                        "removing"
-                      : pendingMutations[`document:${item.documentId}`] ===
-                        "removing"
-                  }
-                  onPress={() => openSavedItem(item)}
-                  onUnsave={() => unsaveItem(item)}
-                />
-              </Animated.View>
-            ))}
-          </View>
-        ) : null}
+              <SavedCard
+                item={item}
+                isUpdating={
+                  item.type === "country"
+                    ? pendingMutations[`country:${item.countryId}`] === "removing"
+                    : pendingMutations[`document:${item.documentId}`] === "removing"
+                }
+                onPress={() => openSavedItem(item)}
+                onUnsave={() => unsaveItem(item)}
+              />
+            </Animated.View>
+          ))}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function SummaryStat({
+function SummaryTile({
   value,
   label,
   icon,
+  tone,
 }: {
   value: number;
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
+  tone: "primary" | "gold";
 }) {
+  const isGold = tone === "gold";
+
   return (
-    <View style={[styles.stat, Elevation.card]}>
-      <View style={styles.statIcon}>
-        <Ionicons name={icon} size={16} color={Palette.primary} />
+    <View style={[styles.tile, Elevation.card]}>
+      <View style={[styles.tileIcon, { backgroundColor: isGold ? Palette.goldSoft : Palette.tint }]}>
+        <Ionicons name={icon} size={18} color={isGold ? Palette.goldInk : Palette.primary} />
       </View>
-      <View>
-        <Text style={styles.statValue}>{value}</Text>
-        <Text style={styles.statLabel}>{label}</Text>
-      </View>
+      <Text style={styles.tileValue}>{value}</Text>
+      <Text style={styles.tileLabel}>{label}</Text>
     </View>
   );
 }
 
-function SavedGuideCard({
+function SavedCard({
   item,
   isUpdating,
   onPress,
@@ -278,35 +271,32 @@ function SavedGuideCard({
 }) {
   const isCountry = item.type === "country";
   const title = isCountry ? item.name : item.title;
+  const countryName = isCountry ? item.name : item.countryName;
   const flagEmoji = isCountry ? item.flagEmoji : item.countryFlagEmoji;
-  const label = isCountry ? "Country" : item.countryName;
-  const description = isCountry
-    ? item.shortDescription
-    : item.shortDescription ?? item.intro;
-  const status = isCountry ? "Saved country" : item.categoryName;
+  const description = isCountry ? item.shortDescription : (item.shortDescription ?? item.intro);
 
   return (
     <PressableScale
       onPress={onPress}
+      scaleTo={0.975}
       style={[styles.card, Elevation.card]}
       accessibilityRole="button"
       accessibilityLabel={`Open ${title}`}
     >
       <View style={styles.cardTop}>
         <View style={styles.cardIcon}>
-          {flagEmoji ? (
-            <Text style={styles.cardEmoji}>{flagEmoji}</Text>
+          {isCountry ? (
+            <FlagImage country={countryName} emoji={flagEmoji} width={34} radius={5} />
           ) : (
-            <Ionicons
-              name={isCountry ? "flag-outline" : "document-text-outline"}
-              size={22}
-              color={Palette.primary}
-            />
+            <>
+              <Ionicons name={getCategoryIcon(item.categoryIcon)} size={22} color={Palette.primary} />
+              <FlagImage country={countryName} emoji={flagEmoji} width={18} radius={3} style={styles.miniFlag} />
+            </>
           )}
         </View>
         <View style={styles.cardHeading}>
           <Text style={styles.cardLabel} numberOfLines={1}>
-            {label}
+            {isCountry ? "Country" : `${item.countryName} · ${item.categoryName}`}
           </Text>
           <Text style={styles.cardTitle} numberOfLines={2}>
             {title}
@@ -315,15 +305,16 @@ function SavedGuideCard({
         <Pressable
           onPress={(event) => {
             event.stopPropagation();
+            haptics.selection();
             onUnsave();
           }}
           disabled={isUpdating}
           hitSlop={10}
           accessibilityRole="button"
-          accessibilityLabel={`Unsave ${title}`}
-          style={[styles.unsave, isUpdating && styles.unsavePressed]}
+          accessibilityLabel={`Remove ${title} from saved`}
+          style={[styles.unsave, isUpdating && styles.unsaveBusy]}
         >
-          <Ionicons name="bookmark" size={18} color="#FFFFFF" />
+          <Ionicons name="bookmark" size={17} color={Palette.white} />
         </Pressable>
       </View>
 
@@ -334,15 +325,13 @@ function SavedGuideCard({
       ) : null}
 
       <View style={styles.cardFooter}>
-        <View style={styles.cardMeta}>
-          <Ionicons name="time-outline" size={14} color={Palette.subtle} />
-          <Text style={styles.cardMetaText} numberOfLines={1}>
-            {status} · {formatSavedDate(item.createdAt)}
-          </Text>
-        </View>
+        <Ionicons name="time-outline" size={13} color={Palette.subtle} />
+        <Text style={styles.cardMetaText} numberOfLines={1}>
+          {formatSavedDate(item.createdAt)}
+        </Text>
         <View style={styles.openPill}>
           <Text style={styles.openText}>Open</Text>
-          <Ionicons name="arrow-forward" size={14} color={Palette.primary} />
+          <Ionicons name="arrow-forward" size={13} color={Palette.primary} />
         </View>
       </View>
     </PressableScale>
@@ -360,124 +349,78 @@ const styles = StyleSheet.create({
   summary: {
     flexDirection: "row",
     gap: 12,
-    marginBottom: 20,
   },
-  stat: {
+  tile: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    padding: 14,
-    borderRadius: 20,
+    padding: 16,
+    borderRadius: Radii.xl,
     backgroundColor: Palette.card,
   },
-  statIcon: {
+  tileIcon: {
     width: 36,
     height: 36,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Palette.tint,
   },
-  statValue: {
-    fontFamily: FontFamily.headingBold,
-    fontSize: 20,
-    lineHeight: 24,
+  tileValue: {
+    ...Type.display,
+    fontSize: 28,
+    lineHeight: 32,
+    marginTop: 14,
     color: Palette.ink,
   },
-  statLabel: {
-    fontFamily: FontFamily.bodyMedium,
-    fontSize: 12,
+  tileLabel: {
+    ...Type.caption,
+    marginTop: 2,
     color: Palette.muted,
   },
-  stateCard: {
-    alignItems: "center",
-    paddingVertical: 32,
-    paddingHorizontal: 24,
-    borderRadius: 26,
-    backgroundColor: Palette.card,
-  },
-  stateIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Palette.tint,
-  },
-  stateIconDanger: {
-    backgroundColor: Palette.dangerTint,
-  },
-  stateTitle: {
-    marginTop: 16,
-    textAlign: "center",
-    fontFamily: FontFamily.headingSemiBold,
-    fontSize: 19,
-    color: Palette.ink,
-  },
-  stateText: {
-    marginTop: 8,
-    textAlign: "center",
-    fontFamily: FontFamily.body,
-    fontSize: 14,
-    lineHeight: 21,
-    color: Palette.muted,
-  },
-  stateButton: {
+  filters: {
     marginTop: 20,
-    height: 48,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-    backgroundColor: Palette.primary,
-  },
-  stateButtonText: {
-    fontFamily: FontFamily.bodyBold,
-    fontSize: 15,
-    color: "#FFFFFF",
+    marginBottom: 18,
   },
   list: {
-    gap: 14,
+    gap: 12,
   },
   card: {
-    padding: 18,
-    borderRadius: 24,
+    padding: 16,
+    borderRadius: Radii.xl,
     backgroundColor: Palette.card,
   },
   cardTop: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 14,
   },
   cardIcon: {
-    width: 48,
-    height: 48,
+    width: 52,
+    height: 52,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Palette.canvas,
+    backgroundColor: Palette.cardMuted,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Palette.hairline,
   },
-  cardEmoji: {
-    fontSize: 26,
+  miniFlag: {
+    position: "absolute",
+    right: -4,
+    bottom: -4,
+    borderWidth: 2,
+    borderColor: Palette.card,
   },
   cardHeading: {
     flex: 1,
     minWidth: 0,
   },
   cardLabel: {
-    fontFamily: FontFamily.bodyBold,
-    fontSize: 11,
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
+    ...Type.overline,
     color: Palette.primary,
   },
   cardTitle: {
-    marginTop: 2,
-    fontFamily: FontFamily.headingSemiBold,
-    fontSize: 18,
-    lineHeight: 24,
+    ...Type.title3,
+    fontSize: 17,
+    marginTop: 3,
     color: Palette.ink,
   },
   unsave: {
@@ -488,49 +431,40 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: Palette.primary,
   },
-  unsavePressed: {
-    opacity: 0.6,
+  unsaveBusy: {
+    opacity: 0.5,
   },
   cardDescription: {
-    marginTop: 14,
-    fontFamily: FontFamily.body,
-    fontSize: 14,
-    lineHeight: 21,
+    ...Type.footnote,
+    marginTop: 12,
     color: Palette.muted,
   },
   cardFooter: {
-    marginTop: 16,
-    paddingTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: Palette.hairline,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  cardMeta: {
-    flex: 1,
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(10,16,36,0.08)",
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
   },
   cardMetaText: {
+    ...Type.caption,
     flex: 1,
-    fontFamily: FontFamily.bodyMedium,
-    fontSize: 12,
     color: Palette.muted,
   },
   openPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
     borderRadius: 999,
     backgroundColor: Palette.tint,
   },
   openText: {
-    fontFamily: FontFamily.bodyBold,
-    fontSize: 13,
+    ...Type.caption,
+    fontFamily: Type.label.fontFamily,
     color: Palette.primary,
   },
 });

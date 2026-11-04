@@ -1,22 +1,21 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth, useUser } from "@clerk/expo";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useEffect, useRef, useState } from "react";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 
-import { CustomLoading } from "@/components/custom-loading";
+import { FormSkeleton } from "@/components/skeletons";
+import { Button } from "@/components/ui/button";
+import { FadeInView } from "@/components/ui/fade-in-view";
+import { InlineNotice } from "@/components/ui/inline-notice";
+import { StackScreen } from "@/components/ui/stack-screen";
+import { TextField } from "@/components/ui/text-field";
+import { Elevation, Palette, Radii, Type } from "@/constants/theme";
 import { useAuthAccess } from "@/features/auth/access";
 import { PremiumGuard } from "@/features/auth/components/premium-guard";
+import { FontFamily } from "@/lib/fonts";
 import { supabase } from "@/lib/supabase";
+import { showSuccessToast } from "@/lib/toast";
 
 type EditableProfile = {
   first_name: string | null;
@@ -41,6 +40,9 @@ function EditProfileContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const lastNameRef = useRef<TextInput>(null);
+  const previewName = [firstName.trim(), lastName.trim()].filter(Boolean).join(" ");
+  const initials = getInitials(firstName, lastName);
 
   useEffect(() => {
     let isActive = true;
@@ -122,6 +124,7 @@ function EditProfileContent() {
       }
 
       await refreshProfile();
+      showSuccessToast("Profile updated", previewName || undefined);
       router.back();
     } catch (updateError) {
       console.warn("Unable to update profile", updateError);
@@ -132,135 +135,125 @@ function EditProfileContent() {
   };
 
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-[#FAFAFB]">
-      <KeyboardAvoidingView
-        behavior={Platform.select({ ios: "padding", default: undefined })}
-        className="flex-1"
-      >
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          className="flex-1"
-          contentContainerClassName="px-5 pb-10 pt-7"
-          showsVerticalScrollIndicator={false}
-        >
-          <Header title="Edit Profile" onBack={() => router.back()} />
+    <StackScreen
+      title="Edit profile"
+      subtitle="This is how your name appears across EU Work Support."
+      keyboardAware
+      footer={
+        isLoading ? null : (
+          <Button
+            label="Save changes"
+            icon="checkmark"
+            isLoading={isSubmitting}
+            onPress={updateProfile}
+          />
+        )
+      }
+    >
+      {error ? <InlineNotice tone="error" message={error} style={styles.notice} /> : null}
 
-          <View className="mt-8 rounded-[30px] border border-[#EDEDF0] bg-white px-5 py-6">
-            <Text className="text-xl font-inter-bold tracking-normal text-[#202124]">
-              Update your profile
-            </Text>
-            <Text className="mt-2 text-base font-inter-medium leading-7 tracking-normal text-[#707684]">
-              Set your first and last name for your EU Work Support account.
-            </Text>
-
-            {error ? (
-              <View className="mt-5 rounded-[18px] bg-[#FFF1F1] px-4 py-3">
-                <Text className="text-sm font-inter-medium tracking-normal text-[#D83B3B]">
-                  {error}
-                </Text>
-              </View>
-            ) : null}
-
-            {isLoading ? (
-              <View className="items-center justify-center py-12">
-                <CustomLoading />
-                <Text className="mt-3 text-sm font-inter-medium tracking-normal text-[#707684]">
-                  Loading profile...
-                </Text>
-              </View>
-            ) : (
-              <View className="mt-6 gap-4">
-                <ProfileTextField
-                  label="First Name"
-                  value={firstName}
-                  onChangeText={setFirstName}
-                  placeholder="Enter first name"
-                  autoComplete="given-name"
-                  textContentType="givenName"
-                />
-                <ProfileTextField
-                  label="Last Name"
-                  value={lastName}
-                  onChangeText={setLastName}
-                  placeholder="Enter last name"
-                  autoComplete="family-name"
-                  textContentType="familyName"
-                />
-
-                <Pressable
-                  onPress={updateProfile}
-                  disabled={isSubmitting}
-                  className="mt-2 h-14 items-center justify-center rounded-[22px] bg-diplomatic-primary disabled:opacity-60"
-                  accessibilityRole="button"
-                >
-                  {isSubmitting ? (
-                    <CustomLoading size={28} />
-                  ) : (
-                    <Text className="text-base font-inter-bold tracking-normal text-white">
-                      Update Profile
-                    </Text>
-                  )}
-                </Pressable>
-              </View>
-            )}
+      {isLoading ? (
+        <FormSkeleton fields={2} />
+      ) : (
+        <FadeInView style={styles.card}>
+          <View style={styles.avatarRow}>
+            <View style={styles.avatar}>
+              {initials ? (
+                <Text style={styles.avatarText}>{initials}</Text>
+              ) : (
+                <Ionicons name="person" size={24} color={Palette.white} />
+              )}
+            </View>
+            <View style={styles.avatarText2}>
+              <Text style={styles.previewName} numberOfLines={1}>
+                {previewName || "Your name"}
+              </Text>
+              <Text style={styles.previewEmail} numberOfLines={1}>
+                {user?.primaryEmailAddress?.emailAddress ?? ""}
+              </Text>
+            </View>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+          <TextField
+            label="First name"
+            icon="person-outline"
+            value={firstName}
+            onChangeText={setFirstName}
+            placeholder="Enter first name"
+            autoCapitalize="words"
+            autoCorrect={false}
+            autoComplete="given-name"
+            textContentType="givenName"
+            returnKeyType="next"
+            onSubmitEditing={() => lastNameRef.current?.focus()}
+            submitBehavior="submit"
+          />
+          <TextField
+            ref={lastNameRef}
+            label="Last name"
+            icon="person-outline"
+            value={lastName}
+            onChangeText={setLastName}
+            placeholder="Enter last name"
+            autoCapitalize="words"
+            autoCorrect={false}
+            autoComplete="family-name"
+            textContentType="familyName"
+            returnKeyType="done"
+            onSubmitEditing={updateProfile}
+          />
+        </FadeInView>
+      )}
+    </StackScreen>
   );
 }
 
-function Header({ title, onBack }: { title: string; onBack: () => void }) {
-  return (
-    <View className="flex-row items-center justify-between">
-      <Pressable
-        onPress={onBack}
-        className="h-11 w-11 items-center justify-center rounded-full border border-[#E6E6EA] bg-white"
-        accessibilityRole="button"
-      >
-        <Ionicons name="chevron-back" size={21} color="#202124" />
-      </Pressable>
-      <Text className="text-[28px] font-inter-bold tracking-normal text-[#202124]">
-        {title}
-      </Text>
-      <View className="h-11 w-11" />
-    </View>
-  );
+function getInitials(first: string, last: string) {
+  return `${first.trim().charAt(0)}${last.trim().charAt(0)}`.toUpperCase();
 }
 
-function ProfileTextField({
-  label,
-  value,
-  onChangeText,
-  placeholder,
-  autoComplete,
-  textContentType,
-}: {
-  label: string;
-  value: string;
-  onChangeText: (value: string) => void;
-  placeholder: string;
-  autoComplete: "given-name" | "family-name";
-  textContentType: "givenName" | "familyName";
-}) {
-  return (
-    <View>
-      <Text className="mb-2 text-sm font-inter-bold tracking-normal text-[#202124]">
-        {label}
-      </Text>
-      <View className="h-14 flex-row items-center rounded-[20px] border border-[#E2E2E6] bg-[#FAFAFB] px-4">
-        <TextInput
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-          placeholderTextColor="#A1A6B1"
-          autoCapitalize="words"
-          autoCorrect={false}
-          autoComplete={autoComplete}
-          textContentType={textContentType}
-          className="min-w-0 flex-1 text-base font-inter-medium tracking-normal text-[#202124]"
-        />
-      </View>
-    </View>
-  );
-}
+const styles = StyleSheet.create({
+  notice: {
+    marginBottom: 16,
+  },
+  card: {
+    gap: 18,
+    padding: 20,
+    borderRadius: Radii.xxl,
+    backgroundColor: Palette.card,
+    ...Elevation.card,
+  },
+  avatarRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    paddingBottom: 18,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Palette.hairline,
+  },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Palette.primary,
+  },
+  avatarText: {
+    fontFamily: FontFamily.displayBold,
+    fontSize: 20,
+    color: Palette.white,
+  },
+  avatarText2: {
+    flex: 1,
+    minWidth: 0,
+  },
+  previewName: {
+    ...Type.title3,
+    color: Palette.ink,
+  },
+  previewEmail: {
+    ...Type.footnote,
+    marginTop: 2,
+    color: Palette.muted,
+  },
+});

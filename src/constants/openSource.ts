@@ -19,8 +19,10 @@ export const openSource = {
       headers: ["Package", "Version", "License", "Purpose"],
       rows: [
         ["@clerk/expo", "3.2.1", "MIT", "Authentication and user account management"],
+        ["@expo-google-fonts/instrument-serif", "0.4.1", "MIT AND OFL-1.1", "Instrument Serif font package"],
         ["@expo-google-fonts/inter", "0.4.2", "MIT AND OFL-1.1", "Inter font package"],
-        ["@expo-google-fonts/poppins", "0.4.1", "MIT AND OFL-1.1", "Poppins font package"],
+        ["@expo-google-fonts/plus-jakarta-sans", "0.4.2", "MIT AND OFL-1.1", "Plus Jakarta Sans font package"],
+        ["@gorhom/bottom-sheet", "5.2.14", "MIT", "Bottom sheets"],
         ["@react-navigation/bottom-tabs", "7.15.9", "MIT", "Bottom tab navigation"],
         ["@react-navigation/elements", "2.9.14", "MIT", "Navigation UI elements"],
         ["@react-navigation/native", "7.2.2", "MIT", "React Navigation core"],
@@ -31,6 +33,7 @@ export const openSource = {
         ["expo-device", "55.0.15", "MIT", "Device information APIs"],
         ["expo-font", "55.0.6", "MIT", "Font loading"],
         ["expo-glass-effect", "55.0.10", "MIT", "Native glass visual effects"],
+        ["expo-haptics", "55.0.18", "MIT", "Haptic feedback"],
         ["expo-image", "55.0.8", "MIT", "Optimized image rendering"],
         ["expo-linking", "55.0.13", "MIT", "Deep linking and URL handling"],
         ["expo-router", "55.0.12", "MIT", "File-based routing"],
@@ -53,7 +56,7 @@ export const openSource = {
         ["react-native-svg", "15.15.5", "MIT", "SVG rendering"],
         ["react-native-web", "0.21.2", "MIT", "React Native web runtime"],
         ["react-native-worklets", "0.7.2", "MIT", "Worklet runtime"],
-        ["sonner-native", "0.25.1", "MIT", "Animated toast notifications"],
+        ["sonner-native", "0.27.0", "MIT", "Animated toast notifications"],
       ],
     },
     {
@@ -97,7 +100,7 @@ export const openSource = {
     },
     {
       type: "paragraph",
-      text: "The Inter and Poppins font packages include font assets that are commonly distributed under the SIL Open Font License 1.1. This license generally permits use, study, copying, merging, embedding, modification, and redistribution of fonts subject to its conditions.",
+      text: "The Inter, Plus Jakarta Sans and Instrument Serif font packages include font assets that are commonly distributed under the SIL Open Font License 1.1. This license generally permits use, study, copying, merging, embedding, modification, and redistribution of fonts subject to its conditions.",
     },
     {
       type: "heading",

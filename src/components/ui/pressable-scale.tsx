@@ -10,46 +10,64 @@ import Animated, {
   useReducedMotion,
   useSharedValue,
   withSpring,
+  withTiming,
 } from "react-native-reanimated";
 
 import { Motion } from "@/constants/theme";
+import { haptics } from "@/lib/haptics";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type PressableScaleProps = PropsWithChildren<
   Omit<PressableProps, "style"> & {
     style?: StyleProp<ViewStyle>;
+    /** Target scale while pressed. */
     scaleTo?: number;
+    /** Dim slightly while pressed, for flat rows where scale alone is subtle. */
+    dimOnPress?: boolean;
+    /** Tactile feedback fired on press-in. */
+    haptic?: "selection" | "light" | "medium" | false;
   }
 >;
 
-/** Pressable with a springy scale-down on press, the core tactile feedback of the app. */
+/** Pressable with a springy scale-down, the core tactile feedback of the app. */
 export function PressableScale({
   children,
   style,
   scaleTo = Motion.pressScale,
+  dimOnPress = false,
+  haptic = false,
   onPressIn,
   onPressOut,
+  disabled,
   ...props
 }: PressableScaleProps) {
   const reduceMotion = useReducedMotion();
-  const scale = useSharedValue(1);
+  const pressed = useSharedValue(0);
+  const baseOpacity = disabled ? 0.5 : 1;
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    opacity: baseOpacity * (dimOnPress ? 1 - pressed.value * 0.12 : 1),
+    transform: [{ scale: 1 - pressed.value * (1 - scaleTo) }],
   }));
 
   return (
     <AnimatedPressable
       {...props}
+      disabled={disabled}
       onPressIn={(event) => {
         if (!reduceMotion) {
-          scale.value = withSpring(scaleTo, Motion.spring);
+          pressed.value = withSpring(1, Motion.snappy);
+        }
+        if (haptic) {
+          haptics[haptic]();
         }
         onPressIn?.(event);
       }}
       onPressOut={(event) => {
-        scale.value = withSpring(1, Motion.spring);
+        pressed.value = reduceMotion
+          ? withTiming(0, { duration: 0 })
+          : withSpring(0, Motion.spring);
         onPressOut?.(event);
       }}
       style={[style, animatedStyle]}

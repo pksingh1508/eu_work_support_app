@@ -1,5 +1,4 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Image } from "expo-image";
 import { memo, useEffect, useRef } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, {
@@ -9,14 +8,12 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 
-import {
-  countryDetails,
-  getFlagUrl,
-  type CountryName,
-} from "@/components/home/country-data";
+import { countryDetails, type CountryName } from "@/components/home/country-data";
+import { Badge } from "@/components/ui/badge";
+import { FlagImage } from "@/components/ui/flag-image";
 import { PressableScale } from "@/components/ui/pressable-scale";
-import { Elevation, Motion, Palette } from "@/constants/theme";
-import { FontFamily } from "@/lib/fonts";
+import { Elevation, Motion, Palette, Radii, Type } from "@/constants/theme";
+import { haptics } from "@/lib/haptics";
 
 type CountryCardProps = {
   country: CountryName;
@@ -40,18 +37,13 @@ function CountryCardBase({
   return (
     <PressableScale
       onPress={() => onPress(country)}
+      scaleTo={0.975}
       style={[styles.card, Elevation.card]}
       accessibilityRole="button"
       accessibilityLabel={`Open ${country} guide`}
     >
-      <View style={styles.flagFrame}>
-        <Image
-          source={{ uri: getFlagUrl(country) }}
-          style={styles.flag}
-          contentFit="cover"
-          transition={200}
-          accessibilityLabel={`${country} flag`}
-        />
+      <View style={styles.flagTile}>
+        <FlagImage country={country} width={36} radius={5} />
       </View>
 
       <View style={styles.body}>
@@ -61,22 +53,14 @@ function CountryCardBase({
         <Text style={styles.summary} numberOfLines={2}>
           {details.summary}
         </Text>
-        <View style={styles.tag}>
-          <View style={styles.tagDot} />
-          <Text style={styles.tagText}>{details.demand}</Text>
-        </View>
+        <Badge label={details.demand} dot style={styles.tag} />
       </View>
 
       {canSave ? (
-        <SaveButton
-          country={country}
-          isSaved={isSaved}
-          isSaving={isSaving}
-          onToggle={onToggleSave}
-        />
+        <SaveButton country={country} isSaved={isSaved} isSaving={isSaving} onToggle={onToggleSave} />
       ) : (
         <View style={styles.chevron}>
-          <Ionicons name="chevron-forward" size={18} color={Palette.muted} />
+          <Ionicons name="chevron-forward" size={17} color={Palette.subtle} />
         </View>
       )}
     </PressableScale>
@@ -98,12 +82,9 @@ function SaveButton({
   const wasSaved = useRef(isSaved);
 
   useEffect(() => {
-    // Only celebrate a fresh save, not the initial render of a saved country.
+    // Celebrate a fresh save only, never the initial render of a saved country.
     if (isSaved && !wasSaved.current) {
-      pop.value = withSequence(
-        withSpring(1.25, Motion.spring),
-        withSpring(1, Motion.spring),
-      );
+      pop.value = withSequence(withSpring(1.3, Motion.snappy), withSpring(1, Motion.spring));
     }
     wasSaved.current = isSaved;
   }, [isSaved, pop]);
@@ -116,19 +97,21 @@ function SaveButton({
     <Pressable
       onPress={(event) => {
         event.stopPropagation();
+        haptics.selection();
         onToggle(country);
       }}
       disabled={isSaving}
       hitSlop={10}
       accessibilityRole="button"
-      accessibilityLabel={isSaved ? `Unsave ${country}` : `Save ${country}`}
+      accessibilityState={{ selected: isSaved, busy: isSaving }}
+      accessibilityLabel={isSaved ? `Remove ${country} from saved` : `Save ${country}`}
       style={[styles.save, isSaved && styles.saveActive, isSaving && styles.saving]}
     >
       <Animated.View style={iconStyle}>
         <Ionicons
           name={isSaved ? "bookmark" : "bookmark-outline"}
           size={18}
-          color={isSaved ? Palette.card : Palette.inkSoft}
+          color={isSaved ? Palette.white : Palette.inkSoft}
         />
       </Animated.View>
     </Pressable>
@@ -142,76 +125,51 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
-    padding: 16,
-    borderRadius: 24,
+    padding: 14,
+    paddingRight: 16,
+    borderRadius: Radii.xl,
     backgroundColor: Palette.card,
   },
-  flagFrame: {
-    width: 56,
-    height: 56,
+  flagTile: {
+    width: 60,
+    height: 60,
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Palette.canvas,
-  },
-  flag: {
-    width: 34,
-    height: 23,
-    borderRadius: 4,
+    backgroundColor: Palette.cardMuted,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Palette.hairline,
   },
   body: {
     flex: 1,
     minWidth: 0,
   },
   name: {
-    fontFamily: FontFamily.headingSemiBold,
+    ...Type.title3,
     fontSize: 17,
-    lineHeight: 22,
     color: Palette.ink,
-    letterSpacing: -0.2,
   },
   summary: {
-    marginTop: 3,
-    fontFamily: FontFamily.body,
-    fontSize: 13,
-    lineHeight: 18,
+    ...Type.footnote,
+    marginTop: 2,
     color: Palette.muted,
   },
   tag: {
     marginTop: 8,
-    alignSelf: "flex-start",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    backgroundColor: Palette.tint,
-  },
-  tagDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: Palette.primary,
-  },
-  tagText: {
-    fontFamily: FontFamily.bodySemiBold,
-    fontSize: 11,
-    color: Palette.primary,
   },
   save: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Palette.canvas,
+    backgroundColor: Palette.well,
   },
   saveActive: {
     backgroundColor: Palette.primary,
   },
   saving: {
-    opacity: 0.6,
+    opacity: 0.55,
   },
   chevron: {
     width: 32,
@@ -219,6 +177,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Palette.canvas,
+    backgroundColor: Palette.cardMuted,
   },
 });

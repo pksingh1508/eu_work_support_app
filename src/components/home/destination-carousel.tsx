@@ -12,15 +12,15 @@ import Animated, {
 
 import {
   countryDetails,
-  getFlagUrl,
   popularDestinationImages,
   popularDestinationTaglines,
   type CountryName,
   type PopularDestination,
 } from "@/components/home/country-data";
+import { FlagImage } from "@/components/ui/flag-image";
 import { GradientFill } from "@/components/ui/gradient-fill";
 import { PressableScale } from "@/components/ui/pressable-scale";
-import { Elevation, HeroGradient } from "@/constants/theme";
+import { Elevation, HeroGradient, Palette, Type } from "@/constants/theme";
 import { FontFamily } from "@/lib/fonts";
 
 type DestinationCarouselProps = {
@@ -30,16 +30,13 @@ type DestinationCarouselProps = {
 
 const CARD_GAP = 14;
 const SIDE_PADDING = 20;
-const CARD_HEIGHT = 340;
+const CARD_HEIGHT = 360;
 const IMAGE_PARALLAX = 46;
 
 /** Snap carousel: neighbours shrink and dim, imagery drifts against the swipe. */
-export function DestinationCarousel({
-  destinations,
-  onPress,
-}: DestinationCarouselProps) {
+export function DestinationCarousel({ destinations, onPress }: DestinationCarouselProps) {
   const { width } = useWindowDimensions();
-  const cardWidth = Math.min(width - SIDE_PADDING * 2 - 34, 360);
+  const cardWidth = Math.min(width - SIDE_PADDING * 2 - 36, 360);
   const interval = cardWidth + CARD_GAP;
   const scrollX = useSharedValue(0);
 
@@ -64,6 +61,7 @@ export function DestinationCarousel({
             key={country}
             country={country}
             index={index}
+            total={destinations.length}
             width={cardWidth}
             interval={interval}
             scrollX={scrollX}
@@ -74,12 +72,7 @@ export function DestinationCarousel({
 
       <View style={styles.dots}>
         {destinations.map((country, index) => (
-          <PageDot
-            key={country}
-            index={index}
-            interval={interval}
-            scrollX={scrollX}
-          />
+          <PageDot key={country} index={index} interval={interval} scrollX={scrollX} />
         ))}
       </View>
     </View>
@@ -89,6 +82,7 @@ export function DestinationCarousel({
 type DestinationCardProps = {
   country: PopularDestination;
   index: number;
+  total: number;
   width: number;
   interval: number;
   scrollX: SharedValue<number>;
@@ -98,23 +92,18 @@ type DestinationCardProps = {
 function DestinationCard({
   country,
   index,
+  total,
   width,
   interval,
   scrollX,
   onPress,
 }: DestinationCardProps) {
-  const inputRange = [
-    (index - 1) * interval,
-    index * interval,
-    (index + 1) * interval,
-  ];
+  const inputRange = [(index - 1) * interval, index * interval, (index + 1) * interval];
 
   const cardStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(scrollX.value, inputRange, [0.75, 1, 0.75], Extrapolation.CLAMP),
+    opacity: interpolate(scrollX.value, inputRange, [0.7, 1, 0.7], Extrapolation.CLAMP),
     transform: [
-      {
-        scale: interpolate(scrollX.value, inputRange, [0.92, 1, 0.92], Extrapolation.CLAMP),
-      },
+      { scale: interpolate(scrollX.value, inputRange, [0.92, 1, 0.92], Extrapolation.CLAMP) },
     ],
   }));
 
@@ -128,7 +117,7 @@ function DestinationCard({
           Extrapolation.CLAMP,
         ),
       },
-      { scale: 1.18 },
+      { scale: 1.2 },
     ],
   }));
 
@@ -138,6 +127,7 @@ function DestinationCard({
     <Animated.View style={[{ width }, styles.cardShadow, Elevation.floating, cardStyle]}>
       <PressableScale
         onPress={() => onPress(country)}
+        haptic="light"
         style={styles.card}
         accessibilityRole="button"
         accessibilityLabel={`Explore ${country}`}
@@ -148,35 +138,35 @@ function DestinationCard({
             source={{ uri: popularDestinationImages[country] }}
             style={StyleSheet.absoluteFill}
             contentFit="cover"
-            transition={400}
-            accessibilityLabel={`${country} skyline`}
+            transition={500}
+            cachePolicy="memory-disk"
+            accessibilityLabel={`${country} landmark`}
           />
         </Animated.View>
         <GradientFill
-          colors={["#050C1C", "#050C1C", "#050C1C"]}
-          opacities={[0.05, 0.25, 0.88]}
+          colors={["#040A1F", "#040A1F", "#040A1F"]}
+          opacities={[0.28, 0.05, 0.92]}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
         />
 
         <View style={styles.topRow}>
           <View style={styles.glassChip}>
-            <Image
-              source={{ uri: getFlagUrl(country) }}
-              style={styles.flag}
-              contentFit="cover"
-              accessibilityLabel={`${country} flag`}
-            />
+            <FlagImage country={country} width={22} radius={4} />
             <Text style={styles.chipText}>{details.demand}</Text>
           </View>
-          <View style={styles.trendBadge}>
-            <Ionicons name="trending-up" size={13} color="#0B1F4B" />
-            <Text style={styles.trendText}>Popular</Text>
-          </View>
+          <Text style={styles.counter}>
+            {String(index + 1).padStart(2, "0")}
+            <Text style={styles.counterTotal}> / {String(total).padStart(2, "0")}</Text>
+          </Text>
         </View>
 
         <View style={styles.bottom}>
           <View style={styles.bottomText}>
+            <View style={styles.popular}>
+              <Ionicons name="trending-up" size={12} color={Palette.navy} />
+              <Text style={styles.popularText}>Popular</Text>
+            </View>
             <Text style={styles.country} numberOfLines={1} adjustsFontSizeToFit>
               {country}
             </Text>
@@ -185,7 +175,7 @@ function DestinationCard({
             </Text>
           </View>
           <View style={styles.arrow}>
-            <Ionicons name="arrow-forward" size={20} color="#0B1F4B" />
+            <Ionicons name="arrow-forward" size={20} color={Palette.navy} />
           </View>
         </View>
       </PressableScale>
@@ -206,8 +196,8 @@ function PageDot({
     const range = [(index - 1) * interval, index * interval, (index + 1) * interval];
 
     return {
-      width: interpolate(scrollX.value, range, [7, 22, 7], Extrapolation.CLAMP),
-      opacity: interpolate(scrollX.value, range, [0.25, 1, 0.25], Extrapolation.CLAMP),
+      width: interpolate(scrollX.value, range, [6, 24, 6], Extrapolation.CLAMP),
+      opacity: interpolate(scrollX.value, range, [0.22, 1, 0.22], Extrapolation.CLAMP),
     };
   });
 
@@ -218,14 +208,14 @@ const styles = StyleSheet.create({
   track: {
     paddingHorizontal: SIDE_PADDING,
     gap: CARD_GAP,
-    paddingVertical: 6,
+    paddingVertical: 8,
   },
   cardShadow: {
-    borderRadius: 30,
+    borderRadius: 32,
   },
   card: {
     height: CARD_HEIGHT,
-    borderRadius: 30,
+    borderRadius: 32,
     overflow: "hidden",
     justifyContent: "space-between",
     padding: 18,
@@ -239,37 +229,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingLeft: 6,
+    paddingLeft: 7,
     paddingRight: 12,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: 999,
-    backgroundColor: "rgba(10, 18, 36, 0.42)",
+    backgroundColor: "rgba(4, 10, 31, 0.42)",
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255, 255, 255, 0.3)",
-  },
-  flag: {
-    width: 24,
-    height: 16,
-    borderRadius: 4,
+    borderColor: "rgba(255, 255, 255, 0.28)",
   },
   chipText: {
-    color: "#FFFFFF",
-    fontFamily: FontFamily.bodySemiBold,
+    fontFamily: FontFamily.displaySemiBold,
     fontSize: 12,
+    color: Palette.white,
   },
-  trendBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: "rgba(255, 255, 255, 0.92)",
+  counter: {
+    fontFamily: FontFamily.displayBold,
+    fontSize: 13,
+    color: Palette.white,
   },
-  trendText: {
-    color: "#0B1F4B",
-    fontFamily: FontFamily.bodyBold,
-    fontSize: 12,
+  counterTotal: {
+    color: "rgba(255,255,255,0.55)",
   },
   bottom: {
     flexDirection: "row",
@@ -279,37 +258,52 @@ const styles = StyleSheet.create({
   bottomText: {
     flex: 1,
   },
+  popular: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginBottom: 10,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: Palette.gold,
+  },
+  popularText: {
+    fontFamily: FontFamily.displayBold,
+    fontSize: 11,
+    color: Palette.navy,
+  },
   country: {
-    color: "#FFFFFF",
-    fontFamily: FontFamily.headingBold,
-    fontSize: 34,
-    lineHeight: 40,
-    letterSpacing: -0.8,
+    ...Type.display,
+    fontSize: 36,
+    lineHeight: 42,
+    color: Palette.white,
   },
   tagline: {
     marginTop: 4,
-    color: "rgba(255, 255, 255, 0.82)",
     fontFamily: FontFamily.bodyMedium,
     fontSize: 14,
     lineHeight: 20,
+    color: "rgba(255, 255, 255, 0.8)",
   },
   arrow: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Palette.white,
   },
   dots: {
-    marginTop: 14,
+    marginTop: 16,
     flexDirection: "row",
     justifyContent: "center",
     gap: 6,
   },
   dot: {
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: HeroGradient[1],
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Palette.primary,
   },
 });

@@ -1,7 +1,9 @@
 import "@/global.css";
 
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { Stack } from "expo-router";
 import React from "react";
+import { StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Toaster } from "sonner-native";
 
@@ -10,62 +12,56 @@ import { Palette } from "@/constants/theme";
 
 export default function RootLayout() {
   return (
-    <GestureHandlerRootView className="flex-1">
+    <GestureHandlerRootView style={styles.root}>
       <AppProviders>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            animation: "ios_from_right",
-            gestureEnabled: true,
-            contentStyle: { backgroundColor: Palette.canvas },
-          }}
-        >
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="(auth)" options={{ animation: "fade_from_bottom" }} />
-          <Stack.Screen name="country/[slug]" />
-          <Stack.Screen name="visa/[id]" />
-          <Stack.Screen name="profile/account" />
-          <Stack.Screen name="profile/change-password" />
-          <Stack.Screen name="profile/legal" />
-          <Stack.Screen name="profile/legal/[policy]" />
-          <Stack.Screen name="profile/sources-and-disclaimer" />
-          <Stack.Screen name="profile/support" />
-          <Stack.Screen name="profile/danger-zone" />
-          <Stack.Screen name="profile/faq" />
-          <Stack.Screen name="profile/app-info" />
-          <Stack.Screen name="profile/settings" />
-          <Stack.Screen name="profile/edit" />
-          <Stack.Screen name="profile/saved-items" />
-          <Stack.Screen name="profile/help" />
-        </Stack>
+        <BottomSheetModalProvider>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              animation: "ios_from_right",
+              animationDuration: 320,
+              gestureEnabled: true,
+              contentStyle: { backgroundColor: Palette.canvas },
+            }}
+          >
+            <Stack.Screen name="(tabs)" options={{ animation: "fade" }} />
+            <Stack.Screen name="(auth)" options={{ animation: "fade_from_bottom" }} />
+            <Stack.Screen name="country/[slug]" />
+            <Stack.Screen name="visa/[id]" />
+            <Stack.Screen name="profile/account" />
+            <Stack.Screen name="profile/change-password" />
+            <Stack.Screen name="profile/legal" />
+            <Stack.Screen name="profile/legal/[policy]" />
+            <Stack.Screen name="profile/sources-and-disclaimer" />
+            <Stack.Screen name="profile/support" />
+            <Stack.Screen name="profile/danger-zone" />
+            <Stack.Screen name="profile/faq" />
+            <Stack.Screen name="profile/app-info" />
+            <Stack.Screen name="profile/settings" />
+            <Stack.Screen name="profile/edit" />
+            <Stack.Screen name="profile/saved-items" />
+            <Stack.Screen name="profile/help" />
+          </Stack>
+        </BottomSheetModalProvider>
+        {/* Rendered after the sheet provider so toasts float above open sheets. */}
         <Toaster
-          duration={2200}
           position="top-center"
-          richColors
-          visibleToasts={2}
-          toastOptions={{
-            titleStyle: {
-              color: "#111827",
-              fontFamily: "Inter_700Bold",
-              fontSize: 15,
-            },
-            descriptionStyle: {
-              color: "#6B7280",
-              fontFamily: "Inter_500Medium",
-              fontSize: 13,
-            },
-            style: {
-              backgroundColor: "#FFFFFF",
-              borderColor: "#E5E7EB",
-              borderRadius: 18,
-              shadowColor: "#111827",
-              shadowOpacity: 0.14,
-              shadowRadius: 18,
-              shadowOffset: { width: 0, height: 10 },
-            },
-          }}
+          duration={2600}
+          visibleToasts={3}
+          gap={8}
+          offset={6}
+          enableStacking
+          swipeToDismissDirection="up"
+          theme="light"
         />
       </AppProviders>
     </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: Palette.canvas,
+  },
+});

@@ -1,90 +1,104 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
-import { Linking, Pressable, ScrollView, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { StyleSheet, Text, View } from "react-native";
+
+import { FadeInView } from "@/components/ui/fade-in-view";
+import { GradientFill } from "@/components/ui/gradient-fill";
+import { ListGroup, ListRow } from "@/components/ui/list-group";
+import { StackScreen } from "@/components/ui/stack-screen";
+import { StarRing } from "@/components/ui/star-ring";
+import { Elevation, NavyGradient, Palette, Radii, Type } from "@/constants/theme";
+import { openMail } from "@/lib/open-external";
 
 const supportEmail = "support@euworksupport.com";
 
 export default function SupportScreen() {
   const router = useRouter();
 
-  const openMail = (subject: string) => {
-    void Linking.openURL(
-      `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}`,
-    );
-  };
-
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-[#FAFAFB]">
-      <ScrollView
-        className="flex-1"
-        contentContainerClassName="px-5 pb-10 pt-7"
-        showsVerticalScrollIndicator={false}
-      >
-        <Header title="Support" onBack={() => router.back()} />
+    <StackScreen title="Support" subtitle="Questions, feedback or a problem — we’re here to help.">
+      <FadeInView style={[styles.hero, Elevation.floating]}>
+        <GradientFill colors={NavyGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+        <View style={styles.ring} pointerEvents="none">
+          <StarRing size={150} starSize={10} opacity={0.4} period={140} />
+        </View>
+        <View style={styles.heroIcon}>
+          <Ionicons name="chatbubbles" size={22} color={Palette.navy} />
+        </View>
+        <Text style={styles.heroTitle}>How can we help?</Text>
+        <Text style={styles.heroBody}>Questions about a guide, your access or the app — just ask.</Text>
+        <Text style={styles.heroEmail}>{supportEmail}</Text>
+      </FadeInView>
 
-        <View className="mt-8 gap-3">
-          <SupportRow
+      <FadeInView index={1} style={styles.group}>
+        <ListGroup title="Get in touch">
+          <ListRow
             icon="mail-outline"
-            title="Contact Support"
-            onPress={() => openMail("Contact Support")}
+            title="Contact support"
+            subtitle="Ask a question about your account"
+            onPress={() => void openMail(supportEmail, "Contact Support")}
           />
-          <SupportRow
-            icon="alert-circle-outline"
-            title="Report a Problem"
-            onPress={() => openMail("Report a Problem")}
+          <ListRow
+            icon="bug-outline"
+            tone="danger"
+            title="Report a problem"
+            subtitle="Something broken or out of date?"
+            onPress={() => void openMail(supportEmail, "Report a Problem")}
           />
-          <SupportRow
-            icon="help-circle-outline"
+        </ListGroup>
+      </FadeInView>
+
+      <FadeInView index={2} style={styles.group}>
+        <ListGroup title="Self-service">
+          <ListRow
+            icon="help-buoy-outline"
+            tone="gold"
             title="FAQ"
+            subtitle="Quick answers to common questions"
             onPress={() => router.push("/profile/faq")}
           />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        </ListGroup>
+      </FadeInView>
+    </StackScreen>
   );
 }
 
-function Header({ title, onBack }: { title: string; onBack: () => void }) {
-  return (
-    <View className="flex-row items-center justify-between">
-      <Pressable
-        onPress={onBack}
-        className="h-11 w-11 items-center justify-center rounded-full border border-[#E6E6EA] bg-white"
-        accessibilityRole="button"
-      >
-        <Ionicons name="chevron-back" size={21} color="#202124" />
-      </Pressable>
-      <Text className="text-[28px] font-inter-bold tracking-normal text-[#202124]">
-        {title}
-      </Text>
-      <View className="h-11 w-11" />
-    </View>
-  );
-}
-
-function SupportRow({
-  icon,
-  title,
-  onPress,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  title: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      className="min-h-[78px] flex-row items-center rounded-[28px] border border-[#EDEDF0] bg-white px-5 active:opacity-80"
-      accessibilityRole="button"
-    >
-      <View className="h-[50px] w-[50px] items-center justify-center rounded-[19px] bg-[#F4F4F5]">
-        <Ionicons name={icon} size={24} color="#202124" />
-      </View>
-      <Text className="ml-5 min-w-0 flex-1 text-xl font-inter-bold tracking-normal text-[#202124]">
-        {title}
-      </Text>
-      <Ionicons name="chevron-forward" size={20} color="#202124" />
-    </Pressable>
-  );
-}
+const styles = StyleSheet.create({
+  hero: {
+    overflow: "hidden",
+    padding: 20,
+    borderRadius: Radii.xxl,
+    backgroundColor: Palette.navy,
+  },
+  ring: {
+    position: "absolute",
+    right: -40,
+    top: -40,
+  },
+  heroIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Palette.gold,
+  },
+  heroTitle: {
+    ...Type.title2,
+    marginTop: 16,
+    color: Palette.white,
+  },
+  heroBody: {
+    ...Type.callout,
+    marginTop: 4,
+    color: "rgba(255,255,255,0.72)",
+  },
+  heroEmail: {
+    ...Type.label,
+    marginTop: 14,
+    color: "#FFE3A3",
+  },
+  group: {
+    marginTop: 26,
+  },
+});

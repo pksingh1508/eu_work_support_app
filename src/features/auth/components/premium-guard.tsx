@@ -1,7 +1,9 @@
 import { PropsWithChildren } from "react";
-import { Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import Animated, { FadeIn } from "react-native-reanimated";
 
 import { CustomLoading } from "@/components/custom-loading";
+import { Palette, Type } from "@/constants/theme";
 import { useAuthAccess } from "@/features/auth/access";
 import { UnAuthenticated } from "@/features/auth/components/unauthenticated";
 
@@ -14,11 +16,11 @@ export function PremiumGuard({ children, returnTo }: PremiumGuardProps) {
 
   if (!isAuthLoaded || isProfileLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-diplomatic-surface px-5">
-        <CustomLoading />
-        <Text className="mt-4 text-base font-inter-semibold tracking-normal text-diplomatic-secondaryText">
-          Loading account...
-        </Text>
+      <View style={styles.loading}>
+        <CustomLoading size={72} />
+        <Animated.Text entering={FadeIn.delay(300).duration(400)} style={styles.loadingText}>
+          Preparing your guides…
+        </Animated.Text>
       </View>
     );
   }
@@ -29,3 +31,18 @@ export function PremiumGuard({ children, returnTo }: PremiumGuardProps) {
 
   return <>{children}</>;
 }
+
+const styles = StyleSheet.create({
+  loading: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    backgroundColor: Palette.canvas,
+  },
+  loadingText: {
+    ...Type.callout,
+    marginTop: 20,
+    color: Palette.muted,
+  },
+});

@@ -2,14 +2,20 @@ import { useSignIn } from "@clerk/expo";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Link, useLocalSearchParams, useRouter, type Href } from "expo-router";
 import { useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { Button } from "@/components/ui/button";
+import { InlineNotice } from "@/components/ui/inline-notice";
+import { Palette, Type } from "@/constants/theme";
 import {
   AuthCard,
+  AuthInlineLink,
   AuthPrimaryButton,
   AuthTextField,
 } from "@/features/auth/components/auth-card";
 import { getAuthErrorMessage } from "@/features/auth/errors";
+import { FontFamily } from "@/lib/fonts";
+import { haptics } from "@/lib/haptics";
 import { isEmailProUser } from "@/lib/pro-account";
 import { showInfoToast } from "@/lib/toast";
 
@@ -162,7 +168,7 @@ export default function SignInScreen() {
       const isVerified = await isEmailProUser(normalizedEmail);
 
       if (!isVerified) {
-        showInfoToast("Not Access", "Please Request Access.");
+        showInfoToast("Access required", "Request access to continue.");
         setUnverifiedEmail(normalizedEmail);
         openVerifyPage(normalizedEmail);
         return;
@@ -256,20 +262,16 @@ export default function SignInScreen() {
 
   return (
     <AuthCard
-      headerTitle="Login"
       title="Welcome back"
-      subtitle="Login to continue your country research, saved guides, and more support."
-      error={null}
+      subtitle="Login to continue your country research and saved guides."
+      error={error}
     >
-      {error ? <AuthFormError message={error} /> : null}
-
       {unverifiedEmail ? (
-        <View className="rounded-[18px] bg-[#EEF7FF] px-4 py-4">
-          <Text className="text-sm font-inter-medium leading-5 tracking-normal text-[#202124]">
-            You don't have Access, Please Request Access and wait for access
-            granted.
-          </Text>
-        </View>
+        <InlineNotice
+          tone="warning"
+          title="Access not granted yet"
+          message="Request access with this email and we’ll let you know as soon as it’s approved."
+        />
       ) : null}
 
       <AuthTextField
@@ -282,6 +284,7 @@ export default function SignInScreen() {
         keyboardType="email-address"
         placeholder="name@example.com"
         textContentType="emailAddress"
+        returnKeyType="next"
       />
 
       <AuthTextField
@@ -293,24 +296,24 @@ export default function SignInScreen() {
         onChangeText={setPassword}
         autoCapitalize="none"
         autoComplete="password"
-        placeholder="Password"
+        placeholder="Your password"
         secureTextEntry={!isPasswordVisible}
         textContentType="password"
+        returnKeyType="go"
+        onSubmitEditing={secondFactorMethod ? undefined : handleSignIn}
       />
 
       {secondFactorMethod ? (
-        <View className="rounded-[18px] bg-[#EEF7FF] px-4 py-4">
-          <Text className="text-sm font-inter-medium leading-5 tracking-normal text-[#202124]">
-            Enter the code Clerk sent to your{" "}
-            {secondFactorMethod === "email_code" ? "email" : "phone"} to finish
-            login.
-          </Text>
-        </View>
+        <InlineNotice
+          message={`Enter the code we sent to your ${
+            secondFactorMethod === "email_code" ? "email" : "phone"
+          } to finish login.`}
+        />
       ) : null}
 
       {secondFactorMethod ? (
         <AuthTextField
-          label="Verification Code"
+          label="Verification code"
           icon="code"
           value={secondFactorCode}
           onChangeText={setSecondFactorCode}
@@ -322,82 +325,87 @@ export default function SignInScreen() {
         />
       ) : null}
 
-      <View className="flex-row items-center justify-between gap-3">
+      <View style={styles.optionsRow}>
         <Pressable
-          onPress={() => setRememberMe((current) => !current)}
-          className="flex-row items-center gap-2"
+          onPress={() => {
+            haptics.selection();
+            setRememberMe((current) => !current);
+          }}
+          style={styles.remember}
           hitSlop={10}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: rememberMe }}
         >
-          <View
-            className={`h-5 w-5 items-center justify-center rounded-[5px] ${
-              rememberMe
-                ? "bg-diplomatic-primary"
-                : "border border-[#DADDE3] bg-white"
-            }`}
-          >
-            {rememberMe ? (
-              <Ionicons name="checkmark" size={15} color="#FFFFFF" />
-            ) : null}
+          <View style={[styles.checkbox, rememberMe && styles.checkboxOn]}>
+            {rememberMe ? <Ionicons name="checkmark" size={14} color={Palette.white} /> : null}
           </View>
-          <Text className="text-sm font-inter-semibold tracking-normal text-[#707684]">
-            Remember me
-          </Text>
+          <Text style={styles.rememberText}>Remember me</Text>
         </Pressable>
 
         <Link href="/forgot-password" asChild>
-          <Pressable hitSlop={10}>
-            <Text className="text-sm font-inter-bold tracking-normal text-diplomatic-primary">
-              Forgot password?
-            </Text>
+          <Pressable hitSlop={10} accessibilityRole="link">
+            <Text style={styles.forgot}>Forgot password?</Text>
           </Pressable>
         </Link>
       </View>
 
       <AuthPrimaryButton
-        label={secondFactorMethod ? "Verify Login" : "Login"}
+        label={secondFactorMethod ? "Verify & login" : "Login"}
         isLoading={isSubmitting}
-        disabled={
-          secondFactorMethod
-            ? !secondFactorCode.trim()
-            : !emailAddress.trim() || !password
-        }
+        disabled={secondFactorMethod ? !secondFactorCode.trim() : !emailAddress.trim() || !password}
         onPress={secondFactorMethod ? handleSecondFactor : handleSignIn}
       />
 
       {secondFactorMethod ? (
-        <Pressable
-          onPress={startSecondFactor}
-          disabled={isSubmitting}
-          className="items-center"
-          hitSlop={10}
-        >
-          <Text className="text-sm font-inter-semibold tracking-normal text-diplomatic-primary">
-            Send a new code
-          </Text>
-        </Pressable>
+        <AuthInlineLink text="Didn’t get it?" action="Send a new code" onPress={startSecondFactor} />
       ) : null}
 
       {unverifiedEmail ? (
-        <Pressable
-          onPress={() => openVerifyPage()}
-          className="h-14 items-center justify-center rounded-[22px] border border-[#CFE0F7] bg-[#EEF7FF] active:opacity-80"
-          accessibilityRole="button"
-        >
-          <Text className="text-base font-inter-bold tracking-normal text-diplomatic-primary">
-            Go to Verify Page
-          </Text>
-        </Pressable>
-      ) : null}
+        <Button label="Request access" variant="secondary" icon="mail-unread-outline" onPress={() => openVerifyPage()} />
+      ) : (
+        <AuthInlineLink
+          text="Don’t have access yet?"
+          action="Request access"
+          onPress={() => openVerifyPage(emailAddress.trim())}
+        />
+      )}
     </AuthCard>
   );
 }
 
-function AuthFormError({ message }: { message: string }) {
-  return (
-    <View className="rounded-[18px] bg-[#FFF1F1] px-4 py-3">
-      <Text className="text-sm font-inter-medium tracking-normal text-[#D83B3B]">
-        {message}
-      </Text>
-    </View>
-  );
-}
+const styles = StyleSheet.create({
+  optionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  remember: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 7,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: Palette.faint,
+    backgroundColor: Palette.card,
+  },
+  checkboxOn: {
+    borderColor: Palette.primary,
+    backgroundColor: Palette.primary,
+  },
+  rememberText: {
+    ...Type.callout,
+    fontFamily: FontFamily.bodyMedium,
+    color: Palette.inkSoft,
+  },
+  forgot: {
+    ...Type.label,
+    color: Palette.primary,
+  },
+});

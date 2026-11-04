@@ -27,8 +27,8 @@ module.exports = {
       },
       fontFamily: {
         sans: ['Inter_400Regular'],
-        serif: ['Poppins_800ExtraBold'],
-        heading: ['Poppins_700Bold'],
+        serif: ['InstrumentSerif_400Regular_Italic'],
+        heading: ['PlusJakartaSans_700Bold'],
         'inter-medium': ['Inter_500Medium'],
         'inter-semibold': ['Inter_600SemiBold'],
         'inter-bold': ['Inter_700Bold'],

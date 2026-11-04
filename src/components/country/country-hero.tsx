@@ -8,34 +8,25 @@ import Animated, {
   type SharedValue,
 } from "react-native-reanimated";
 
-import {
-  countryDetails,
-  popularDestinationImages,
-  type CountryName,
-  type PopularDestination,
-} from "@/components/home/country-data";
+import { popularDestinationImages, type PopularDestination } from "@/components/home/country-data";
+import { FlagImage, getFlagUrlByName } from "@/components/ui/flag-image";
 import { GradientFill } from "@/components/ui/gradient-fill";
-import { HeroGradient } from "@/constants/theme";
+import { StarRing } from "@/components/ui/star-ring";
+import { HeroGradient, Palette, Type } from "@/constants/theme";
 import { FontFamily } from "@/lib/fonts";
 
-export const COUNTRY_HERO_HEIGHT = 400;
+export const COUNTRY_HERO_HEIGHT = 420;
 
 type CountryHeroProps = {
   name: string;
   subtitle: string;
   flagEmoji: string | null;
   documentCount: number;
+  categoryCount: number;
+  reviewedLabel: string | null;
   topInset: number;
   scrollY: SharedValue<number>;
 };
-
-function getFlagCode(name: string) {
-  return countryDetails[name as CountryName]?.code ?? null;
-}
-
-function getHeroImage(name: string) {
-  return popularDestinationImages[name as PopularDestination] ?? null;
-}
 
 /** Stretchy, parallax country hero: grows on overscroll, drifts and fades on scroll. */
 export function CountryHero({
@@ -43,11 +34,13 @@ export function CountryHero({
   subtitle,
   flagEmoji,
   documentCount,
+  categoryCount,
+  reviewedLabel,
   topInset,
   scrollY,
 }: CountryHeroProps) {
-  const flagCode = getFlagCode(name);
-  const heroImage = getHeroImage(name);
+  const heroImage = popularDestinationImages[name as PopularDestination] ?? null;
+  const flagWash = getFlagUrlByName(name, 640);
 
   const backdropStyle = useAnimatedStyle(() => ({
     transform: [
@@ -59,32 +52,15 @@ export function CountryHero({
           Extrapolation.CLAMP,
         ),
       },
-      {
-        scale: interpolate(
-          scrollY.value,
-          [-COUNTRY_HERO_HEIGHT, 0],
-          [2, 1],
-          Extrapolation.CLAMP,
-        ),
-      },
+      { scale: interpolate(scrollY.value, [-COUNTRY_HERO_HEIGHT, 0], [2, 1], Extrapolation.CLAMP) },
     ],
   }));
 
   const contentStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      scrollY.value,
-      [0, COUNTRY_HERO_HEIGHT * 0.55],
-      [1, 0],
-      Extrapolation.CLAMP,
-    ),
+    opacity: interpolate(scrollY.value, [0, COUNTRY_HERO_HEIGHT * 0.5], [1, 0], Extrapolation.CLAMP),
     transform: [
       {
-        translateY: interpolate(
-          scrollY.value,
-          [0, COUNTRY_HERO_HEIGHT],
-          [0, 60],
-          Extrapolation.CLAMP,
-        ),
+        translateY: interpolate(scrollY.value, [0, COUNTRY_HERO_HEIGHT], [0, 70], Extrapolation.CLAMP),
       },
     ],
   }));
@@ -98,48 +74,50 @@ export function CountryHero({
             source={{ uri: heroImage }}
             style={StyleSheet.absoluteFill}
             contentFit="cover"
-            transition={400}
+            transition={500}
+            cachePolicy="memory-disk"
             accessibilityLabel={`${name} landscape`}
           />
-        ) : flagCode ? (
+        ) : flagWash ? (
           <Image
-            source={{ uri: `https://flagcdn.com/w640/${flagCode}.png` }}
+            source={{ uri: flagWash }}
             style={[StyleSheet.absoluteFill, styles.flagWash]}
             contentFit="cover"
-            blurRadius={24}
+            blurRadius={30}
             accessibilityLabel={`${name} flag colours`}
           />
         ) : null}
         <GradientFill
-          colors={["#071330", "#071330", "#071330"]}
-          opacities={[0.35, 0.35, 0.92]}
+          colors={["#050A20", "#050A20", "#050A20"]}
+          opacities={heroImage ? [0.4, 0.25, 0.94] : [0.55, 0.45, 0.95]}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
         />
+        {!heroImage ? (
+          <View style={styles.ring} pointerEvents="none">
+            <StarRing size={230} starSize={14} opacity={0.35} period={140} />
+          </View>
+        ) : null}
       </Animated.View>
 
-      <Animated.View style={[styles.content, { paddingTop: topInset + 72 }, contentStyle]}>
+      <Animated.View style={[styles.content, { paddingTop: topInset + 80 }, contentStyle]}>
         <View style={styles.flagBadge}>
-          {flagCode ? (
-            <Image
-              source={{ uri: `https://flagcdn.com/w160/${flagCode}.png` }}
-              style={styles.flag}
-              contentFit="cover"
-              accessibilityLabel={`${name} flag`}
-            />
-          ) : (
-            <Text style={styles.flagEmoji}>{flagEmoji ?? "🏳️"}</Text>
-          )}
+          <FlagImage country={name} emoji={flagEmoji} width={44} radius={6} />
         </View>
 
-        <Text style={styles.name}>{name}</Text>
-        <Text style={styles.subtitle} numberOfLines={3}>
+        <Text style={styles.name} accessibilityRole="header">
+          {name}
+        </Text>
+        <Text style={styles.subtitle} numberOfLines={2}>
           {subtitle}
         </Text>
 
         <View style={styles.stats}>
-          <HeroStat icon="time-outline" value="4–12 wks" label="Typical process" />
-          <HeroStat icon="documents-outline" value={`${documentCount}`} label="Guides" />
+          <HeroStat icon="reader-outline" value={`${documentCount}`} label="Guides" />
+          <HeroStat icon="layers-outline" value={`${categoryCount}`} label="Topics" />
+          {reviewedLabel ? (
+            <HeroStat icon="shield-checkmark-outline" value={reviewedLabel} label="Reviewed" wide />
+          ) : null}
         </View>
       </Animated.View>
     </View>
@@ -150,16 +128,20 @@ function HeroStat({
   icon,
   value,
   label,
+  wide = false,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   value: string;
   label: string;
+  wide?: boolean;
 }) {
   return (
-    <View style={styles.stat}>
-      <Ionicons name={icon} size={16} color="rgba(255,255,255,0.85)" />
-      <View>
-        <Text style={styles.statValue}>{value}</Text>
+    <View style={[styles.stat, wide && styles.statWide]}>
+      <Ionicons name={icon} size={15} color={Palette.gold} />
+      <View style={styles.statText}>
+        <Text style={styles.statValue} numberOfLines={1}>
+          {value}
+        </Text>
         <Text style={styles.statLabel}>{label}</Text>
       </View>
     </View>
@@ -175,70 +157,70 @@ const styles = StyleSheet.create({
     backgroundColor: HeroGradient[0],
   },
   flagWash: {
-    opacity: 0.55,
+    opacity: 0.5,
+  },
+  ring: {
+    position: "absolute",
+    right: -60,
+    top: 40,
   },
   content: {
     flex: 1,
     justifyContent: "flex-end",
     paddingHorizontal: 24,
-    paddingBottom: 28,
+    paddingBottom: 30,
   },
   flagBadge: {
     alignSelf: "flex-start",
     padding: 6,
     borderRadius: 12,
-    backgroundColor: "rgba(255, 255, 255, 0.16)",
+    backgroundColor: "rgba(255, 255, 255, 0.14)",
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255, 255, 255, 0.35)",
-  },
-  flag: {
-    width: 42,
-    height: 28,
-    borderRadius: 5,
-  },
-  flagEmoji: {
-    fontSize: 28,
+    borderColor: "rgba(255, 255, 255, 0.3)",
   },
   name: {
-    marginTop: 16,
-    fontFamily: FontFamily.headingBold,
+    ...Type.hero,
     fontSize: 40,
     lineHeight: 46,
-    letterSpacing: -1,
-    color: "#FFFFFF",
+    marginTop: 16,
+    color: Palette.white,
   },
   subtitle: {
+    ...Type.body,
     marginTop: 6,
-    fontFamily: FontFamily.body,
-    fontSize: 15,
-    lineHeight: 22,
-    color: "rgba(255, 255, 255, 0.82)",
+    color: "rgba(255, 255, 255, 0.78)",
   },
   stats: {
     marginTop: 20,
     flexDirection: "row",
-    gap: 10,
+    gap: 8,
   },
   stat: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 18,
-    backgroundColor: "rgba(255, 255, 255, 0.12)",
+    gap: 9,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255, 255, 255, 0.22)",
+    borderColor: "rgba(255, 255, 255, 0.2)",
+  },
+  statWide: {
+    flex: 1,
+    minWidth: 0,
+  },
+  statText: {
+    flexShrink: 1,
   },
   statValue: {
-    fontFamily: FontFamily.headingSemiBold,
-    fontSize: 16,
-    color: "#FFFFFF",
+    fontFamily: FontFamily.displayBold,
+    fontSize: 14,
+    color: Palette.white,
   },
   statLabel: {
-    fontFamily: FontFamily.body,
-    fontSize: 12,
-    color: "rgba(255, 255, 255, 0.7)",
+    fontFamily: FontFamily.bodyMedium,
+    fontSize: 11,
+    color: "rgba(255, 255, 255, 0.62)",
   },
 });

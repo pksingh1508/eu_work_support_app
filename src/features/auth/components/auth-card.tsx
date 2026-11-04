@@ -1,19 +1,29 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { useRouter } from 'expo-router';
-import { PropsWithChildren } from 'react';
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { useRouter } from "expo-router";
+import { forwardRef, PropsWithChildren } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   TextInput,
-  TextInputProps,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+  type TextInputProps,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { CustomLoading } from "@/components/custom-loading";
+import { Button } from "@/components/ui/button";
+import { FadeInView } from "@/components/ui/fade-in-view";
+import { FocusStatusBar } from "@/components/ui/focus-status-bar";
+import { GradientFill } from "@/components/ui/gradient-fill";
+import { IconButton } from "@/components/ui/icon-button";
+import { InlineNotice } from "@/components/ui/inline-notice";
+import { StarRing } from "@/components/ui/star-ring";
+import { TextField } from "@/components/ui/text-field";
+import { Elevation, HeroGradient, Palette, Radii, Type } from "@/constants/theme";
+import { FontFamily } from "@/lib/fonts";
 
 type AuthCardProps = PropsWithChildren<{
   title: string;
@@ -22,12 +32,131 @@ type AuthCardProps = PropsWithChildren<{
   error?: string | null;
 }>;
 
+/** Auth layout: midnight hero with the star ring, form card rising over it. */
+export function AuthCard({ title, subtitle, headerTitle, error, children }: AuthCardProps) {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={styles.screen}
+    >
+      <FocusStatusBar style="light" />
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 28 }}
+      >
+        <View style={[styles.hero, { paddingTop: insets.top + 12 }]}>
+          <GradientFill colors={HeroGradient} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} />
+          <View style={styles.ring} pointerEvents="none">
+            <StarRing size={230} starSize={14} opacity={0.45} period={110} />
+          </View>
+
+          <View style={styles.heroTop}>
+            <IconButton
+              icon="chevron-back"
+              variant="glass"
+              onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
+              accessibilityLabel="Go back"
+            />
+            <View style={styles.brandChip}>
+              <View style={styles.brandMark}>
+                <Ionicons name="star" size={9} color={Palette.navy} />
+              </View>
+              <Text style={styles.brandText}>{headerTitle ?? "EU Work Support"}</Text>
+            </View>
+            <View style={styles.heroSpacer} />
+          </View>
+
+          <FadeInView style={styles.heroText}>
+            <Text style={styles.title} accessibilityRole="header">
+              {title}
+            </Text>
+            <Text style={styles.subtitle}>{subtitle}</Text>
+          </FadeInView>
+        </View>
+
+        <FadeInView index={1} style={[styles.card, Elevation.raised]}>
+          {error ? <InlineNotice tone="error" message={error} /> : null}
+          {children}
+        </FadeInView>
+
+        <Text style={styles.terms}>
+          By continuing, you agree to the{" "}
+          <Text
+            onPress={() => router.push("/profile/legal/terms-and-conditions")}
+            accessibilityRole="link"
+            style={styles.termsLink}
+          >
+            Terms
+          </Text>{" "}
+          and{" "}
+          <Text
+            onPress={() => router.push("/profile/legal/privacy-policy")}
+            accessibilityRole="link"
+            style={styles.termsLink}
+          >
+            Privacy Policy
+          </Text>
+          .
+        </Text>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
 type AuthTextFieldProps = TextInputProps & {
   label: string;
   icon?: string;
   actionLabel?: string;
   onActionPress?: () => void;
 };
+
+function getFieldIcon(icon?: string) {
+  switch (icon) {
+    case "lock":
+      return "lock-closed-outline" as const;
+    case "code":
+      return "keypad-outline" as const;
+    case "mail":
+      return "mail-outline" as const;
+    default:
+      return undefined;
+  }
+}
+
+export const AuthTextField = forwardRef<TextInput, AuthTextFieldProps>(function AuthTextField(
+  { label, icon, actionLabel, onActionPress, ...props },
+  ref,
+) {
+  return (
+    <TextField
+      ref={ref}
+      label={label}
+      icon={getFieldIcon(icon)}
+      {...props}
+      trailing={
+        actionLabel ? (
+          <Pressable
+            onPress={onActionPress}
+            hitSlop={12}
+            style={styles.fieldAction}
+            accessibilityRole="button"
+            accessibilityLabel={actionLabel === "Hide" ? "Hide password" : "Show password"}
+          >
+            <Ionicons
+              name={actionLabel === "Hide" ? "eye-outline" : "eye-off-outline"}
+              size={20}
+              color={Palette.subtle}
+            />
+          </Pressable>
+        ) : undefined
+      }
+    />
+  );
+});
 
 type AuthPrimaryButtonProps = {
   label: string;
@@ -36,139 +165,8 @@ type AuthPrimaryButtonProps = {
   onPress: () => void;
 };
 
-export function AuthCard({
-  title,
-  subtitle,
-  headerTitle = title,
-  error,
-  children,
-}: AuthCardProps) {
-  const router = useRouter();
-
-  return (
-    <KeyboardAvoidingView
-      behavior={Platform.select({ ios: 'padding', default: undefined })}
-      className="flex-1 bg-[#FAFAFB]">
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        contentContainerClassName="min-h-full px-5 pb-10 pt-7">
-        <SafeAreaView className="flex-1">
-          <View className="mb-8 flex-row items-center justify-between">
-            <Pressable
-              onPress={() => router.back()}
-              className="h-11 w-11 items-center justify-center rounded-full border border-[#E6E6EA] bg-white"
-              accessibilityRole="button"
-            >
-              <Ionicons name="chevron-back" size={23} color="#202124" />
-            </Pressable>
-            <Text className="mx-3 min-w-0 flex-1 text-center text-[30px] font-inter-bold tracking-normal text-[#202124]">
-              {headerTitle}
-            </Text>
-            <View className="h-11 w-11" />
-          </View>
-
-          <View className="rounded-[30px] border border-[#EDEDF0] bg-white px-5 py-6">
-            <Text className="text-[30px] font-inter-bold leading-9 tracking-normal text-[#202124]">
-              {title}
-            </Text>
-            <Text className="mt-3 text-base font-inter-medium leading-7 tracking-normal text-[#707684]">
-              {subtitle}
-            </Text>
-
-            {error ? (
-              <View className="mt-5 rounded-[18px] bg-[#FFF1F1] px-4 py-3">
-                <Text className="text-sm font-inter-medium tracking-normal text-[#D83B3B]">{error}</Text>
-              </View>
-            ) : null}
-
-            <View className="mt-6 gap-4">{children}</View>
-          </View>
-
-          <Text className="mt-6 px-2 text-center text-sm font-inter-medium leading-5 tracking-normal text-[#707684]">
-            By continuing, you agree to the{" "}
-            <Text
-              onPress={() => router.push("/profile/legal/terms-and-conditions")}
-              accessibilityRole="link"
-              className="text-diplomatic-primary underline"
-            >
-              Terms
-            </Text>{" "}
-            and{" "}
-            <Text
-              onPress={() => router.push("/profile/legal/privacy-policy")}
-              accessibilityRole="link"
-              className="text-diplomatic-primary underline"
-            >
-              Privacy Policy
-            </Text>
-            .
-          </Text>
-        </SafeAreaView>
-      </ScrollView>
-    </KeyboardAvoidingView>
-  );
-}
-
-export function AuthTextField({
-  label,
-  icon,
-  actionLabel,
-  onActionPress,
-  secureTextEntry,
-  ...props
-}: AuthTextFieldProps) {
-  return (
-    <View>
-      <View className="mb-2 flex-row items-center justify-between">
-        <Text className="text-sm font-inter-bold tracking-normal text-[#202124]">{label}</Text>
-      </View>
-
-      <View className="h-14 flex-row items-center rounded-[20px] border border-[#E2E2E6] bg-[#FAFAFB] px-4">
-        <TextInput
-          {...props}
-          secureTextEntry={secureTextEntry}
-          placeholderTextColor="#A1A6B1"
-          className="min-w-0 flex-1 text-base font-inter-medium tracking-normal text-[#202124] outline-none"
-        />
-        {actionLabel ? (
-          <Pressable onPress={onActionPress} hitSlop={10} className="ml-3">
-            <Ionicons
-              name={actionLabel === 'Hide' ? 'eye-outline' : 'eye-off-outline'}
-              size={22}
-              color="#8A93A4"
-            />
-          </Pressable>
-        ) : null}
-      </View>
-    </View>
-  );
-}
-
-function getFieldIcon(icon: string) {
-  switch (icon) {
-    case 'lock':
-      return 'lock-closed-outline' as const;
-    case 'code':
-      return 'keypad-outline' as const;
-    case 'mail':
-    default:
-      return 'mail-outline' as const;
-  }
-}
-
 export function AuthPrimaryButton({ label, isLoading, disabled, onPress }: AuthPrimaryButtonProps) {
-  return (
-    <Pressable
-      disabled={isLoading || disabled}
-      onPress={onPress}
-      className="h-14 items-center justify-center rounded-[22px] bg-diplomatic-primary active:opacity-80 disabled:opacity-60">
-      {isLoading ? (
-        <CustomLoading size={28} />
-      ) : (
-        <Text className="text-base font-inter-bold tracking-normal text-white">{label}</Text>
-      )}
-    </Pressable>
-  );
+  return <Button label={label} isLoading={isLoading} disabled={disabled} onPress={onPress} />;
 }
 
 export function AuthInlineLink({
@@ -181,10 +179,112 @@ export function AuthInlineLink({
   onPress: () => void;
 }) {
   return (
-    <Pressable onPress={onPress} className="items-center" hitSlop={10}>
-      <Text className="text-center text-sm font-inter-medium tracking-normal text-[#707684]">
-        {text} <Text className="text-diplomatic-primary">{action}</Text>
+    <Pressable onPress={onPress} style={styles.inlineLink} hitSlop={10} accessibilityRole="link">
+      <Text style={styles.inlineText}>
+        {text ? `${text} ` : ""}
+        <Text style={styles.inlineAction}>{action}</Text>
       </Text>
     </Pressable>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: Palette.canvas,
+  },
+  hero: {
+    overflow: "hidden",
+    paddingHorizontal: 20,
+    paddingBottom: 72,
+    borderBottomLeftRadius: 36,
+    borderBottomRightRadius: 36,
+    backgroundColor: HeroGradient[1],
+  },
+  ring: {
+    position: "absolute",
+    right: -70,
+    top: 30,
+  },
+  heroTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  heroSpacer: {
+    width: 44,
+  },
+  brandChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    paddingLeft: 5,
+    paddingRight: 12,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.22)",
+  },
+  brandMark: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Palette.gold,
+  },
+  brandText: {
+    fontFamily: FontFamily.displaySemiBold,
+    fontSize: 12,
+    color: Palette.white,
+  },
+  heroText: {
+    marginTop: 36,
+    paddingHorizontal: 4,
+  },
+  title: {
+    ...Type.display,
+    color: Palette.white,
+  },
+  subtitle: {
+    ...Type.body,
+    marginTop: 8,
+    color: "rgba(255,255,255,0.72)",
+  },
+  card: {
+    marginTop: -44,
+    marginHorizontal: 16,
+    gap: 18,
+    padding: 20,
+    borderRadius: Radii.xxl,
+    backgroundColor: Palette.card,
+  },
+  terms: {
+    ...Type.footnote,
+    marginTop: 22,
+    paddingHorizontal: 32,
+    textAlign: "center",
+    color: Palette.muted,
+  },
+  termsLink: {
+    fontFamily: FontFamily.bodySemiBold,
+    color: Palette.primary,
+  },
+  fieldAction: {
+    marginLeft: 12,
+  },
+  inlineLink: {
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+  inlineText: {
+    ...Type.callout,
+    textAlign: "center",
+    color: Palette.muted,
+  },
+  inlineAction: {
+    fontFamily: FontFamily.displayBold,
+    color: Palette.primary,
+  },
+});

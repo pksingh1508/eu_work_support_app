@@ -38,7 +38,7 @@ export function CollapsingTopBar({
     backgroundColor: interpolateColor(
       scrollY.value,
       [fadeStart, collapseAt],
-      ["rgba(246, 247, 251, 0)", "rgba(246, 247, 251, 0.98)"],
+      ["rgba(243, 245, 249, 0)", "rgba(243, 245, 249, 0.98)"],
     ),
     borderBottomColor: interpolateColor(
       scrollY.value,
@@ -60,7 +60,7 @@ export function CollapsingTopBar({
     backgroundColor: interpolateColor(
       scrollY.value,
       [fadeStart, collapseAt],
-      ["rgba(10, 18, 36, 0.38)", Palette.card],
+      ["rgba(6, 12, 36, 0.36)", Palette.card],
     ),
   }));
 

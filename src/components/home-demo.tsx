@@ -19,25 +19,33 @@ import {
   type CountryName,
 } from "@/components/home/country-data";
 import { DestinationCarousel } from "@/components/home/destination-carousel";
-import { FilterTabs, type FilterKey } from "@/components/home/filter-tabs";
 import { HomeHero } from "@/components/home/home-hero";
 import { FadeInView } from "@/components/ui/fade-in-view";
 import { FocusStatusBar } from "@/components/ui/focus-status-bar";
+import { SectionHeader } from "@/components/ui/screen-header";
+import { SegmentedControl, type SegmentOption } from "@/components/ui/segmented-control";
 import {
   easiestVisaCountries,
   europeanCountryNames,
   popularDestinations,
   topRated,
 } from "@/constants/country";
-import { BottomTabInset, HeroGradient, Palette } from "@/constants/theme";
+import { BottomTabInset, HeroGradient, Palette, Type } from "@/constants/theme";
 import { useAuthAccess } from "@/features/auth/access";
 import {
   useSavedCountrySlugs,
   useSavedStore,
 } from "@/features/saved/saved-store";
-import { FontFamily } from "@/lib/fonts";
 import { fetchCountryIdBySlug } from "@/lib/saved-items";
 import { showErrorToast, showSavedToast, showUnsavedToast } from "@/lib/toast";
+
+type FilterKey = "all" | "top-rated" | "easiest-visa";
+
+const homeFilters: readonly SegmentOption<FilterKey>[] = [
+  { key: "all", label: "All" },
+  { key: "top-rated", label: "Top rated" },
+  { key: "easiest-visa", label: "Easiest visa" },
+];
 
 type HomeListItem =
   | { type: "hero" }
@@ -246,10 +254,9 @@ export function HomeDemo() {
     if (item.type === "popular") {
       return (
         <View style={styles.section}>
-          <SectionHeading
-            eyebrow="Trending now"
-            title="Popular destinations"
-          />
+          <View style={styles.heading}>
+            <SectionHeader eyebrow="Trending now" title="Popular destinations" />
+          </View>
           <DestinationCarousel
             destinations={popularDestinations}
             onPress={openCountry}
@@ -259,14 +266,20 @@ export function HomeDemo() {
     }
 
     if (item.type === "filters") {
-      return <FilterTabs activeFilter={activeFilter} onChange={setActiveFilter} />;
+      return (
+        <View style={styles.filters}>
+          <SegmentedControl options={homeFilters} value={activeFilter} onChange={setActiveFilter} />
+        </View>
+      );
     }
 
     if (item.type === "count") {
       return (
         <View style={styles.countRow}>
           <Text style={styles.countTitle}>Explore countries</Text>
-          <Text style={styles.countValue}>{item.total} results</Text>
+          <Text style={styles.countValue}>
+            {item.total} {item.total === 1 ? "country" : "countries"}
+          </Text>
         </View>
       );
     }
@@ -318,15 +331,6 @@ export function HomeDemo() {
   );
 }
 
-function SectionHeading({ eyebrow, title }: { eyebrow: string; title: string }) {
-  return (
-    <View style={styles.heading}>
-      <Text style={styles.eyebrow}>{eyebrow.toUpperCase()}</Text>
-      <Text style={styles.headingTitle}>{title}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
@@ -343,43 +347,31 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   section: {
-    paddingTop: 22,
-    paddingBottom: 18,
+    paddingTop: 26,
+    paddingBottom: 14,
   },
   heading: {
     paddingHorizontal: 20,
-    marginBottom: 14,
   },
-  eyebrow: {
-    fontFamily: FontFamily.bodyBold,
-    fontSize: 11,
-    letterSpacing: 1.4,
-    color: Palette.primary,
-  },
-  headingTitle: {
-    marginTop: 4,
-    fontFamily: FontFamily.headingBold,
-    fontSize: 24,
-    lineHeight: 30,
-    letterSpacing: -0.5,
-    color: Palette.ink,
+  filters: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: Palette.canvas,
   },
   countRow: {
     flexDirection: "row",
     alignItems: "baseline",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 12,
+    paddingTop: 14,
+    paddingBottom: 14,
   },
   countTitle: {
-    fontFamily: FontFamily.headingSemiBold,
-    fontSize: 18,
+    ...Type.title2,
     color: Palette.ink,
   },
   countValue: {
-    fontFamily: FontFamily.bodyMedium,
-    fontSize: 13,
+    ...Type.caption,
     color: Palette.muted,
   },
   countryItem: {
