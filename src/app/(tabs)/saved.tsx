@@ -9,7 +9,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { getCategoryIcon } from "@/features/documents/content";
 import { SavedListSkeleton } from "@/components/skeletons";
-import { FadeInView } from "@/components/ui/fade-in-view";
+import { FadeInView, fadeSafeProps } from "@/components/ui/fade-in-view";
 import { FlagImage } from "@/components/ui/flag-image";
 import { FocusStatusBar } from "@/components/ui/focus-status-bar";
 import { PressableScale } from "@/components/ui/pressable-scale";
@@ -52,6 +52,7 @@ function SavedContent() {
   const countries = useSavedStore((state) => state.countries);
   const documents = useSavedStore((state) => state.documents);
   const status = useSavedStore((state) => state.status);
+  const storeUserId = useSavedStore((state) => state.userId);
   const pendingMutations = useSavedStore((state) => state.pendingMutations);
   const hydrateForUser = useSavedStore((state) => state.hydrateForUser);
   const refresh = useSavedStore((state) => state.refresh);
@@ -71,7 +72,10 @@ function SavedContent() {
     () => (filter === "all" ? savedItems : savedItems.filter((item) => item.type === filter)),
     [filter, savedItems],
   );
-  const isLoading = status === "loading" && savedItems.length === 0;
+  // "idle" or another user's store means this user's library hasn't loaded yet;
+  // treat it as loading so "Nothing saved yet" never flashes before the fetch.
+  const hasLoadedForUser = storeUserId === userId && (status === "ready" || status === "error");
+  const isLoading = !hasLoadedForUser && savedItems.length === 0;
   const hasError = status === "error" && savedItems.length === 0;
 
   useFocusEffect(
@@ -104,7 +108,10 @@ function SavedContent() {
       return;
     }
 
-    router.push(`/visa/${item.documentId}`);
+    router.push({
+      pathname: "/visa/[id]",
+      params: { id: item.documentId, title: item.title, category: item.categoryName },
+    });
   };
 
   const unsaveItem = (item: SavedItem) => {
@@ -210,11 +217,12 @@ function SavedContent() {
           {visibleItems.map((item, index) => (
             <Animated.View
               key={`${item.type}-${item.id}`}
-              entering={FadeInDown.delay(Math.min(index * Motion.stagger, Motion.maxStaggerDelay))
-                .springify()
-                .damping(Motion.softSpring.damping)}
+              entering={FadeInDown.duration(Motion.enter)
+                .delay(Math.min(index * Motion.stagger, Motion.maxStaggerDelay))
+                .withInitialValues({ transform: [{ translateY: 10 }] })}
               exiting={FadeOutLeft.duration(240)}
               layout={LinearTransition.springify().damping(Motion.softSpring.damping)}
+              {...fadeSafeProps}
             >
               <SavedCard
                 item={item}

@@ -10,7 +10,7 @@ import { ArticleStyleProvider, READER_SCALES } from "@/components/document/artic
 import { DocumentArticle } from "@/components/document/document-sections";
 import { GuideDetailSkeleton } from "@/components/skeletons";
 import { ProBadge } from "@/components/ui/badge";
-import { FadeInView } from "@/components/ui/fade-in-view";
+import { ContentReveal } from "@/components/ui/fade-in-view";
 import { FlagImage } from "@/components/ui/flag-image";
 import { GradientFill } from "@/components/ui/gradient-fill";
 import { PressableScale } from "@/components/ui/pressable-scale";
@@ -45,8 +45,12 @@ function VisaDocumentContent() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const documentId = Array.isArray(id) ? id[0] : id;
+  const params = useLocalSearchParams<{ id: string; title?: string; category?: string }>();
+  const documentId = Array.isArray(params.id) ? params.id[0] : params.id;
+  // Passed by the screen that opened the guide, so the real heading shows from
+  // the first frame and the skeleton only stands in for the unknown body.
+  const knownTitle = typeof params.title === "string" && params.title ? params.title : undefined;
+  const knownCategory = typeof params.category === "string" && params.category ? params.category : undefined;
   const [document, setDocument] = useState<VisaDocument | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -197,9 +201,9 @@ function VisaDocumentContent() {
   return (
     <>
       <StackScreen
-        title={document?.title ?? "Guide"}
-        eyebrow={document ? document.categoryName : undefined}
-        hideLargeTitle={!document}
+        title={document?.title ?? knownTitle ?? "Guide"}
+        eyebrow={document?.categoryName ?? knownCategory}
+        hideLargeTitle={!document && !(isLoading && knownTitle)}
         scrollRef={scrollRef}
         showProgress={Boolean(document)}
         onBack={goBack}
@@ -236,7 +240,7 @@ function VisaDocumentContent() {
           ) : null
         }
       >
-        {isLoading ? <GuideDetailSkeleton /> : null}
+        {isLoading ? <GuideDetailSkeleton showTitle={!knownTitle} /> : null}
 
         {!isLoading && error ? (
           <StateView
@@ -259,48 +263,47 @@ function VisaDocumentContent() {
 
         {!isLoading && document && article ? (
           <>
-            <FadeInView index={0}>
-              <View style={[styles.cover, Elevation.raised]}>
-                <GradientFill colors={NavyGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-                <View style={styles.coverRing} pointerEvents="none">
-                  <StarRing size={150} starSize={10} opacity={0.32} period={160} />
+            {/* No fade: it replaces the dark skeleton cover in place. */}
+            <View style={[styles.cover, Elevation.raised]}>
+              <GradientFill colors={NavyGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+              <View style={styles.coverRing} pointerEvents="none">
+                <StarRing size={150} starSize={10} opacity={0.32} period={160} />
+              </View>
+              <View style={styles.coverTop}>
+                <View style={styles.coverFlag}>
+                  <FlagImage
+                    country={document.countryName}
+                    emoji={document.countryFlagEmoji}
+                    width={36}
+                    radius={5}
+                  />
                 </View>
-                <View style={styles.coverTop}>
-                  <View style={styles.coverFlag}>
-                    <FlagImage
-                      country={document.countryName}
-                      emoji={document.countryFlagEmoji}
-                      width={36}
-                      radius={5}
+                <View style={styles.coverMeta}>
+                  <Text style={styles.coverCountry}>{document.countryName}</Text>
+                  <View style={styles.coverCategory}>
+                    <Ionicons
+                      name={getCategoryIcon(document.categoryIcon)}
+                      size={13}
+                      color="rgba(255,255,255,0.75)"
                     />
+                    <Text style={styles.coverCategoryText} numberOfLines={1}>
+                      {document.categoryName}
+                    </Text>
                   </View>
-                  <View style={styles.coverMeta}>
-                    <Text style={styles.coverCountry}>{document.countryName}</Text>
-                    <View style={styles.coverCategory}>
-                      <Ionicons
-                        name={getCategoryIcon(document.categoryIcon)}
-                        size={13}
-                        color="rgba(255,255,255,0.75)"
-                      />
-                      <Text style={styles.coverCategoryText} numberOfLines={1}>
-                        {document.categoryName}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-                <Text style={styles.coverOverview}>{overviewText}</Text>
-                <View style={styles.coverStats}>
-                  <CoverStat icon="time-outline" label={`${readingMinutes} min read`} />
-                  {contents.length > 0 ? (
-                    <CoverStat icon="list-outline" label={`${contents.length} sections`} />
-                  ) : null}
-                  {document.isPremium ? <ProBadge /> : null}
                 </View>
               </View>
-            </FadeInView>
+              <Text style={styles.coverOverview}>{overviewText}</Text>
+              <View style={styles.coverStats}>
+                <CoverStat icon="time-outline" label={`${readingMinutes} min read`} />
+                {contents.length > 0 ? (
+                  <CoverStat icon="list-outline" label={`${contents.length} sections`} />
+                ) : null}
+                {document.isPremium ? <ProBadge /> : null}
+              </View>
+            </View>
 
             {contents.length >= 3 ? (
-              <FadeInView index={1}>
+              <ContentReveal>
                 <View style={styles.toc}>
                   <Text style={styles.tocEyebrow}>In this guide</Text>
                   {contents.slice(0, INLINE_TOC_LIMIT).map((entry, index) => (
@@ -333,7 +336,7 @@ function VisaDocumentContent() {
                     </PressableScale>
                   ) : null}
                 </View>
-              </FadeInView>
+              </ContentReveal>
             ) : null}
 
             <View
@@ -342,7 +345,7 @@ function VisaDocumentContent() {
                 articleOffset.current = event.nativeEvent.layout.y;
               }}
             >
-              <FadeInView index={2}>
+              <ContentReveal>
                 <ArticleStyleProvider scale={readerScale}>
                   <DocumentArticle
                     article={article}
@@ -351,7 +354,7 @@ function VisaDocumentContent() {
                     }}
                   />
                 </ArticleStyleProvider>
-              </FadeInView>
+              </ContentReveal>
             </View>
 
             <PressableScale

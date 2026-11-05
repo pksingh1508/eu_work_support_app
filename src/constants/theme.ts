@@ -275,8 +275,12 @@ export const Motion = {
   spring: { damping: 18, stiffness: 220, mass: 0.9 },
   softSpring: { damping: 22, stiffness: 140, mass: 1 },
   snappy: { damping: 20, stiffness: 320, mass: 0.7 },
-  stagger: 55,
-  maxStaggerDelay: 330,
+  stagger: 40,
+  maxStaggerDelay: 160,
   fast: 160,
   base: 240,
+  /** Entrance of a single item (FadeInView). */
+  enter: 280,
+  /** Loaded content replacing a skeleton (ContentReveal). */
+  reveal: 200,
 } as const;

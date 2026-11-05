@@ -101,6 +101,16 @@ function firstRelation<T>(value: T | T[]) {
   return Array.isArray(value) ? value[0] : value;
 }
 
+/**
+ * Placeholder searches older versions seeded into the history and then saved
+ * with the user's first real search. Dropped when reading storage.
+ */
+const LEGACY_PLACEHOLDER_SEARCHES = new Set([
+  "digital nomad visa spain",
+  "berlin tech salaries",
+  "blue card requirements",
+]);
+
 export function getStoredRecentSearches() {
   const stored = appStorage.getString(RECENT_SEARCHES_KEY);
 
@@ -116,9 +126,14 @@ export function getStoredRecentSearches() {
       return [];
     }
 
-    return parsed
-      .filter((item): item is string => typeof item === "string")
-      .slice(0, MAX_RECENT_SEARCHES);
+    const searches = parsed.filter((item): item is string => typeof item === "string");
+    const cleaned = searches.filter((item) => !LEGACY_PLACEHOLDER_SEARCHES.has(item.toLowerCase()));
+
+    if (cleaned.length !== searches.length) {
+      saveRecentSearches(cleaned);
+    }
+
+    return cleaned.slice(0, MAX_RECENT_SEARCHES);
   } catch {
     return [];
   }
@@ -174,7 +189,20 @@ function mapSearchResult(row: RawSearchDocument): SearchResult | null {
   };
 }
 
-function mergeSearchRows(rows: RawSearchDocument[]) {
+/** 2 = title contains the whole query, 1 = every word in the title, 0 = body only. */
+function titleRelevance(title: string, query: string) {
+  const haystack = title.toLowerCase();
+  const needle = normalizeQuery(query).toLowerCase();
+
+  if (needle && haystack.includes(needle)) {
+    return 2;
+  }
+
+  const words = needle.split(" ").filter(Boolean);
+  return words.length > 0 && words.every((word) => haystack.includes(word)) ? 1 : 0;
+}
+
+function mergeSearchRows(rows: RawSearchDocument[], query: string) {
   const uniqueRows = new Map<string, RawSearchDocument>();
 
   rows.forEach((row) => {
@@ -185,6 +213,12 @@ function mergeSearchRows(rows: RawSearchDocument[]) {
     .map(mapSearchResult)
     .filter((result): result is SearchResult => Boolean(result))
     .sort((left, right) => {
+      const relevance = titleRelevance(right.title, query) - titleRelevance(left.title, query);
+
+      if (relevance !== 0) {
+        return relevance;
+      }
+
       const popularity = left.popularityRank - right.popularityRank;
 
       if (popularity !== 0) {
@@ -303,7 +337,7 @@ export async function searchPublishedDocuments(query: string) {
   return mergeSearchRows([
     ...(documentResponse.data ?? []),
     ...extraRows,
-  ] as RawSearchDocument[]);
+  ] as RawSearchDocument[], query);
 }
 
 export function clearRecentSearches() {

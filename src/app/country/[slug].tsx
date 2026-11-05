@@ -15,7 +15,7 @@ import { CollapsingTopBar } from "@/components/country/collapsing-top-bar";
 import { COUNTRY_HERO_HEIGHT, CountryHero } from "@/components/country/country-hero";
 import { DocumentRow } from "@/components/country/document-row";
 import { CountryDetailSkeleton } from "@/components/skeletons";
-import { FadeInView } from "@/components/ui/fade-in-view";
+import { ContentReveal } from "@/components/ui/fade-in-view";
 import { FocusStatusBar } from "@/components/ui/focus-status-bar";
 import { ListGroup, ListRow } from "@/components/ui/list-group";
 import { PressableScale } from "@/components/ui/pressable-scale";
@@ -219,7 +219,10 @@ function CountryDetailContent() {
 
   const openGuide = useCallback(
     (document: CountryDocument) => {
-      router.push(`/visa/${document.id}`);
+      router.push({
+        pathname: "/visa/[id]",
+        params: { id: document.id, title: document.title, category: document.categoryName },
+      });
     },
     [router],
   );
@@ -294,26 +297,24 @@ function CountryDetailContent() {
               scrollY={scrollY}
             />
 
-            <View style={styles.body}>
-              <FadeInView index={1}>
-                <View style={[styles.overview, Elevation.raised]}>
-                  <View style={styles.overviewIcon}>
-                    <Ionicons name="compass" size={20} color={Palette.primary} />
-                  </View>
-                  <View style={styles.overviewText}>
-                    <Text style={styles.overviewTitle}>Immigration overview</Text>
-                    <Text style={styles.overviewBody}>{overviewText}</Text>
-                  </View>
+            <ContentReveal style={styles.body}>
+              <View style={[styles.overview, Elevation.raised]}>
+                <View style={styles.overviewIcon}>
+                  <Ionicons name="compass" size={20} color={Palette.primary} />
                 </View>
-              </FadeInView>
+                <View style={styles.overviewText}>
+                  <Text style={styles.overviewTitle}>Immigration overview</Text>
+                  <Text style={styles.overviewBody}>{overviewText}</Text>
+                </View>
+              </View>
 
-              <FadeInView index={2} style={styles.sectionHeader}>
+              <View style={styles.sectionHeader}>
                 <SectionHeader
                   eyebrow="Library"
                   title="Guides & documents"
                   count={country.documents.length}
                 />
-              </FadeInView>
+              </View>
 
               {country.documents.length === 0 ? (
                 <StateView
@@ -333,55 +334,52 @@ function CountryDetailContent() {
                   </View>
                   <View style={styles.documents}>
                     {group.entries.map(({ document, index }) => (
-                      <FadeInView key={document.id} index={index + 3}>
-                        <DocumentRow
-                          document={document}
-                          isFirst={index === 0}
-                          onPress={openGuide}
-                        />
-                      </FadeInView>
+                      <DocumentRow
+                        key={document.id}
+                        document={document}
+                        isFirst={index === 0}
+                        onPress={openGuide}
+                      />
                     ))}
                   </View>
                 </View>
               ))}
 
               {officialUrl || officialImmigrationUrl || lastReviewedDate ? (
-                <FadeInView index={4}>
-                  <ListGroup
-                    title="Official sources"
-                    footer={lastReviewedDate ? `Last reviewed ${lastReviewedDate}` : undefined}
-                    style={styles.sources}
-                  >
-                    {officialUrl ? (
-                      <ListRow
-                        icon="globe-outline"
-                        title="Official website"
-                        subtitle={getUrlHost(officialUrl)}
-                        external
-                        onPress={() => void openExternal(officialUrl)}
-                      />
-                    ) : null}
-                    {officialImmigrationUrl ? (
-                      <ListRow
-                        icon="business-outline"
-                        title="Immigration authority"
-                        subtitle={getUrlHost(officialImmigrationUrl)}
-                        external
-                        onPress={() => void openExternal(officialImmigrationUrl)}
-                      />
-                    ) : null}
-                    {!officialUrl && !officialImmigrationUrl && lastReviewedDate ? (
-                      <ListRow
-                        icon="shield-checkmark-outline"
-                        tone="success"
-                        title="Reviewed by our team"
-                        subtitle={lastReviewedDate}
-                      />
-                    ) : null}
-                  </ListGroup>
-                </FadeInView>
+                <ListGroup
+                  title="Official sources"
+                  footer={lastReviewedDate ? `Last reviewed ${lastReviewedDate}` : undefined}
+                  style={styles.sources}
+                >
+                  {officialUrl ? (
+                    <ListRow
+                      icon="globe-outline"
+                      title="Official website"
+                      subtitle={getUrlHost(officialUrl)}
+                      external
+                      onPress={() => void openExternal(officialUrl)}
+                    />
+                  ) : null}
+                  {officialImmigrationUrl ? (
+                    <ListRow
+                      icon="business-outline"
+                      title="Immigration authority"
+                      subtitle={getUrlHost(officialImmigrationUrl)}
+                      external
+                      onPress={() => void openExternal(officialImmigrationUrl)}
+                    />
+                  ) : null}
+                  {!officialUrl && !officialImmigrationUrl && lastReviewedDate ? (
+                    <ListRow
+                      icon="shield-checkmark-outline"
+                      tone="success"
+                      title="Reviewed by our team"
+                      subtitle={lastReviewedDate}
+                    />
+                  ) : null}
+                </ListGroup>
               ) : null}
-            </View>
+            </ContentReveal>
           </>
         ) : null}
       </Animated.ScrollView>

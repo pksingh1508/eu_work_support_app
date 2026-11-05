@@ -96,9 +96,17 @@ export function CountryDetailSkeleton() {
 }
 
 /** Guide reading page. */
-export function GuideDetailSkeleton() {
+export function GuideDetailSkeleton({ showTitle = true }: { showTitle?: boolean }) {
   return (
     <SkeletonFade>
+      {/* Stands in for the large title when it isn't known yet, so the cover doesn't jump. */}
+      {showTitle ? (
+        <View style={styles.guideTitle}>
+          <Skeleton width={96} height={11} />
+          <Skeleton width="82%" height={32} radius={8} style={styles.mt12} />
+          <Skeleton width="48%" height={32} radius={8} style={styles.mt12} />
+        </View>
+      ) : null}
       <View style={styles.guideHero}>
         <View style={styles.row}>
           <Skeleton width={40} height={28} radius={6} tone="dark" />
@@ -182,6 +190,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     marginTop: 30,
     marginBottom: 14,
+  },
+  guideTitle: {
+    // Matches StackScreen's large title: 6 top + overline row + 2 title lines + 24 bottom.
+    paddingTop: 7,
+    paddingBottom: 24,
   },
   guideHero: {
     padding: 20,

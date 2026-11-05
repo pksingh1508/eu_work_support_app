@@ -2,13 +2,13 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View, type TextStyle } from "react-native";
-import Animated, { FadeIn, FadeOut, LinearTransition } from "react-native-reanimated";
+import Animated, { FadeIn, LinearTransition } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { getCountrySlug } from "@/components/home/country-data";
 import { SearchResultsSkeleton } from "@/components/skeletons";
 import { ProBadge } from "@/components/ui/badge";
-import { FadeInView } from "@/components/ui/fade-in-view";
+import { FadeInView, fadeSafeProps } from "@/components/ui/fade-in-view";
 import { FlagImage } from "@/components/ui/flag-image";
 import { FocusStatusBar } from "@/components/ui/focus-status-bar";
 import { PressableScale } from "@/components/ui/pressable-scale";
@@ -60,6 +60,9 @@ function SearchContent() {
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryToken, setRetryToken] = useState(0);
+  // The query the current results/error belong to. Until it matches, a search
+  // is still pending, so we show the skeleton rather than "No guides found".
+  const [resolvedQuery, setResolvedQuery] = useState("");
 
   const shouldSearch = debouncedQuery.length >= MIN_SEARCH_LENGTH;
 
@@ -89,6 +92,7 @@ function SearchContent() {
       .then((nextResults) => {
         if (requestIdRef.current === requestId) {
           setResults(nextResults);
+          setResolvedQuery(debouncedQuery);
         }
       })
       .catch((searchError) => {
@@ -98,6 +102,7 @@ function SearchContent() {
 
         console.warn("Unable to search country documents", searchError);
         setResults([]);
+        setResolvedQuery(debouncedQuery);
         setError("Search is unavailable right now. Please try again.");
       })
       .finally(() => {
@@ -121,12 +126,16 @@ function SearchContent() {
 
   const openResult = (result: SearchResult) => {
     submitSearch(query || result.title);
-    router.push(`/visa/${result.id}`);
+    router.push({
+      pathname: "/visa/[id]",
+      params: { id: result.id, title: result.title, category: result.categoryName },
+    });
   };
 
   const hasQuery = query.trim().length > 0;
   const isTyping = normalizeQuery(query).length >= MIN_SEARCH_LENGTH && !shouldSearch;
-  const showSkeleton = (isSearching || isTyping) && results.length === 0;
+  const isPending = shouldSearch && resolvedQuery !== debouncedQuery;
+  const showSkeleton = (isSearching || isTyping || isPending) && results.length === 0;
 
   return (
     <SafeAreaView edges={["top"]} style={styles.screen}>
@@ -142,13 +151,11 @@ function SearchContent() {
         {hasQuery ? (
           <View style={styles.compactHeader} />
         ) : (
-          <Animated.View exiting={FadeOut.duration(140)}>
-            <ScreenHeader
-              eyebrow="Discover"
-              title="Search"
-              subtitle={`Visas, permits and documents across ${europeanCountryNames.length} European countries.`}
-            />
-          </Animated.View>
+          <ScreenHeader
+            eyebrow="Discover"
+            title="Search"
+            subtitle={`Visas, permits and documents across ${europeanCountryNames.length} European countries.`}
+          />
         )}
 
         <FadeInView index={1}>
@@ -161,7 +168,7 @@ function SearchContent() {
         </FadeInView>
 
         {!shouldSearch && !isTyping ? (
-          <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(120)}>
+          <Animated.View entering={FadeIn.duration(200)} {...fadeSafeProps}>
             {recentSearches.length > 0 ? (
               <FadeInView index={2} style={styles.block}>
                 <SectionHeader
@@ -240,6 +247,7 @@ function SearchContent() {
           <Animated.View
             entering={FadeIn.duration(200)}
             layout={LinearTransition.duration(220)}
+            {...fadeSafeProps}
             style={styles.block}
           >
             <View style={styles.resultsHeader}>

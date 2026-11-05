@@ -11,13 +11,13 @@ import Animated, {
   cancelAnimation,
   Easing,
   FadeIn,
-  FadeOut,
   makeMutable,
   useAnimatedStyle,
   withRepeat,
   withTiming,
 } from "react-native-reanimated";
 
+import { fadeSafeProps } from "@/components/ui/fade-in-view";
 import { GradientFill } from "@/components/ui/gradient-fill";
 import { Palette, Radii } from "@/constants/theme";
 
@@ -127,16 +127,20 @@ export function SkeletonCard({
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
-/** Cross-fades skeleton content in/out so swapping to real data never pops. */
+/**
+ * Fades skeletons in. There is deliberately no exit animation: a fading-out
+ * skeleton is drawn on top of the real content that replaces it, which showed
+ * as ghost grey cards over the page. Content takes its place in one frame.
+ */
 export function SkeletonFade({
   children,
   style,
 }: PropsWithChildren<{ style?: StyleProp<ViewStyle> }>) {
   return (
     <Animated.View
-      entering={FadeIn.duration(220)}
-      exiting={FadeOut.duration(180)}
+      entering={FadeIn.duration(180)}
       style={style}
+      {...fadeSafeProps}
       accessibilityRole="progressbar"
       accessibilityLabel="Loading content"
     >
