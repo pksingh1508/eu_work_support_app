@@ -161,7 +161,7 @@ export function HomeDemo() {
   const toggleSavedCountry = useCallback(
     async (country: CountryName) => {
       if (!hasPremiumAccess || !userId) {
-        router.push("/saved");
+        router.navigate("/saved");
         return;
       }
 
@@ -246,7 +246,7 @@ export function HomeDemo() {
         <HomeHero
           scrollY={scrollY}
           countryCount={europeanCountryNames.length}
-          onSearchPress={() => router.push("/search")}
+          onSearchPress={() => router.navigate("/search")}
         />
       );
     }

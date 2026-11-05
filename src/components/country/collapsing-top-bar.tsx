@@ -34,17 +34,10 @@ export function CollapsingTopBar({
 }: CollapsingTopBarProps) {
   const fadeStart = collapseAt - 90;
 
+  // Solid layer faded by opacity; an animated rgba() background let content
+  // show through the bar on Android.
   const barStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(
-      scrollY.value,
-      [fadeStart, collapseAt],
-      ["rgba(243, 245, 249, 0)", "rgba(243, 245, 249, 0.98)"],
-    ),
-    borderBottomColor: interpolateColor(
-      scrollY.value,
-      [fadeStart, collapseAt],
-      ["rgba(19, 27, 46, 0)", Palette.hairline],
-    ),
+    opacity: interpolate(scrollY.value, [fadeStart, collapseAt], [0, 1], Extrapolation.CLAMP),
   }));
 
   const titleStyle = useAnimatedStyle(() => ({
@@ -73,7 +66,8 @@ export function CollapsingTopBar({
   }));
 
   return (
-    <Animated.View style={[styles.bar, { paddingTop: topInset + 8 }, barStyle]}>
+    <View style={[styles.bar, { paddingTop: topInset + 8 }]}>
+      <Animated.View pointerEvents="none" style={[styles.barBackground, barStyle]} />
       <PressableScale
         onPress={onBack}
         accessibilityRole="button"
@@ -97,7 +91,7 @@ export function CollapsingTopBar({
       </Animated.View>
 
       <View style={styles.right}>{rightAction}</View>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -114,7 +108,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingBottom: 10,
+    elevation: 20,
+  },
+  barBackground: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: Palette.canvas,
     borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(10, 16, 36, 0.08)",
   },
   button: {
     width: BUTTON,

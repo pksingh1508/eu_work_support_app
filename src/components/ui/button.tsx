@@ -56,8 +56,13 @@ export function Button({
   style,
   accessibilityHint,
 }: ButtonProps) {
-  const tokens = variantTokens[variant];
   const isInactive = disabled || isLoading;
+  // A disabled primary is a quiet solid well with readable text, not a
+  // half-transparent gradient (white on pale blue was ~1.8:1).
+  const isDisabledPrimary = variant === "primary" && disabled && !isLoading;
+  const tokens = isDisabledPrimary
+    ? { background: Palette.well, text: Palette.muted, spinnerTrack: "rgba(10,16,36,0.12)" }
+    : variantTokens[variant];
   const height = size === "lg" ? 56 : 46;
 
   return (
@@ -66,6 +71,7 @@ export function Button({
       disabled={isInactive}
       haptic="light"
       scaleTo={0.975}
+      disabledOpacity={isDisabledPrimary ? 1 : undefined}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityHint={accessibilityHint}
@@ -85,7 +91,7 @@ export function Button({
         style,
       ]}
     >
-      {variant === "primary" ? (
+      {variant === "primary" && !isDisabledPrimary ? (
         <>
           <GradientFill colors={PrimaryGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
           <View pointerEvents="none" style={styles.sheen} />

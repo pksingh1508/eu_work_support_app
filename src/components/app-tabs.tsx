@@ -10,7 +10,9 @@ export default function AppTabs() {
       tabBar={(props) => <AppTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        animation: "shift",
+        // "shift" can leave a tab painted blank on Android (RN Animated issue
+        // with bottom-tabs 7.15); the sliding tab indicator carries the motion.
+        animation: "none",
         sceneStyle: { backgroundColor: Palette.canvas },
       }}
     >

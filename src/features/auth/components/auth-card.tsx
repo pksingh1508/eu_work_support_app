@@ -39,7 +39,9 @@ export function AuthCard({ title, subtitle, headerTitle, error, children }: Auth
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      // Android is edge-to-edge, so adjustResize no longer shrinks the window;
+      // without this the keyboard covers the primary button.
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.screen}
     >
       <FocusStatusBar style="light" />

@@ -12,7 +12,7 @@ export const privacyPolicy = {
     },
     {
       type: "paragraph",
-      text: "This document is intended to support Apple App Store and Google Play review requirements, including clear disclosure of collected data, account deletion, data retention, and third-party service providers.",
+      text: "It explains clearly what data we collect, how long we keep it, which third-party services we use, and how you can delete your account.",
     },
     {
       type: "heading",

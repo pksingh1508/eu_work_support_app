@@ -114,8 +114,10 @@ const styles = StyleSheet.create({
   },
   action: {
     marginTop: 22,
+    alignSelf: "center",
   },
   secondary: {
     marginTop: 6,
+    alignSelf: "center",
   },
 });

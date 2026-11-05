@@ -191,9 +191,10 @@ const styles = StyleSheet.create({
     backgroundColor: Palette.navy,
   },
   identityDecor: {
+    // Pushed up and right so the rotating stars stay clear of the "Edit" link.
     position: "absolute",
-    right: -56,
-    top: -60,
+    right: -112,
+    top: -118,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -292,6 +293,6 @@ const styles = StyleSheet.create({
   },
   footerText: {
     ...Type.caption,
-    color: Palette.subtle,
+    color: Palette.muted,
   },
 });

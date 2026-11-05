@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useState, type ReactNode } from "react";
+import { Pressable, StyleSheet, Text, View, type TextStyle } from "react-native";
 import Animated, {
   FadeIn,
   FadeOut,
@@ -10,33 +10,32 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
+import { useArticleStyles } from "@/components/document/article-theme";
+import { RichText } from "@/components/document/rich-text";
 import { Motion, Palette, Radii, Type } from "@/constants/theme";
-import { stringifyValue, type ContentSection } from "@/features/documents/content";
 import { haptics } from "@/lib/haptics";
 
-export function DocumentFaq({ section }: { section: ContentSection }) {
-  const items = Array.isArray(section.items) ? section.items : [];
+type FaqEntry = { question: string; answer: string };
+
+/** Accordion of guide questions, using the reader's typography. */
+export function DocumentFaq({ items }: { items: FaqEntry[] }) {
+  const article = useArticleStyles();
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>{section.title ?? "Frequently asked"}</Text>
-      <View>
-        {items.map((item, index) => {
-          const faq = item as { question?: unknown; answer?: unknown };
-
-          return (
-            <FaqItem
-              key={`${stringifyValue(faq.question)}-${index}`}
-              question={stringifyValue(faq.question)}
-              answer={stringifyValue(faq.answer)}
-              isOpen={openIndex === index}
-              isLast={index === items.length - 1}
-              onToggle={() => setOpenIndex((current) => (current === index ? null : index))}
-            />
-          );
-        })}
-      </View>
+      {items.map((item, index) => (
+        <FaqItem
+          key={`${item.question}-${index}`}
+          question={item.question}
+          answer={item.answer}
+          questionStyle={article.question}
+          renderAnswer={(answer) => <RichText text={answer} style={[article.body, styles.answerSpacing]} />}
+          isOpen={openIndex === index}
+          isLast={index === items.length - 1}
+          onToggle={() => setOpenIndex((current) => (current === index ? null : index))}
+        />
+      ))}
     </View>
   );
 }
@@ -47,12 +46,16 @@ export function FaqItem({
   isOpen,
   isLast,
   onToggle,
+  questionStyle,
+  renderAnswer,
 }: {
   question: string;
   answer: string;
   isOpen: boolean;
   isLast: boolean;
   onToggle: () => void;
+  questionStyle?: TextStyle;
+  renderAnswer?: (answer: string) => ReactNode;
 }) {
   const rotation = useSharedValue(isOpen ? 1 : 0);
 
@@ -76,19 +79,21 @@ export function FaqItem({
         accessibilityState={{ expanded: isOpen }}
         accessibilityLabel={question}
       >
-        <Text style={styles.questionText}>{question}</Text>
+        <Text style={[styles.questionText, questionStyle]}>{question}</Text>
         <Animated.View style={[styles.chevron, isOpen && styles.chevronOpen, chevronStyle]}>
           <Ionicons name="chevron-down" size={15} color={isOpen ? Palette.white : Palette.inkSoft} />
         </Animated.View>
       </Pressable>
       {isOpen ? (
-        <Animated.Text
-          entering={FadeIn.duration(Motion.base)}
-          exiting={FadeOut.duration(120)}
-          style={styles.answer}
-        >
-          {answer}
-        </Animated.Text>
+        <Animated.View entering={FadeIn.duration(Motion.base)} exiting={FadeOut.duration(120)}>
+          {renderAnswer ? (
+            renderAnswer(answer)
+          ) : (
+            <Text selectable style={styles.answer}>
+              {answer}
+            </Text>
+          )}
+        </Animated.View>
       ) : null}
     </Animated.View>
   );
@@ -97,17 +102,11 @@ export function FaqItem({
 const styles = StyleSheet.create({
   card: {
     paddingHorizontal: 18,
-    paddingTop: 18,
-    paddingBottom: 6,
-    borderRadius: Radii.xl,
+    paddingVertical: 4,
+    borderRadius: Radii.lg,
     backgroundColor: Palette.card,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Palette.hairline,
-  },
-  title: {
-    ...Type.title3,
-    marginBottom: 4,
-    color: Palette.ink,
+    borderColor: "rgba(10,16,36,0.1)",
   },
   divider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -118,7 +117,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   questionText: {
     ...Type.headline,
@@ -139,6 +138,9 @@ const styles = StyleSheet.create({
   answer: {
     ...Type.body,
     paddingBottom: 16,
-    color: Palette.muted,
+    color: Palette.inkSoft,
+  },
+  answerSpacing: {
+    paddingBottom: 18,
   },
 });

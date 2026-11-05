@@ -22,7 +22,7 @@ function DocumentRowBase({ document, isFirst, onPress }: DocumentRowProps) {
       style={[styles.card, Elevation.card]}
       accessibilityRole="button"
       accessibilityLabel={`Open ${document.title}`}
-      accessibilityHint="Opens the guide in a sheet"
+      accessibilityHint="Opens the full guide"
     >
       <View style={[styles.icon, isFirst && styles.iconFeatured]}>
         <Ionicons
@@ -32,11 +32,9 @@ function DocumentRowBase({ document, isFirst, onPress }: DocumentRowProps) {
         />
       </View>
       <View style={styles.body}>
-        <View style={styles.titleRow}>
-          <Text style={styles.title} numberOfLines={2}>
-            {document.title}
-          </Text>
-        </View>
+        <Text style={styles.title} numberOfLines={2}>
+          {document.title}
+        </Text>
         <Text style={styles.description} numberOfLines={2}>
           {document.shortDescription ?? document.intro ?? "Complete guide"}
         </Text>
@@ -78,14 +76,11 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
   title: {
     ...Type.headline,
-    flex: 1,
+    // Android measures wrapping without negative tracking but draws with it,
+    // which left an empty second line under some one-line titles.
+    letterSpacing: 0,
     color: Palette.ink,
   },
   description: {

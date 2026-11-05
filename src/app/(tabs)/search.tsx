@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View, type TextStyle } from "react-native";
 import Animated, { FadeIn, FadeOut, LinearTransition } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -124,6 +124,7 @@ function SearchContent() {
     router.push(`/visa/${result.id}`);
   };
 
+  const hasQuery = query.trim().length > 0;
   const isTyping = normalizeQuery(query).length >= MIN_SEARCH_LENGTH && !shouldSearch;
   const showSkeleton = (isSearching || isTyping) && results.length === 0;
 
@@ -137,11 +138,18 @@ function SearchContent() {
         contentContainerStyle={[styles.content, { paddingBottom: BottomTabInset + 24 }]}
         showsVerticalScrollIndicator={false}
       >
-        <ScreenHeader
-          eyebrow="Discover"
-          title="Search"
-          subtitle={`Visas, permits and documents across ${europeanCountryNames.length} European countries.`}
-        />
+        {/* The large header steps aside while typing so results get the space above the keyboard. */}
+        {hasQuery ? (
+          <View style={styles.compactHeader} />
+        ) : (
+          <Animated.View exiting={FadeOut.duration(140)}>
+            <ScreenHeader
+              eyebrow="Discover"
+              title="Search"
+              subtitle={`Visas, permits and documents across ${europeanCountryNames.length} European countries.`}
+            />
+          </Animated.View>
+        )}
 
         <FadeInView index={1}>
           <SearchField
@@ -270,7 +278,11 @@ function SearchContent() {
             <View style={styles.results}>
               {results.map((result, index) => (
                 <FadeInView key={result.id} index={index}>
-                  <SearchResultCard result={result} onPress={() => openResult(result)} />
+                  <SearchResultCard
+                    result={result}
+                    query={debouncedQuery}
+                    onPress={() => openResult(result)}
+                  />
                 </FadeInView>
               ))}
             </View>
@@ -311,7 +323,44 @@ function QueryShortcut({
   );
 }
 
-function SearchResultCard({ result, onPress }: { result: SearchResult; onPress: () => void }) {
+/** Highlights the words of the query inside a result title. */
+function HighlightedText({ text, query, style }: { text: string; query: string; style: TextStyle }) {
+  const terms = query
+    .split(/\s+/)
+    .filter((term) => term.length >= MIN_SEARCH_LENGTH)
+    .map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+
+  if (terms.length === 0) {
+    return <Text style={style}>{text}</Text>;
+  }
+
+  const pattern = new RegExp(`(${terms.join("|")})`, "gi");
+  const parts = text.split(pattern);
+
+  return (
+    <Text style={style}>
+      {parts.map((part, index) =>
+        index % 2 === 1 ? (
+          <Text key={index} style={styles.highlight}>
+            {part}
+          </Text>
+        ) : (
+          part
+        ),
+      )}
+    </Text>
+  );
+}
+
+function SearchResultCard({
+  result,
+  query,
+  onPress,
+}: {
+  result: SearchResult;
+  query: string;
+  onPress: () => void;
+}) {
   return (
     <PressableScale
       onPress={onPress}
@@ -338,7 +387,7 @@ function SearchResultCard({ result, onPress }: { result: SearchResult; onPress: 
 
       <View style={styles.resultBody}>
         <View style={styles.resultTextCol}>
-          <Text style={styles.resultTitle}>{result.title}</Text>
+          <HighlightedText text={result.title} query={query} style={styles.resultTitle} />
           {result.shortDescription ? (
             <Text style={styles.resultDescription} numberOfLines={2}>
               {result.shortDescription}
@@ -498,6 +547,13 @@ const styles = StyleSheet.create({
     ...Type.title3,
     fontSize: 17,
     color: Palette.ink,
+  },
+  highlight: {
+    color: Palette.primary,
+    backgroundColor: Palette.tint,
+  },
+  compactHeader: {
+    height: 12,
   },
   resultDescription: {
     ...Type.footnote,

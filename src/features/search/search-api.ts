@@ -1,5 +1,6 @@
 import { appStorage } from "@/lib/local-storage";
 import { supabase } from "@/lib/supabase";
+import { cleanDescription } from "@/features/documents/article";
 
 export const RECENT_SEARCHES_KEY = "search.recentQueries";
 const MAX_RECENT_SEARCHES = 5;
@@ -7,17 +8,13 @@ const SEARCH_LIMIT = 25;
 export const MIN_SEARCH_LENGTH = 2;
 export const SEARCH_DEBOUNCE_MS = 350;
 
-const fallbackRecentSearches = [
-  "Digital Nomad Visa Spain",
-  "Berlin Tech Salaries",
-  "Blue Card Requirements",
-];
-
+// Each of these matches published guides; keep them in sync with real content.
 export const trendingQueries = [
-  "Germany Tech Visa",
-  "Poland Work Permit",
-  "Netherlands 30% Ruling",
-  "Portugal D7",
+  "Student visa",
+  "Work visa",
+  "Residence permit",
+  "Sworn translation",
+  "Driving licence",
 ];
 
 const documentSelect = `
@@ -107,22 +104,23 @@ function firstRelation<T>(value: T | T[]) {
 export function getStoredRecentSearches() {
   const stored = appStorage.getString(RECENT_SEARCHES_KEY);
 
+  // Only ever show searches the user actually made.
   if (!stored) {
-    return fallbackRecentSearches;
+    return [];
   }
 
   try {
     const parsed = JSON.parse(stored);
 
     if (!Array.isArray(parsed)) {
-      return fallbackRecentSearches;
+      return [];
     }
 
     return parsed
       .filter((item): item is string => typeof item === "string")
       .slice(0, MAX_RECENT_SEARCHES);
   } catch {
-    return fallbackRecentSearches;
+    return [];
   }
 }
 
@@ -163,7 +161,7 @@ function mapSearchResult(row: RawSearchDocument): SearchResult | null {
     id: row.id,
     title: row.title,
     slug: row.slug,
-    shortDescription: row.short_description,
+    shortDescription: cleanDescription(row.short_description),
     isPremium: row.is_premium,
     sortOrder: row.sort_order ?? 100,
     countryName: country.name,
@@ -250,10 +248,22 @@ function publishedDocumentsQuery() {
     .eq("countries.is_active", true);
 }
 
+/** Every word must appear, in any order ("visa germany" finds "Germany Work Visa"). */
+function matchAllWords(words: string[]) {
+  return words.reduce(
+    (query, word) => query.ilike("search_text", toIlikePattern(word)),
+    publishedDocumentsQuery(),
+  );
+}
+
 export async function searchPublishedDocuments(query: string) {
   const pattern = toIlikePattern(query);
+  const words = normalizeQuery(query)
+    .split(" ")
+    .filter((word) => word.replace(/[%_]/g, "").length > 0)
+    .slice(0, 6);
   const [documentResponse, matches] = await Promise.all([
-    publishedDocumentsQuery().ilike("search_text", pattern).limit(SEARCH_LIMIT),
+    matchAllWords(words.length > 0 ? words : [query]).limit(SEARCH_LIMIT),
     getMatchedCountryAndCategoryIds(pattern),
   ]);
 

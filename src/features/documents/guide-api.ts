@@ -4,6 +4,7 @@ import {
   type ContentJson,
 } from "@/features/documents/content";
 import { supabase } from "@/lib/supabase";
+import { cleanDescription } from "@/features/documents/article";
 
 const documentSelect = `
   id,
@@ -97,7 +98,7 @@ function mapDocument(row: RawDocument): VisaDocument | null {
     id: row.id,
     title: row.title,
     slug: row.slug,
-    shortDescription: row.short_description,
+    shortDescription: cleanDescription(row.short_description),
     intro: row.intro,
     contentJson: normalizeContentJson(row.content_json),
     isPremium: row.is_premium,

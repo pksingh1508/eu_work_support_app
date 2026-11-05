@@ -92,7 +92,7 @@ export const SearchField = forwardRef<TextInput, SearchFieldProps>(function Sear
         autoCapitalize="none"
         autoCorrect={false}
         placeholder={placeholder}
-        placeholderTextColor={Palette.subtle}
+        placeholderTextColor={Palette.placeholder}
         selectionColor={Palette.primary}
         cursorColor={Palette.primary}
         style={styles.input}
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     fontFamily: FontFamily.bodyMedium,
     fontSize: 15,
-    color: Palette.subtle,
+    color: Palette.muted,
   },
   input: {
     flex: 1,

@@ -193,7 +193,7 @@ function SavedContent() {
             message="Tap the bookmark on any country or guide and it will appear here."
             actionLabel="Explore countries"
             actionIcon="arrow-forward"
-            onAction={() => router.push("/")}
+            onAction={() => router.navigate("/")}
           />
         ) : null}
 

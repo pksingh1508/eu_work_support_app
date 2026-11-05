@@ -5,6 +5,7 @@ import { Stack } from "expo-router";
 import React from "react";
 import { StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Toaster } from "sonner-native";
 
 import { AppProviders } from "@/components/app-providers";
@@ -44,18 +45,27 @@ export default function RootLayout() {
           </Stack>
         </BottomSheetModalProvider>
         {/* Rendered after the sheet provider so toasts float above open sheets. */}
-        <Toaster
-          position="top-center"
-          duration={2600}
-          visibleToasts={3}
-          gap={8}
-          offset={6}
-          enableStacking
-          swipeToDismissDirection="up"
-          theme="light"
-        />
+        <AppToaster />
       </AppProviders>
     </GestureHandlerRootView>
+  );
+}
+
+/** Toasts sit below the status bar instead of covering the clock. */
+function AppToaster() {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <Toaster
+      position="top-center"
+      duration={2600}
+      visibleToasts={3}
+      gap={8}
+      offset={insets.top + 6}
+      enableStacking
+      swipeToDismissDirection="up"
+      theme="light"
+    />
   );
 }
 

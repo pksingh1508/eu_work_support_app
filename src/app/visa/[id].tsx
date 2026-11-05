@@ -1,27 +1,37 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@clerk/expo";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import Animated, { useAnimatedRef } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { DocumentSections } from "@/components/document/document-sections";
+import { ArticleStyleProvider, READER_SCALES } from "@/components/document/article-theme";
+import { DocumentArticle } from "@/components/document/document-sections";
 import { GuideDetailSkeleton } from "@/components/skeletons";
-import { Badge, ProBadge } from "@/components/ui/badge";
+import { ProBadge } from "@/components/ui/badge";
 import { FadeInView } from "@/components/ui/fade-in-view";
 import { FlagImage } from "@/components/ui/flag-image";
 import { GradientFill } from "@/components/ui/gradient-fill";
 import { PressableScale } from "@/components/ui/pressable-scale";
-import { StackScreen } from "@/components/ui/stack-screen";
+import { AppSheet } from "@/components/ui/sheet";
+import { BAR_HEIGHT, StackScreen } from "@/components/ui/stack-screen";
 import { StarRing } from "@/components/ui/star-ring";
 import { StateView } from "@/components/ui/state-view";
 import { Elevation, NavyGradient, Palette, Radii, Type } from "@/constants/theme";
 import { PremiumGuard } from "@/features/auth/components/premium-guard";
-import { estimateReadingMinutes, getCategoryIcon } from "@/features/documents/content";
+import { buildArticle, countArticleWords, getTableOfContents } from "@/features/documents/article";
+import { getCategoryIcon } from "@/features/documents/content";
 import { fetchVisaDocument, type VisaDocument } from "@/features/documents/guide-api";
 import { useIsDocumentSaved, useSavedStore } from "@/features/saved/saved-store";
 import { FontFamily } from "@/lib/fonts";
 import { haptics } from "@/lib/haptics";
+import { getReaderScale, setReaderScale } from "@/lib/local-storage";
 import { showErrorToast, showSavedToast, showUnsavedToast } from "@/lib/toast";
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const NOT_FOUND = "Guide not found.";
+const INLINE_TOC_LIMIT = 5;
 
 export default function VisaDocumentScreen() {
   return (
@@ -33,6 +43,7 @@ export default function VisaDocumentScreen() {
 
 function VisaDocumentContent() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { userId } = useAuth();
   const { id } = useLocalSearchParams<{ id: string }>();
   const documentId = Array.isArray(id) ? id[0] : id;
@@ -40,6 +51,11 @@ function VisaDocumentContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
+  const [isContentsOpen, setIsContentsOpen] = useState(false);
+  const [readerScale, setReaderScaleState] = useState(getReaderScale);
+  const scrollRef = useAnimatedRef<Animated.ScrollView>();
+  const articleOffset = useRef(0);
+  const sectionOffsets = useRef<Record<string, number>>({});
   const isSaved = useIsDocumentSaved(document?.id);
   const pendingMutation = useSavedStore((state) =>
     document?.id ? state.pendingMutations[`document:${document.id}`] : undefined,
@@ -51,9 +67,9 @@ function VisaDocumentContent() {
   useEffect(() => {
     let isMounted = true;
 
-    if (!documentId) {
+    if (!documentId || !UUID_PATTERN.test(documentId)) {
       setIsLoading(false);
-      setError("Guide not found.");
+      setError(NOT_FOUND);
       return;
     }
 
@@ -67,7 +83,7 @@ function VisaDocumentContent() {
         }
 
         setDocument(nextDocument);
-        setError(nextDocument ? null : "Guide not found.");
+        setError(nextDocument ? null : NOT_FOUND);
       })
       .catch((fetchError) => {
         if (!isMounted) {
@@ -95,18 +111,40 @@ function VisaDocumentContent() {
     }
   }, [hydrateSavedForUser, userId]);
 
-  const overviewText = useMemo(() => {
-    if (!document) {
-      return "";
-    }
+  const article = useMemo(
+    () => (document ? buildArticle(document.intro, document.contentJson, document.title) : null),
+    [document],
+  );
+  const contents = useMemo(() => (article ? getTableOfContents(article) : []), [article]);
+  const readingMinutes = article ? Math.max(1, Math.round(countArticleWords(article) / 220)) : 0;
 
-    return (
-      document.shortDescription ??
-      `${document.countryName} ${document.categoryName.toLowerCase()} guide.`
-    );
-  }, [document]);
+  const overviewText = document
+    ? (document.shortDescription ?? `${document.countryName} ${document.categoryName.toLowerCase()} guide.`)
+    : "";
 
-  const readingMinutes = document ? estimateReadingMinutes(document.intro, document.contentJson) : 0;
+  const goBack = () => (router.canGoBack() ? router.back() : router.replace("/"));
+
+  const changeReaderScale = (scale: number) => {
+    haptics.selection();
+    setReaderScaleState(scale);
+    setReaderScale(scale);
+  };
+
+  const jumpToSection = useCallback(
+    (sectionId: string) => {
+      const offset = sectionOffsets.current[sectionId];
+      setIsContentsOpen(false);
+
+      if (offset === undefined) {
+        return;
+      }
+
+      const y = Math.max(0, articleOffset.current + offset - (insets.top + BAR_HEIGHT + 12));
+      // Let the sheet start closing before the page scrolls underneath it.
+      setTimeout(() => scrollRef.current?.scrollTo({ y, animated: true }), 120);
+    },
+    [insets.top, scrollRef],
+  );
 
   const toggleSaved = () => {
     if (!document) {
@@ -157,122 +195,245 @@ function VisaDocumentContent() {
   };
 
   return (
-    <StackScreen
-      title={document?.title ?? "Guide"}
-      eyebrow={document ? document.categoryName : undefined}
-      hideLargeTitle={!document}
-      rightAction={
-        document ? (
-          <PressableScale
-            onPress={toggleSaved}
-            disabled={Boolean(pendingMutation)}
-            scaleTo={0.88}
-            style={[styles.saveButton, isSaved && styles.saveButtonActive]}
-            accessibilityRole="button"
-            accessibilityState={{ selected: isSaved }}
-            accessibilityLabel={isSaved ? `Remove ${document.title} from saved` : `Save ${document.title}`}
-          >
-            <Ionicons
-              name={isSaved ? "bookmark" : "bookmark-outline"}
-              size={19}
-              color={isSaved ? Palette.white : Palette.ink}
-            />
-          </PressableScale>
-        ) : null
-      }
-    >
-      {isLoading ? <GuideDetailSkeleton /> : null}
+    <>
+      <StackScreen
+        title={document?.title ?? "Guide"}
+        eyebrow={document ? document.categoryName : undefined}
+        hideLargeTitle={!document}
+        scrollRef={scrollRef}
+        showProgress={Boolean(document)}
+        onBack={goBack}
+        rightAction={
+          document ? (
+            <View style={styles.actions}>
+              <PressableScale
+                onPress={() => setIsContentsOpen(true)}
+                scaleTo={0.88}
+                haptic="selection"
+                style={styles.headerButton}
+                accessibilityRole="button"
+                accessibilityLabel="Contents and text size"
+              >
+                <Ionicons name="reader-outline" size={19} color={Palette.ink} />
+              </PressableScale>
+              <PressableScale
+                onPress={toggleSaved}
+                disabled={Boolean(pendingMutation)}
+                disabledOpacity={1}
+                scaleTo={0.88}
+                style={[styles.headerButton, isSaved && styles.headerButtonActive]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isSaved }}
+                accessibilityLabel={isSaved ? `Remove ${document.title} from saved` : `Save ${document.title}`}
+              >
+                <Ionicons
+                  name={isSaved ? "bookmark" : "bookmark-outline"}
+                  size={19}
+                  color={isSaved ? Palette.white : Palette.ink}
+                />
+              </PressableScale>
+            </View>
+          ) : null
+        }
+      >
+        {isLoading ? <GuideDetailSkeleton /> : null}
 
-      {!isLoading && error ? (
-        <StateView
-          icon={error === "Guide not found." ? "document-outline" : "cloud-offline-outline"}
-          tone="danger"
-          title={error}
-          message="Check your connection, then try again."
-          actionLabel="Try again"
-          actionIcon="refresh"
-          onAction={() => setReloadToken((current) => current + 1)}
-          secondaryLabel="Go back"
-          onSecondary={() => router.back()}
-          style={styles.state}
-        />
-      ) : null}
+        {!isLoading && error ? (
+          <StateView
+            icon={error === NOT_FOUND ? "document-outline" : "cloud-offline-outline"}
+            tone="danger"
+            title={error}
+            message={
+              error === NOT_FOUND
+                ? "This guide may have moved or is no longer published."
+                : "Check your connection, then try again."
+            }
+            actionLabel={error === NOT_FOUND ? undefined : "Try again"}
+            actionIcon="refresh"
+            onAction={() => setReloadToken((current) => current + 1)}
+            secondaryLabel="Go back"
+            onSecondary={goBack}
+            style={styles.state}
+          />
+        ) : null}
 
-      {!isLoading && document ? (
-        <>
-          <FadeInView index={0}>
-            <View style={[styles.cover, Elevation.floating]}>
-              <GradientFill colors={NavyGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-              <View style={styles.coverRing} pointerEvents="none">
-                <StarRing size={160} starSize={10} opacity={0.4} period={160} />
-              </View>
-              <View style={styles.coverTop}>
-                <View style={styles.coverFlag}>
-                  <FlagImage
-                    country={document.countryName}
-                    emoji={document.countryFlagEmoji}
-                    width={36}
-                    radius={5}
-                  />
+        {!isLoading && document && article ? (
+          <>
+            <FadeInView index={0}>
+              <View style={[styles.cover, Elevation.raised]}>
+                <GradientFill colors={NavyGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                <View style={styles.coverRing} pointerEvents="none">
+                  <StarRing size={150} starSize={10} opacity={0.32} period={160} />
                 </View>
-                <View style={styles.coverMeta}>
-                  <Text style={styles.coverCountry}>{document.countryName}</Text>
-                  <View style={styles.coverCategory}>
-                    <Ionicons
-                      name={getCategoryIcon(document.categoryIcon)}
-                      size={13}
-                      color="rgba(255,255,255,0.7)"
+                <View style={styles.coverTop}>
+                  <View style={styles.coverFlag}>
+                    <FlagImage
+                      country={document.countryName}
+                      emoji={document.countryFlagEmoji}
+                      width={36}
+                      radius={5}
                     />
-                    <Text style={styles.coverCategoryText} numberOfLines={1}>
-                      {document.categoryName}
-                    </Text>
+                  </View>
+                  <View style={styles.coverMeta}>
+                    <Text style={styles.coverCountry}>{document.countryName}</Text>
+                    <View style={styles.coverCategory}>
+                      <Ionicons
+                        name={getCategoryIcon(document.categoryIcon)}
+                        size={13}
+                        color="rgba(255,255,255,0.75)"
+                      />
+                      <Text style={styles.coverCategoryText} numberOfLines={1}>
+                        {document.categoryName}
+                      </Text>
+                    </View>
                   </View>
                 </View>
+                <Text style={styles.coverOverview}>{overviewText}</Text>
+                <View style={styles.coverStats}>
+                  <CoverStat icon="time-outline" label={`${readingMinutes} min read`} />
+                  {contents.length > 0 ? (
+                    <CoverStat icon="list-outline" label={`${contents.length} sections`} />
+                  ) : null}
+                  {document.isPremium ? <ProBadge /> : null}
+                </View>
               </View>
-              <Text style={styles.coverOverview}>{overviewText}</Text>
-              <View style={styles.coverStats}>
-                <CoverStat icon="time-outline" label={`${readingMinutes} min read`} />
-                <CoverStat
-                  icon="list-outline"
-                  label={`${document.contentJson.sections?.length ?? 0} sections`}
-                />
-                {document.isPremium ? <ProBadge /> : null}
-              </View>
-            </View>
-          </FadeInView>
-
-          {document.tags.length > 0 ? (
-            <FadeInView index={1} style={styles.tags}>
-              {document.tags.slice(0, 6).map((tag) => (
-                <Badge key={tag} label={tag} tone="neutral" />
-              ))}
             </FadeInView>
-          ) : null}
 
-          <FadeInView index={2} style={styles.content}>
-            <DocumentSections intro={document.intro} content={document.contentJson} />
-          </FadeInView>
+            {contents.length >= 3 ? (
+              <FadeInView index={1}>
+                <View style={styles.toc}>
+                  <Text style={styles.tocEyebrow}>In this guide</Text>
+                  {contents.slice(0, INLINE_TOC_LIMIT).map((entry, index) => (
+                    <PressableScale
+                      key={entry.id}
+                      onPress={() => jumpToSection(entry.id)}
+                      haptic="selection"
+                      scaleTo={0.98}
+                      style={styles.tocRow}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Jump to ${entry.title}`}
+                    >
+                      <Text style={styles.tocNumber}>{String(index + 1).padStart(2, "0")}</Text>
+                      <Text style={styles.tocTitle} numberOfLines={2}>
+                        {entry.title}
+                      </Text>
+                      <Ionicons name="arrow-down" size={15} color={Palette.muted} />
+                    </PressableScale>
+                  ))}
+                  {contents.length > INLINE_TOC_LIMIT ? (
+                    <PressableScale
+                      onPress={() => setIsContentsOpen(true)}
+                      haptic="selection"
+                      style={styles.tocMore}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Show all ${contents.length} sections`}
+                    >
+                      <Text style={styles.tocMoreText}>All {contents.length} sections</Text>
+                      <Ionicons name="chevron-forward" size={15} color={Palette.primary} />
+                    </PressableScale>
+                  ) : null}
+                </View>
+              </FadeInView>
+            ) : null}
 
-          <PressableScale
-            onPress={() => router.push(`/country/${document.countrySlug}`)}
-            haptic="light"
-            scaleTo={0.98}
-            style={[styles.moreCard, Elevation.card]}
-            accessibilityRole="button"
-            accessibilityLabel={`View all ${document.countryName} guides`}
-          >
-            <FlagImage country={document.countryName} emoji={document.countryFlagEmoji} width={40} radius={6} />
-            <View style={styles.moreText}>
-              <Text style={styles.moreEyebrow}>Keep exploring</Text>
-              <Text style={styles.moreTitle}>All {document.countryName} guides</Text>
+            <View
+              style={styles.content}
+              onLayout={(event) => {
+                articleOffset.current = event.nativeEvent.layout.y;
+              }}
+            >
+              <FadeInView index={2}>
+                <ArticleStyleProvider scale={readerScale}>
+                  <DocumentArticle
+                    article={article}
+                    onSectionLayout={(sectionId, y) => {
+                      sectionOffsets.current[sectionId] = y;
+                    }}
+                  />
+                </ArticleStyleProvider>
+              </FadeInView>
             </View>
-            <View style={styles.moreArrow}>
-              <Ionicons name="arrow-forward" size={17} color={Palette.white} />
+
+            <PressableScale
+              onPress={() => router.push(`/country/${document.countrySlug}`)}
+              haptic="light"
+              scaleTo={0.98}
+              style={[styles.moreCard, Elevation.card]}
+              accessibilityRole="button"
+              accessibilityLabel={`View all ${document.countryName} guides`}
+            >
+              <FlagImage country={document.countryName} emoji={document.countryFlagEmoji} width={40} radius={6} />
+              <View style={styles.moreText}>
+                <Text style={styles.moreEyebrow}>Keep exploring</Text>
+                <Text style={styles.moreTitle}>All {document.countryName} guides</Text>
+              </View>
+              <View style={styles.moreArrow}>
+                <Ionicons name="arrow-forward" size={17} color={Palette.white} />
+              </View>
+            </PressableScale>
+          </>
+        ) : null}
+      </StackScreen>
+
+      <AppSheet
+        visible={isContentsOpen}
+        onClose={() => setIsContentsOpen(false)}
+        snapPoints={["70%"]}
+        scrollable
+        header={
+          <View style={styles.sheetHeader}>
+            <Text style={styles.sheetTitle}>Reading</Text>
+            <Text style={styles.sheetLabel}>Text size</Text>
+            <View style={styles.scaleRow} accessibilityRole="radiogroup">
+              {READER_SCALES.map((scale) => {
+                const isActive = Math.abs(scale - readerScale) < 0.01;
+
+                return (
+                  <PressableScale
+                    key={scale}
+                    onPress={() => changeReaderScale(scale)}
+                    scaleTo={0.94}
+                    style={[styles.scaleOption, isActive && styles.scaleOptionActive]}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: isActive }}
+                    accessibilityLabel={`Text size ${Math.round(scale * 100)} percent`}
+                  >
+                    <Text
+                      style={[
+                        styles.scaleGlyph,
+                        { fontSize: Math.round(15 * scale) },
+                        isActive && styles.scaleGlyphActive,
+                      ]}
+                    >
+                      Aa
+                    </Text>
+                  </PressableScale>
+                );
+              })}
             </View>
-          </PressableScale>
-        </>
-      ) : null}
-    </StackScreen>
+            {contents.length > 0 ? <Text style={[styles.sheetLabel, styles.sheetContentsLabel]}>Contents</Text> : null}
+          </View>
+        }
+      >
+        <View style={styles.sheetList}>
+          {contents.map((entry, index) => (
+            <PressableScale
+              key={entry.id}
+              onPress={() => jumpToSection(entry.id)}
+              haptic="selection"
+              scaleTo={0.98}
+              dimOnPress
+              style={[styles.sheetRow, index < contents.length - 1 && styles.sheetRowDivider]}
+              accessibilityRole="button"
+              accessibilityLabel={`Jump to ${entry.title}`}
+            >
+              <Text style={styles.tocNumber}>{String(index + 1).padStart(2, "0")}</Text>
+              <Text style={styles.sheetRowTitle}>{entry.title}</Text>
+            </PressableScale>
+          ))}
+        </View>
+      </AppSheet>
+    </>
   );
 }
 
@@ -286,7 +447,11 @@ function CoverStat({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; labe
 }
 
 const styles = StyleSheet.create({
-  saveButton: {
+  actions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  headerButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -296,7 +461,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: Palette.hairline,
   },
-  saveButtonActive: {
+  headerButtonActive: {
     backgroundColor: Palette.primary,
     borderColor: Palette.primary,
   },
@@ -311,8 +476,8 @@ const styles = StyleSheet.create({
   },
   coverRing: {
     position: "absolute",
-    right: -50,
-    top: -50,
+    right: -62,
+    top: -84,
   },
   coverTop: {
     flexDirection: "row",
@@ -341,12 +506,14 @@ const styles = StyleSheet.create({
   coverCategoryText: {
     ...Type.caption,
     flexShrink: 1,
-    color: "rgba(255,255,255,0.7)",
+    color: "rgba(255,255,255,0.78)",
   },
   coverOverview: {
     ...Type.body,
+    fontSize: 16,
+    lineHeight: 25,
     marginTop: 16,
-    color: "rgba(255,255,255,0.86)",
+    color: "rgba(255,255,255,0.9)",
   },
   coverStats: {
     marginTop: 18,
@@ -369,17 +536,56 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Palette.white,
   },
-  tags: {
+  toc: {
     marginTop: 16,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 6,
+    borderRadius: Radii.xl,
+    backgroundColor: Palette.card,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(10,16,36,0.08)",
+  },
+  tocEyebrow: {
+    ...Type.overline,
+    marginBottom: 4,
+    color: Palette.primary,
+  },
+  tocRow: {
+    minHeight: 48,
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 8,
+  },
+  tocNumber: {
+    width: 22,
+    fontFamily: FontFamily.displayBold,
+    fontSize: 13,
+    color: Palette.primary,
+  },
+  tocTitle: {
+    ...Type.bodyMedium,
+    flex: 1,
+    color: Palette.ink,
+  },
+  tocMore: {
+    minHeight: 46,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Palette.divider,
+  },
+  tocMoreText: {
+    ...Type.label,
+    color: Palette.primary,
   },
   content: {
-    marginTop: 24,
+    marginTop: 12,
   },
   moreCard: {
-    marginTop: 26,
+    marginTop: 40,
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
@@ -406,5 +612,67 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: Palette.primary,
+  },
+  sheetHeader: {
+    paddingHorizontal: 20,
+    paddingBottom: 8,
+  },
+  sheetTitle: {
+    ...Type.title2,
+    color: Palette.ink,
+  },
+  sheetLabel: {
+    ...Type.overline,
+    marginTop: 18,
+    marginBottom: 10,
+    color: Palette.muted,
+  },
+  sheetContentsLabel: {
+    marginTop: 22,
+    marginBottom: 0,
+  },
+  scaleRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  scaleOption: {
+    flex: 1,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: Radii.sm,
+    backgroundColor: Palette.cardMuted,
+    borderWidth: 1,
+    borderColor: "rgba(10,16,36,0.08)",
+  },
+  scaleOptionActive: {
+    backgroundColor: Palette.tint,
+    borderColor: Palette.primary,
+  },
+  scaleGlyph: {
+    fontFamily: FontFamily.displayBold,
+    color: Palette.inkSoft,
+  },
+  scaleGlyphActive: {
+    color: Palette.primary,
+  },
+  sheetList: {
+    marginTop: 4,
+  },
+  sheetRow: {
+    minHeight: 52,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 12,
+  },
+  sheetRowDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Palette.divider,
+  },
+  sheetRowTitle: {
+    ...Type.bodyMedium,
+    flex: 1,
+    color: Palette.ink,
   },
 });

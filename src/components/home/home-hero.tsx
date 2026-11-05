@@ -69,10 +69,11 @@ export function HomeHero({ scrollY, countryCount, onSearchPress }: HomeHeroProps
   return (
     <View style={styles.wrapper}>
       <View style={styles.hero}>
-        <GradientFill colors={HeroGradient} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} />
+        {/* Vertical, so the top edge is one colour and meets the status-bar backdrop without a seam. */}
+        <GradientFill colors={HeroGradient} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} />
+        <View style={styles.glow} pointerEvents="none" />
         <Animated.View style={[styles.decor, decorStyle]} pointerEvents="none">
-          <View style={styles.glow} />
-          <StarRing size={250} starSize={15} opacity={0.5} period={120} />
+          <StarRing size={250} starSize={15} opacity={0.75} period={120} />
         </Animated.View>
         <View style={styles.glowLeft} pointerEvents="none" />
 
@@ -128,17 +129,21 @@ const styles = StyleSheet.create({
   },
   decor: {
     position: "absolute",
-    right: -78,
-    top: -46,
+    // Kept clear of the headline so the rotating stars never cross the text.
+    right: -100,
+    top: -104,
     alignItems: "center",
     justifyContent: "center",
   },
   glow: {
+    // Sits fully inside the hero so its edge is never cut flat at the top.
     position: "absolute",
-    width: 190,
-    height: 190,
-    borderRadius: 95,
-    backgroundColor: "rgba(80, 130, 255, 0.28)",
+    right: -70,
+    top: 24,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: "rgba(80, 130, 255, 0.2)",
   },
   glowLeft: {
     position: "absolute",

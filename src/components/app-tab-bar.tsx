@@ -113,8 +113,9 @@ function TabButton({ icon, label, isFocused, onPress }: TabButtonProps) {
     ],
   }));
 
+  // Inactive labels stay fully opaque: dimming them dropped contrast to ~2.4:1.
   const labelStyle = useAnimatedStyle(() => ({
-    opacity: 0.55 + 0.45 * lift.value,
+    opacity: 0.88 + 0.12 * lift.value,
   }));
 
   return (
@@ -129,7 +130,7 @@ function TabButton({ icon, label, isFocused, onPress }: TabButtonProps) {
         <Ionicons
           name={icon}
           size={22}
-          color={isFocused ? Palette.primary : Palette.subtle}
+          color={isFocused ? Palette.primary : Palette.placeholder}
         />
       </Animated.View>
       <Animated.Text

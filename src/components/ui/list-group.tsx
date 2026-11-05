@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     ...Type.overline,
     marginBottom: 10,
     marginLeft: 6,
-    color: Palette.subtle,
+    color: Palette.muted,
   },
   card: {
     paddingVertical: 4,
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     ...Type.caption,
     marginTop: 10,
     marginHorizontal: 6,
-    color: Palette.subtle,
+    color: Palette.muted,
   },
   row: {
     minHeight: 62,

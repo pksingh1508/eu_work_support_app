@@ -1,8 +1,8 @@
 import { useSignIn } from "@clerk/expo";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Link, useLocalSearchParams, useRouter, type Href } from "expo-router";
-import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useRef, useState } from "react";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { Button } from "@/components/ui/button";
 import { InlineNotice } from "@/components/ui/inline-notice";
@@ -52,6 +52,7 @@ export default function SignInScreen() {
   const [secondFactorCode, setSecondFactorCode] = useState("");
   const [secondFactorMethod, setSecondFactorMethod] =
     useState<SecondFactorMethod | null>(null);
+  const passwordRef = useRef<TextInput>(null);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -285,9 +286,12 @@ export default function SignInScreen() {
         placeholder="name@example.com"
         textContentType="emailAddress"
         returnKeyType="next"
+        submitBehavior="submit"
+        onSubmitEditing={() => passwordRef.current?.focus()}
       />
 
       <AuthTextField
+        ref={passwordRef}
         label="Password"
         icon="lock"
         actionLabel={isPasswordVisible ? "Hide" : "Show"}

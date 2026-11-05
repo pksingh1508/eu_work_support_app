@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { cleanDescription } from "@/features/documents/article";
 
 const savedCountrySelect = `
   id,
@@ -327,7 +328,7 @@ export async function fetchSavedItems(
           documentId: document.id,
           title: document.title,
           slug: document.slug,
-          shortDescription: document.short_description,
+          shortDescription: cleanDescription(document.short_description),
           intro: document.intro,
           countryName: country.name,
           countrySlug: country.slug,

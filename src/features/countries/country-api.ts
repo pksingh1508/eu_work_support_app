@@ -4,6 +4,7 @@ import {
   type ContentJson,
 } from "@/features/documents/content";
 import { supabase } from "@/lib/supabase";
+import { cleanDescription } from "@/features/documents/article";
 
 const countrySelect = `
   id,
@@ -114,7 +115,7 @@ function mapCountryResponse(row: CountryResponse): CountryState {
         id: document.id,
         title: document.title,
         slug: document.slug,
-        shortDescription: document.short_description,
+        shortDescription: cleanDescription(document.short_description),
         intro: document.intro,
         contentJson: normalizeContentJson(document.content_json),
         isPremium: document.is_premium,

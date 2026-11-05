@@ -27,7 +27,10 @@ export default function SupportScreen() {
         </View>
         <Text style={styles.heroTitle}>How can we help?</Text>
         <Text style={styles.heroBody}>Questions about a guide, your access or the app — just ask.</Text>
-        <Text style={styles.heroEmail}>{supportEmail}</Text>
+        {/* Selectable so it can be copied when no mail app is set up. */}
+        <Text selectable style={styles.heroEmail}>
+          {supportEmail}
+        </Text>
       </FadeInView>
 
       <FadeInView index={1} style={styles.group}>

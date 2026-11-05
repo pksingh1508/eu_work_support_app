@@ -34,6 +34,7 @@ export const localStorageKeys = {
   authCachedAt: 'auth.cachedAt',
   savedItemsSnapshot: 'saved.itemsSnapshot',
   themePreference: 'settings.themePreference',
+  readerScale: 'reader.textScale',
 } as const;
 
 const memoryStore = new Map<string, StorageValue>();
@@ -135,4 +136,14 @@ export function getThemePreference(): ThemePreference {
 
 export function setThemePreference(preference: ThemePreference) {
   appStorage.set(localStorageKeys.themePreference, preference);
+}
+
+/** Guide reader text size multiplier (on top of the system font scale). */
+export function getReaderScale(): number {
+  const value = appStorage.getNumber(localStorageKeys.readerScale);
+  return typeof value === 'number' && value >= 0.8 && value <= 1.4 ? value : 1;
+}
+
+export function setReaderScale(scale: number) {
+  appStorage.set(localStorageKeys.readerScale, scale);
 }

@@ -27,6 +27,8 @@ type PressableScaleProps = PropsWithChildren<
     dimOnPress?: boolean;
     /** Tactile feedback fired on press-in. */
     haptic?: "selection" | "light" | "medium" | false;
+    /** Opacity while disabled; components with their own disabled look pass 1. */
+    disabledOpacity?: number;
   }
 >;
 
@@ -40,11 +42,12 @@ export function PressableScale({
   onPressIn,
   onPressOut,
   disabled,
+  disabledOpacity = 0.5,
   ...props
 }: PressableScaleProps) {
   const reduceMotion = useReducedMotion();
   const pressed = useSharedValue(0);
-  const baseOpacity = disabled ? 0.5 : 1;
+  const baseOpacity = disabled ? disabledOpacity : 1;
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: baseOpacity * (dimOnPress ? 1 - pressed.value * 0.12 : 1),

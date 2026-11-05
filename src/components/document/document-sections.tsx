@@ -1,289 +1,291 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
-import Animated, { LinearTransition } from "react-native-reanimated";
+import { StyleSheet, Text, View, type LayoutChangeEvent } from "react-native";
 
+import { useArticleStyles } from "@/components/document/article-theme";
 import { DocumentFaq } from "@/components/document/document-faq";
 import { DocumentTable } from "@/components/document/document-table";
-import { GradientFill } from "@/components/ui/gradient-fill";
+import { RichText } from "@/components/document/rich-text";
 import { PressableScale } from "@/components/ui/pressable-scale";
-import { NavyGradient, Palette, Radii, Type } from "@/constants/theme";
-import {
-  getUrlHost,
-  stringifyValue,
-  type ContentJson,
-  type ContentSection,
-} from "@/features/documents/content";
+import { Palette, Radii, Type } from "@/constants/theme";
+import type { Article, ArticleBlock, CalloutTone } from "@/features/documents/article";
+import { getUrlHost } from "@/features/documents/content";
 import { FontFamily } from "@/lib/fonts";
 import { openExternal } from "@/lib/open-external";
 
-type DocumentSectionsProps = {
-  intro?: string | null;
-  content: ContentJson;
+type DocumentArticleProps = {
+  article: Article;
+  /** Reports each titled section's y offset (relative to the article) for the contents jump list. */
+  onSectionLayout?: (id: string, y: number) => void;
 };
 
 const COLLAPSED_ITEM_LIMIT = 12;
 
-/** Renders a guide's structured `content_json` as an editorial reading layout. */
-export function DocumentSections({ intro, content }: DocumentSectionsProps) {
-  const sections = content.sections ?? [];
+/** Renders a guide as one continuous, editorial reading flow. */
+export function DocumentArticle({ article, onSectionLayout }: DocumentArticleProps) {
+  const styles = useArticleStyles();
 
   return (
-    <View style={styles.stack}>
-      {intro ? <Text style={styles.lead}>{intro}</Text> : null}
-      {sections.map((section, index) => (
-        <SectionView key={`${section.type ?? "section"}-${index}`} section={section} />
+    <View>
+      {article.headline ? (
+        <Text selectable style={[styles.headline, layout.headline]} accessibilityRole="header">
+          {article.headline}
+        </Text>
+      ) : null}
+      {article.lead ? <RichText text={article.lead} style={styles.lead} emphasize={false} /> : null}
+
+      {article.sections.map((section, index) => (
+        <View
+          key={section.id}
+          style={index === 0 && !section.title ? layout.firstSection : layout.section}
+          onLayout={
+            section.title && onSectionLayout
+              ? (event: LayoutChangeEvent) => onSectionLayout(section.id, event.nativeEvent.layout.y)
+              : undefined
+          }
+        >
+          {section.title ? (
+            <View style={layout.h2Row}>
+              <View style={layout.h2Bar} />
+              <Text style={[styles.h2, layout.h2Text]} accessibilityRole="header">
+                {section.title}
+              </Text>
+            </View>
+          ) : null}
+          <Blocks blocks={section.blocks} />
+        </View>
       ))}
     </View>
   );
 }
 
-function SectionView({ section }: { section: ContentSection }) {
-  switch (section.type) {
-    case "table":
-      return <DocumentTable section={section} />;
-    case "faq":
-      return <DocumentFaq section={section} />;
-    case "source_links":
-      return <SourceLinks section={section} />;
-    case "numbered_steps":
-      return <Steps section={section} />;
-    case "hero":
-      return <HeroSection section={section} />;
-    case "warning":
-    case "callout":
-    case "quick_answer":
-      return <Callout section={section} />;
+function blockSpacing(block: ArticleBlock, previous: ArticleBlock | undefined) {
+  if (!previous) {
+    return 0;
+  }
+
+  switch (block.kind) {
+    case "paragraph":
+      return previous.kind === "subheading" ? 6 : 14;
+    case "list":
+      return previous.kind === "paragraph" ? 10 : 14;
+    case "subheading":
+      return 24;
+    case "step":
+      return previous.kind === "step" ? 0 : 20;
     default:
-      return <TextSection section={section} />;
+      return 20;
   }
 }
 
-function SectionTitle({ title, color = Palette.ink }: { title?: string; color?: string }) {
-  if (!title) {
-    return null;
-  }
-
-  return <Text style={[styles.sectionTitle, { color }]}>{title}</Text>;
-}
-
-function TextSection({ section }: { section: ContentSection }) {
-  const items = Array.isArray(section.items) ? section.items : [];
-  const isChecklist = section.type === "checklist";
-
+function Blocks({ blocks, tone }: { blocks: ArticleBlock[]; tone?: "callout" }) {
   return (
-    <View style={styles.card}>
-      <SectionTitle title={section.title} />
-      {section.content ? <Text style={styles.body}>{section.content}</Text> : null}
-      {items.length > 0 ? <ItemList items={items} variant={isChecklist ? "check" : "dot"} /> : null}
-    </View>
+    <>
+      {blocks.map((block, index) => (
+        <View key={index} style={{ marginTop: blockSpacing(block, blocks[index - 1]) }}>
+          <Block block={block} tone={tone} />
+        </View>
+      ))}
+    </>
   );
 }
 
-function ItemList({
-  items,
-  variant,
-  light = false,
-}: {
-  items: unknown[];
-  variant: "check" | "dot";
-  light?: boolean;
-}) {
+function Block({ block, tone }: { block: ArticleBlock; tone?: "callout" }) {
+  const styles = useArticleStyles();
+  const bodyStyle = tone === "callout" ? [styles.body, { color: Palette.inkSoft }] : styles.body;
+
+  switch (block.kind) {
+    case "paragraph":
+      return <RichText text={block.text} style={bodyStyle} />;
+    case "subheading":
+      return (
+        <Text selectable style={styles.h3} accessibilityRole="header">
+          {block.text}
+        </Text>
+      );
+    case "list":
+      return <ItemList items={block.items} variant={block.variant} />;
+    case "steps":
+      return <NumberedSteps items={block.items} />;
+    case "step":
+      return <StepBlock block={block} />;
+    case "callout":
+      return <Callout tone={block.tone} title={block.title} blocks={block.blocks} />;
+    case "table":
+      return <DocumentTable title={block.title} columns={block.columns} rows={block.rows} />;
+    case "faq":
+      return <DocumentFaq items={block.items} />;
+    case "sources":
+      return <SourceLinks items={block.items} />;
+  }
+}
+
+function ItemList({ items, variant }: { items: string[]; variant: "check" | "dot" }) {
+  const styles = useArticleStyles();
   const [isExpanded, setIsExpanded] = useState(false);
   const isLong = items.length > COLLAPSED_ITEM_LIMIT + 3;
   const visibleItems = isLong && !isExpanded ? items.slice(0, COLLAPSED_ITEM_LIMIT) : items;
+  const lineHeight = styles.body.lineHeight ?? 26;
 
   return (
-    <Animated.View layout={LinearTransition.duration(220)} style={styles.items}>
+    <View style={layout.items}>
       {visibleItems.map((item, index) => (
-        <View key={`${stringifyValue(item)}-${index}`} style={styles.itemRow}>
+        <View key={`${item}-${index}`} style={layout.itemRow}>
           {variant === "check" ? (
-            <View style={styles.checkIcon}>
+            <View style={[layout.checkIcon, { marginTop: (lineHeight - 20) / 2 }]}>
               <Ionicons name="checkmark" size={12} color={Palette.white} />
             </View>
           ) : (
-            <View style={[styles.dot, light && { backgroundColor: Palette.gold }]} />
+            <View style={[layout.dot, { marginTop: (lineHeight - 6) / 2 }]} />
           )}
-          <Text style={[styles.itemText, light && styles.lightText]}>{stringifyValue(item)}</Text>
+          <RichText text={item} style={[styles.body, layout.itemText]} />
         </View>
       ))}
       {isLong ? (
         <PressableScale
           onPress={() => setIsExpanded((current) => !current)}
           haptic="selection"
-          style={styles.expand}
+          style={layout.expand}
           accessibilityRole="button"
           accessibilityLabel={isExpanded ? "Show fewer items" : `Show all ${items.length} items`}
         >
-          <Text style={styles.expandText}>
-            {isExpanded ? "Show less" : `Show all ${items.length}`}
-          </Text>
+          <Text style={layout.expandText}>{isExpanded ? "Show less" : `Show all ${items.length}`}</Text>
           <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={15} color={Palette.primary} />
         </PressableScale>
       ) : null}
-    </Animated.View>
+    </View>
   );
 }
 
-function Steps({ section }: { section: ContentSection }) {
-  const items = Array.isArray(section.items) ? section.items : [];
+function NumberedSteps({ items }: { items: string[] }) {
+  const styles = useArticleStyles();
 
   return (
-    <View style={styles.card}>
-      <SectionTitle title={section.title} />
-      {section.content ? <Text style={styles.body}>{section.content}</Text> : null}
-      <View style={styles.steps}>
-        {items.map((item, index) => {
-          const isLast = index === items.length - 1;
+    <View>
+      {items.map((item, index) => {
+        const isLast = index === items.length - 1;
 
-          return (
-            <View key={`${stringifyValue(item)}-${index}`} style={styles.stepRow}>
-              <View style={styles.stepRail}>
-                <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText}>{index + 1}</Text>
-                </View>
-                {!isLast ? <View style={styles.stepLine} /> : null}
+        return (
+          <View key={`${item}-${index}`} style={layout.stepRow}>
+            <View style={layout.stepRail}>
+              <View style={layout.stepNumber}>
+                <Text style={layout.stepNumberText}>{index + 1}</Text>
               </View>
-              <Text style={[styles.itemText, styles.stepText, !isLast && styles.stepTextGap]}>
-                {stringifyValue(item)}
-              </Text>
+              {!isLast ? <View style={layout.stepLine} /> : null}
             </View>
-          );
-        })}
+            <RichText text={item} style={[styles.body, layout.stepBody, !isLast && layout.stepGap]} />
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function StepBlock({ block }: { block: Extract<ArticleBlock, { kind: "step" }> }) {
+  const styles = useArticleStyles();
+
+  return (
+    <View style={layout.stepRow}>
+      <View style={layout.stepRail}>
+        <View style={layout.stepNumber}>
+          <Text style={layout.stepNumberText}>{block.number}</Text>
+        </View>
+        {!block.isLast ? <View style={layout.stepLine} /> : null}
+      </View>
+      <View style={[layout.stepContent, !block.isLast && layout.stepGap]}>
+        <Text selectable style={[styles.h3, layout.stepTitle]} accessibilityRole="header">
+          {block.title}
+        </Text>
+        <Blocks blocks={block.blocks} />
       </View>
     </View>
   );
 }
 
-const calloutTones = {
-  quick_answer: {
-    bg: Palette.tint,
-    accent: Palette.primary,
-    icon: "flash" as const,
-    label: "Quick answer",
-  },
-  callout: {
-    bg: Palette.tint,
-    accent: Palette.primary,
-    icon: "bulb" as const,
-    label: "Good to know",
-  },
-  warning: {
-    bg: Palette.warningTint,
-    accent: Palette.warning,
-    icon: "warning" as const,
-    label: "Important",
-  },
+const calloutTones: Record<
+  CalloutTone,
+  { bg: string; accent: string; icon: keyof typeof Ionicons.glyphMap; label: string }
+> = {
+  quick_answer: { bg: Palette.tint, accent: Palette.primary, icon: "flash", label: "Quick answer" },
+  callout: { bg: Palette.tint, accent: Palette.primary, icon: "bulb", label: "Good to know" },
+  warning: { bg: Palette.warningTint, accent: Palette.warning, icon: "warning", label: "Important" },
 };
 
-function Callout({ section }: { section: ContentSection }) {
-  const tone = calloutTones[(section.type as keyof typeof calloutTones) ?? "callout"] ?? calloutTones.callout;
-  const items = Array.isArray(section.items) ? section.items : [];
+function Callout({ tone, title, blocks }: { tone: CalloutTone; title?: string; blocks: ArticleBlock[] }) {
+  const styles = useArticleStyles();
+  const palette = calloutTones[tone];
 
   return (
-    <View style={[styles.callout, { backgroundColor: tone.bg }]}>
-      <View style={styles.calloutHeader}>
-        <View style={[styles.calloutIcon, { backgroundColor: tone.accent }]}>
-          <Ionicons name={tone.icon} size={13} color={Palette.white} />
-        </View>
-        <Text style={[styles.calloutLabel, { color: tone.accent }]}>{tone.label}</Text>
+    <View style={[layout.callout, { backgroundColor: palette.bg, borderLeftColor: palette.accent }]}>
+      <View style={layout.calloutHeader}>
+        <Ionicons name={palette.icon} size={15} color={palette.accent} />
+        <Text style={[layout.calloutLabel, { color: palette.accent }]}>{palette.label}</Text>
       </View>
-      <SectionTitle title={section.title} />
-      {section.content ? <Text style={[styles.body, styles.calloutBody]}>{section.content}</Text> : null}
-      {items.length > 0 ? <ItemList items={items} variant="dot" /> : null}
+      {title ? <Text style={[styles.h3, layout.calloutTitle]}>{title}</Text> : null}
+      <Blocks blocks={blocks} tone="callout" />
     </View>
   );
 }
 
-function HeroSection({ section }: { section: ContentSection }) {
-  const items = Array.isArray(section.items) ? section.items : [];
-
+function SourceLinks({ items }: { items: { label: string; url: string }[] }) {
   return (
-    <View style={styles.hero}>
-      <GradientFill colors={NavyGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-      <SectionTitle title={section.title} color={Palette.white} />
-      {section.content ? <Text style={[styles.body, styles.lightText]}>{section.content}</Text> : null}
-      {items.length > 0 ? <ItemList items={items} variant="dot" light /> : null}
+    <View style={layout.links}>
+      {items.map((item, index) => (
+        <PressableScale
+          key={`${item.url}-${index}`}
+          onPress={() => void openExternal(item.url)}
+          haptic="selection"
+          scaleTo={0.98}
+          style={layout.link}
+          accessibilityRole="link"
+          accessibilityLabel={`Open ${item.label}`}
+        >
+          <View style={layout.linkIcon}>
+            <Ionicons name="globe-outline" size={17} color={Palette.primary} />
+          </View>
+          <View style={layout.linkText}>
+            <Text style={layout.linkLabel} numberOfLines={2}>
+              {item.label}
+            </Text>
+            <Text style={layout.linkHost} numberOfLines={1}>
+              {getUrlHost(item.url)}
+            </Text>
+          </View>
+          <Ionicons name="open-outline" size={16} color={Palette.muted} />
+        </PressableScale>
+      ))}
     </View>
   );
 }
 
-function SourceLinks({ section }: { section: ContentSection }) {
-  const items = Array.isArray(section.items) ? section.items : [];
-
-  return (
-    <View style={styles.card}>
-      <SectionTitle title={section.title ?? "Official sources"} />
-      <View style={styles.links}>
-        {items.map((item, index) => {
-          const source = item as { label?: unknown; url?: unknown };
-          const url = stringifyValue(source.url);
-          const label = stringifyValue(source.label) || url;
-
-          return (
-            <PressableScale
-              key={`${url}-${index}`}
-              onPress={() => {
-                if (url) {
-                  void openExternal(url);
-                }
-              }}
-              haptic="selection"
-              scaleTo={0.98}
-              style={styles.link}
-              accessibilityRole="link"
-              accessibilityLabel={`Open ${label}`}
-            >
-              <View style={styles.linkIcon}>
-                <Ionicons name="globe-outline" size={17} color={Palette.primary} />
-              </View>
-              <View style={styles.linkText}>
-                <Text style={styles.linkLabel} numberOfLines={2}>
-                  {label}
-                </Text>
-                {url ? (
-                  <Text style={styles.linkHost} numberOfLines={1}>
-                    {getUrlHost(url)}
-                  </Text>
-                ) : null}
-              </View>
-              <Ionicons name="open-outline" size={16} color={Palette.subtle} />
-            </PressableScale>
-          );
-        })}
-      </View>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  stack: {
-    gap: 14,
+const layout = StyleSheet.create({
+  headline: {
+    marginBottom: 12,
   },
-  lead: {
-    fontFamily: FontFamily.body,
-    fontSize: 17,
-    lineHeight: 27,
-    color: Palette.inkSoft,
-    marginBottom: 6,
+  firstSection: {
+    marginTop: 20,
   },
-  card: {
-    padding: 18,
-    borderRadius: Radii.xl,
-    backgroundColor: Palette.card,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Palette.hairline,
+  section: {
+    marginTop: 40,
   },
-  sectionTitle: {
-    ...Type.title3,
-    marginBottom: 8,
+  h2Row: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    marginBottom: 12,
   },
-  body: {
-    ...Type.body,
-    color: "#3B4459",
+  h2Bar: {
+    width: 3,
+    alignSelf: "stretch",
+    maxHeight: 24,
+    marginTop: 2,
+    borderRadius: 2,
+    backgroundColor: Palette.primary,
+  },
+  h2Text: {
+    flex: 1,
   },
   items: {
-    marginTop: 10,
     gap: 10,
   },
   itemRow: {
@@ -294,7 +296,6 @@ const styles = StyleSheet.create({
   dot: {
     width: 6,
     height: 6,
-    marginTop: 9,
     marginLeft: 4,
     borderRadius: 3,
     backgroundColor: Palette.primary,
@@ -302,22 +303,16 @@ const styles = StyleSheet.create({
   checkIcon: {
     width: 20,
     height: 20,
-    marginTop: 2,
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: Palette.success,
   },
   itemText: {
-    ...Type.body,
     flex: 1,
-    color: "#3B4459",
-  },
-  lightText: {
-    color: "rgba(255,255,255,0.84)",
   },
   expand: {
-    marginTop: 4,
+    marginTop: 2,
     alignSelf: "flex-start",
     flexDirection: "row",
     alignItems: "center",
@@ -330,9 +325,6 @@ const styles = StyleSheet.create({
   expandText: {
     ...Type.label,
     color: Palette.primary,
-  },
-  steps: {
-    marginTop: 12,
   },
   stepRow: {
     flexDirection: "row",
@@ -357,47 +349,44 @@ const styles = StyleSheet.create({
   stepLine: {
     flex: 1,
     width: 2,
-    marginVertical: 4,
+    marginVertical: 6,
     borderRadius: 1,
     backgroundColor: Palette.tintStrong,
   },
-  stepText: {
-    paddingTop: 2,
+  stepBody: {
+    flex: 1,
+    paddingTop: 1,
   },
-  stepTextGap: {
-    paddingBottom: 18,
+  stepContent: {
+    flex: 1,
+    minWidth: 0,
+  },
+  stepTitle: {
+    paddingTop: 2,
+    marginBottom: 6,
+  },
+  stepGap: {
+    paddingBottom: 24,
   },
   callout: {
-    padding: 18,
-    borderRadius: Radii.xl,
+    padding: 16,
+    paddingLeft: 16,
+    borderRadius: Radii.md,
+    borderLeftWidth: 3,
   },
   calloutHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 10,
-  },
-  calloutIcon: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: "center",
-    justifyContent: "center",
+    gap: 7,
+    marginBottom: 8,
   },
   calloutLabel: {
     ...Type.overline,
   },
-  calloutBody: {
-    color: Palette.inkSoft,
-  },
-  hero: {
-    overflow: "hidden",
-    padding: 20,
-    borderRadius: Radii.xl,
-    backgroundColor: Palette.navy,
+  calloutTitle: {
+    marginBottom: 6,
   },
   links: {
-    marginTop: 4,
     gap: 8,
   },
   link: {
@@ -406,7 +395,9 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 12,
     borderRadius: Radii.md,
-    backgroundColor: Palette.cardMuted,
+    backgroundColor: Palette.card,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(10,16,36,0.1)",
   },
   linkIcon: {
     width: 36,

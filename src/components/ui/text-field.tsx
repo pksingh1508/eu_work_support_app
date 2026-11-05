@@ -75,7 +75,7 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
           {...props}
           editable={editable}
           secureTextEntry={isPassword ? isSecure : props.secureTextEntry}
-          placeholderTextColor={Palette.subtle}
+          placeholderTextColor={Palette.placeholder}
           selectionColor={Palette.primary}
           cursorColor={Palette.primary}
           onFocus={(event) => {

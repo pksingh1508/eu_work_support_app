@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/adaptive-icon.png",
     "scheme": "euworksupport",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "ios": {
       "bundleIdentifier": "com.euworksupport.app",
       "icon": "./assets/iosIcons.icon",

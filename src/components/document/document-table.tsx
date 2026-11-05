@@ -1,125 +1,102 @@
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
-import { Palette, Radii, Type } from "@/constants/theme";
-import { stringifyValue, type ContentSection } from "@/features/documents/content";
+import { useArticleStyles } from "@/components/document/article-theme";
+import { RichText } from "@/components/document/rich-text";
+import { Palette, Radii } from "@/constants/theme";
 
-const WIDE_COLUMN = 168;
+type DocumentTableProps = {
+  title?: string;
+  columns: string[];
+  rows: string[][];
+};
 
-/** Data table: fits the card for 1–2 columns, scrolls horizontally beyond that. */
-export function DocumentTable({ section }: { section: ContentSection }) {
-  const columns = Array.isArray(section.columns) ? section.columns : [];
-  const rows = Array.isArray(section.rows) ? section.rows : [];
-  const columnCount = Math.max(columns.length, ...rows.map((row) => row?.length ?? 0), 1);
-  const isWide = columnCount > 2;
-  const cellWidth = isWide ? WIDE_COLUMN : undefined;
-
-  const table = (
-    <View style={[styles.table, isWide && { width: WIDE_COLUMN * columnCount }]}>
-      {columns.length > 0 ? (
-        <View style={[styles.row, styles.headerRow]}>
-          {columns.map((column, index) => (
-            <Text
-              key={`${column}-${index}`}
-              style={[styles.headerCell, cellWidth ? { width: cellWidth } : styles.flexCell]}
-            >
-              {column}
-            </Text>
-          ))}
-        </View>
-      ) : null}
-      {rows.map((row, rowIndex) => (
-        <View
-          key={`${section.title ?? "table"}-${rowIndex}`}
-          style={[styles.row, rowIndex < rows.length - 1 && styles.rowDivider]}
-        >
-          {(Array.isArray(row) ? row : []).map((cell, cellIndex) => (
-            <Text
-              key={`${rowIndex}-${cellIndex}`}
-              style={[
-                styles.cell,
-                cellIndex === 0 && styles.firstCell,
-                cellWidth ? { width: cellWidth } : styles.flexCell,
-              ]}
-            >
-              {stringifyValue(cell)}
-            </Text>
-          ))}
-        </View>
-      ))}
-    </View>
-  );
+/**
+ * Phone-friendly tables. Two columns read as a label / value list; wider
+ * tables become one card per row with every value labelled by its column, so
+ * nothing needs horizontal scrolling.
+ */
+export function DocumentTable({ title, columns, rows }: DocumentTableProps) {
+  const styles = useArticleStyles();
+  const columnCount = Math.max(columns.length, ...rows.map((row) => row.length));
 
   return (
-    <View style={styles.card}>
-      {section.title ? <Text style={styles.title}>{section.title}</Text> : null}
-      {isWide ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scroller}>
-          {table}
-        </ScrollView>
+    <View style={layout.wrapper}>
+      {title ? <Text style={[styles.h3, layout.title]}>{title}</Text> : null}
+
+      {columnCount <= 2 ? (
+        <View style={layout.card}>
+          {rows.map((row, rowIndex) => (
+            <View
+              key={rowIndex}
+              style={[layout.pair, rowIndex < rows.length - 1 && layout.divider]}
+            >
+              <Text selectable style={styles.cellTitle}>
+                {row[0]}
+              </Text>
+              {row[1] ? <RichText text={row[1]} style={[styles.body, layout.pairValue]} /> : null}
+            </View>
+          ))}
+        </View>
       ) : (
-        table
+        <View style={layout.stack}>
+          {rows.map((row, rowIndex) => (
+            <View key={rowIndex} style={layout.card}>
+              <View style={layout.rowCard}>
+                <Text selectable style={styles.cellTitle}>
+                  {row[0]}
+                </Text>
+                {row.slice(1).map((cell, cellIndex) =>
+                  cell ? (
+                    <View key={cellIndex} style={layout.field}>
+                      {columns[cellIndex + 1] ? (
+                        <Text style={styles.label}>{columns[cellIndex + 1]}</Text>
+                      ) : null}
+                      <RichText text={cell} style={styles.body} />
+                    </View>
+                  ) : null,
+                )}
+              </View>
+            </View>
+          ))}
+        </View>
       )}
-      {isWide ? <Text style={styles.hint}>Swipe to see more columns</Text> : null}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    padding: 18,
-    borderRadius: Radii.xl,
-    backgroundColor: Palette.card,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Palette.hairline,
+const layout = StyleSheet.create({
+  wrapper: {
+    marginTop: 8,
   },
   title: {
-    ...Type.title3,
     marginBottom: 12,
-    color: Palette.ink,
   },
-  scroller: {
-    marginHorizontal: -2,
-  },
-  table: {
+  card: {
     overflow: "hidden",
-    borderRadius: Radii.md,
+    borderRadius: Radii.lg,
+    backgroundColor: Palette.card,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(10,16,36,0.1)",
   },
-  row: {
-    flexDirection: "row",
+  pair: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
-  headerRow: {
-    backgroundColor: Palette.cardMuted,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(10,16,36,0.1)",
+  pairValue: {
+    marginTop: 4,
   },
-  rowDivider: {
+  divider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Palette.divider,
   },
-  flexCell: {
-    flex: 1,
+  stack: {
+    gap: 10,
   },
-  headerCell: {
-    ...Type.overline,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-    color: Palette.muted,
+  rowCard: {
+    padding: 16,
+    gap: 10,
   },
-  cell: {
-    ...Type.callout,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    color: "#3B4459",
-  },
-  firstCell: {
-    fontFamily: Type.label.fontFamily,
-    color: Palette.ink,
-  },
-  hint: {
-    ...Type.caption,
-    marginTop: 10,
-    color: Palette.subtle,
+  field: {
+    gap: 2,
   },
 });

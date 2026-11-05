@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@clerk/expo";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Animated, {
   useAnimatedReaction,
@@ -14,7 +14,6 @@ import { scheduleOnRN } from "react-native-worklets";
 import { CollapsingTopBar } from "@/components/country/collapsing-top-bar";
 import { COUNTRY_HERO_HEIGHT, CountryHero } from "@/components/country/country-hero";
 import { DocumentRow } from "@/components/country/document-row";
-import { DocumentSheet } from "@/components/country/document-sheet";
 import { CountryDetailSkeleton } from "@/components/skeletons";
 import { FadeInView } from "@/components/ui/fade-in-view";
 import { FocusStatusBar } from "@/components/ui/focus-status-bar";
@@ -80,7 +79,6 @@ function CountryDetailContent() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const countrySlug = Array.isArray(slug) ? slug[0] : slug;
   const [country, setCountry] = useState<CountryState | null>(null);
-  const [selectedDocument, setSelectedDocument] = useState<CountryDocument | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
@@ -219,10 +217,14 @@ function CountryDetailContent() {
     showUnsavedToast(country.name, "country");
   };
 
-  const openFullGuide = (document: CountryDocument) => {
-    setSelectedDocument(null);
-    router.push(`/visa/${document.id}`);
-  };
+  const openGuide = useCallback(
+    (document: CountryDocument) => {
+      router.push(`/visa/${document.id}`);
+    },
+    [router],
+  );
+
+  const goBack = () => (router.canGoBack() ? router.back() : router.replace("/"));
 
   return (
     <View style={styles.screen}>
@@ -232,7 +234,7 @@ function CountryDetailContent() {
         topInset={insets.top}
         scrollY={scrollY}
         collapseAt={country || isLoading ? COLLAPSE_AT : 0}
-        onBack={() => router.back()}
+        onBack={goBack}
         rightAction={
           country ? (
             <PressableScale
@@ -274,7 +276,7 @@ function CountryDetailContent() {
               actionIcon="refresh"
               onAction={() => setReloadToken((current) => current + 1)}
               secondaryLabel="Go back"
-              onSecondary={() => router.back()}
+              onSecondary={goBack}
             />
           </View>
         ) : null}
@@ -335,7 +337,7 @@ function CountryDetailContent() {
                         <DocumentRow
                           document={document}
                           isFirst={index === 0}
-                          onPress={setSelectedDocument}
+                          onPress={openGuide}
                         />
                       </FadeInView>
                     ))}
@@ -383,12 +385,6 @@ function CountryDetailContent() {
           </>
         ) : null}
       </Animated.ScrollView>
-
-      <DocumentSheet
-        document={selectedDocument}
-        onClose={() => setSelectedDocument(null)}
-        onOpenFullGuide={openFullGuide}
-      />
     </View>
   );
 }
@@ -467,7 +463,7 @@ const styles = StyleSheet.create({
   },
   groupCount: {
     ...Type.caption,
-    color: Palette.subtle,
+    color: Palette.muted,
   },
   documents: {
     gap: 10,

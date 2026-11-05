@@ -108,28 +108,3 @@ export function formatLongDate(value: string | null) {
     timeZone: "UTC",
   }).format(date);
 }
-
-/** Rough reading time for a guide, used as a light metadata hint. */
-export function estimateReadingMinutes(intro: string | null, content: ContentJson) {
-  let words = intro ? intro.split(/\s+/).length : 0;
-
-  (content.sections ?? []).forEach((section) => {
-    words += `${section.title ?? ""} ${section.content ?? ""}`.split(/\s+/).length;
-    (section.items ?? []).forEach((item) => {
-      if (item && typeof item === "object") {
-        Object.values(item as Record<string, unknown>).forEach((value) => {
-          words += stringifyValue(value).split(/\s+/).length;
-        });
-      } else {
-        words += stringifyValue(item).split(/\s+/).length;
-      }
-    });
-    (section.rows ?? []).forEach((row) => {
-      (Array.isArray(row) ? row : []).forEach((cell) => {
-        words += stringifyValue(cell).split(/\s+/).length;
-      });
-    });
-  });
-
-  return Math.max(1, Math.round(words / 220));
-}

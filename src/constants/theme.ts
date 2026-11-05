@@ -13,8 +13,12 @@ import { FontFamily } from "@/lib/fonts";
 export const Palette = {
   ink: "#0A1024",
   inkSoft: "#1E2842",
+  /** Long-form reading text: softer than ink, ~12:1 on white and canvas. */
+  bodyText: "#2B3346",
   muted: "#5A6378",
   subtle: "#959EB1",
+  /** Input placeholder: lighter than typed text but still ~4.5:1. */
+  placeholder: "#6E778B",
   faint: "#C6CCD8",
 
   canvas: "#F3F5F9",

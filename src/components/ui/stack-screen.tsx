@@ -15,6 +15,7 @@ import Animated, {
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
+  type AnimatedRef,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -37,9 +38,13 @@ type StackScreenProps = {
   hideLargeTitle?: boolean;
   contentContainerStyle?: StyleProp<ViewStyle>;
   onBack?: () => void;
+  /** Lets the screen scroll programmatically (e.g. jump to a section). */
+  scrollRef?: AnimatedRef<Animated.ScrollView>;
+  /** Shows a thin reading-progress bar under the collapsed header. */
+  showProgress?: boolean;
 };
 
-const BAR_HEIGHT = 60;
+export const BAR_HEIGHT = 60;
 const COLLAPSE_DISTANCE = 56;
 
 /**
@@ -59,23 +64,29 @@ export function StackScreen({
   hideLargeTitle = false,
   contentContainerStyle,
   onBack,
+  scrollRef,
+  showProgress = false,
 }: StackScreenProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const scrollY = useSharedValue(0);
+  const readProgress = useSharedValue(0);
 
   const onScroll = useAnimatedScrollHandler((event) => {
     scrollY.value = event.contentOffset.y;
+    const scrollable = event.contentSize.height - event.layoutMeasurement.height;
+    readProgress.value = scrollable > 0 ? Math.min(1, Math.max(0, event.contentOffset.y / scrollable)) : 0;
   });
 
-  const barStyle = useAnimatedStyle(() => {
-    const progress = interpolate(scrollY.value, [8, COLLAPSE_DISTANCE], [0, 1], Extrapolation.CLAMP);
+  // A solid layer faded by opacity: animating an rgba() background let body
+  // text show through the bar on Android.
+  const barBackgroundStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.value, [8, COLLAPSE_DISTANCE], [0, 1], Extrapolation.CLAMP),
+  }));
 
-    return {
-      backgroundColor: `rgba(243, 245, 249, ${progress * 0.97})`,
-      borderBottomColor: `rgba(10, 16, 36, ${progress * 0.07})`,
-    };
-  });
+  const progressStyle = useAnimatedStyle(() => ({
+    transform: [{ scaleX: readProgress.value }],
+  }));
 
   const compactTitleStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
@@ -114,7 +125,14 @@ export function StackScreen({
     <View style={styles.screen}>
       <FocusStatusBar style="dark" />
 
-      <Animated.View style={[styles.bar, { paddingTop: insets.top }, barStyle]}>
+      <View style={[styles.bar, { paddingTop: insets.top }]}>
+        <Animated.View pointerEvents="none" style={[styles.barBackground, barBackgroundStyle]}>
+          {showProgress ? (
+            <View style={styles.progressTrack}>
+              <Animated.View style={[styles.progressFill, progressStyle]} />
+            </View>
+          ) : null}
+        </Animated.View>
         <View style={styles.barInner}>
           <IconButton icon="chevron-back" onPress={handleBack} accessibilityLabel="Go back" />
           <Animated.View style={[styles.compactTitleWrap, compactTitleStyle]} pointerEvents="none">
@@ -124,9 +142,10 @@ export function StackScreen({
           </Animated.View>
           <View style={styles.right}>{rightAction}</View>
         </View>
-      </Animated.View>
+      </View>
 
       <Animated.ScrollView
+        ref={scrollRef}
         onScroll={onScroll}
         scrollEventThrottle={16}
         keyboardShouldPersistTaps="handled"
@@ -168,7 +187,8 @@ export function StackScreen({
   return (
     <KeyboardAvoidingView
       style={styles.screen}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      // Android is edge-to-edge, so adjustResize no longer shrinks the window.
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       {body}
     </KeyboardAvoidingView>
@@ -186,7 +206,25 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 10,
+    elevation: 10,
+  },
+  barBackground: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: Palette.canvas,
     borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(10, 16, 36, 0.08)",
+  },
+  progressTrack: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 2,
+  },
+  progressFill: {
+    height: 2,
+    backgroundColor: Palette.primary,
+    transformOrigin: "left",
   },
   barInner: {
     height: BAR_HEIGHT,
